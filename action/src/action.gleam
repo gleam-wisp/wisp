@@ -6,7 +6,6 @@ import gleam/http.{Get, Method}
 import gleam/http/request.{Request}
 import gleam/http/response.{Response}
 import gleam/io
-import gleam/result
 import gleam/string_builder.{StringBuilder}
 import ids/nanoid
 import mist
@@ -112,6 +111,8 @@ create table if not exists answers (
     constraint valid_answer check (length(answer) > 0)
 
 , foreign key (application_id) references applications (id)
+
+, unique (application_id, question)
 ) strict;
 "
 
@@ -167,6 +168,10 @@ pub fn record_answer(
     (application_id, created_at, question, answer)
   values 
     (?, datetime('now'), ?, ?)
+  on conflict (application_id, question)
+  do update set
+    answer = excluded.answer
+  , created_at = excluded.created_at
   "
   let arguments = [
     sqlight.text(application_id),
@@ -190,9 +195,12 @@ pub fn list_answers(
   let sql =
     "
   select created_at, question, answer
-  from answers
-  where application_id = ?
-  order by created_at desc
+  from
+    answers
+  where
+    application_id = ?
+  order by
+    created_at desc, question desc
   "
   let arguments = [sqlight.text(application_id)]
   let decoder =
