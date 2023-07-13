@@ -200,7 +200,7 @@ pub fn list_answers(
   where
     application_id = ?
   order by
-    created_at desc, question desc
+    created_at asc, id asc
   "
   let arguments = [sqlight.text(application_id)]
   let decoder =
