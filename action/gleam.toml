@@ -6,6 +6,8 @@ description = "A Gleam web application"
 gleam_stdlib = "~> 0.29"
 mist = "~> 0.12"
 nakai = "~> 0.8"
+sqlight = "~> 0.6"
+ids = "~> 0.7"
 # framework = { path = "../framework" }
 
 [dev-dependencies]
