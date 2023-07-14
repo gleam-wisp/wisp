@@ -1,87 +1,77 @@
 // TODO: Sign the application id so that bad actors can't generate them.
 
 import action/database
-import action/html.{Html, h, text}
+import action/feature/applications/form.{
+  BoolSubmitButtons, Checkboxes, Email, Phone, Question, Radio, Step, Text,
+}
+import action/html
 import action/web.{Context}
 import framework.{Request, Response}
+import gleam/io
 import gleam/list
+import gleam/result
 // TODO: import from framework once we have constructor re-exports
 import gleam/http.{Get, Patch}
+import gleam/string_builder
 
-pub type Step {
-  Step(id: String, questions: List(Question))
-}
+const region_options = ["London", "etc"]
 
-pub type Question {
-  Question(text: String, inputs: List(Input))
-}
-
-pub type Input {
-  Input(name: String, kind: InputKind)
-}
-
-pub type InputKind {
-  Checkbox(text: String)
-  Submit(text: String, value: String)
-  Text(required: Bool)
-  Email(required: Bool)
-  Phone(required: Bool)
-  Radio(required: Bool, options: List(String))
-}
-
-pub const region_options = ["London", "etc"]
-
-pub const step_initial = Step(
+const step_initial = Step(
   "intro",
   [
     Question(
-      "Are you ready to take action?",
-      [
-        Input("ready", Submit("I'm ready", "yes")),
-        Input("ready", Submit("Not yet", "no")),
-      ],
+      text: "Are you ready to take action?",
+      name: "ready",
+      input: BoolSubmitButtons(true: "I'm ready", false: "Not yet"),
     ),
   ],
 )
 
-pub const step_not_ready = Step(
+const step_not_ready = Step(
   "not_ready",
   [
     Question(
-      "What do you need to take part?",
-      [
-        Input("logistics", Checkbox("I need help getting to London")),
-        Input("logistics", Checkbox("I need help getting to London")),
-      ],
+      text: "What do you need to take part?",
+      name: "help_required",
+      input: Checkboxes([#("logistics", "I need help getting to London")]),
     ),
   ],
 )
 
-pub const step_ready = Step(
+const step_ready = Step(
   "ready",
   [
     Question(
-      "Have you been trained in non-violent resistance by Just Stop Oil?",
-      [
-        Input("non-violence-trained", Submit("Yes", "yes")),
-        Input("non-violence-trained", Submit("Not yet", "no")),
-      ],
+      text: "Have you been trained in non-violent resistance by Just Stop Oil?",
+      name: "non-violence-trained",
+      input: BoolSubmitButtons(true: "Yes", false: "Not yet"),
     ),
   ],
 )
 
-pub const contact_details = Step(
+const step_contact_details = Step(
   "contact_details",
   [
-    Question("What's your name?", [Input("name", Text(True))]),
-    Question("What's your email address?", [Input("email", Email(True))]),
-    Question("What's your phone number?", [Input("phone", Phone(True))]),
+    Question(text: "What's your name?", name: "name", input: Text(True)),
     Question(
-      "What's your region?",
-      [Input("region", Radio(True, region_options))],
+      text: "What's your email address?",
+      name: "email",
+      input: Email(True),
+    ),
+    Question(
+      text: "What's your phone number?",
+      name: "phone",
+      input: Phone(True),
+    ),
+    Question(
+      text: "What's your region?",
+      name: "region",
+      input: Radio(True, region_options),
     ),
   ],
 )
+
+const steps = [step_initial, step_not_ready, step_ready, step_contact_details]
 
 pub fn resource(req: Request, ctx: Context) -> Response {
   case req.method {
@@ -96,109 +86,23 @@ pub fn resource(req: Request, ctx: Context) -> Response {
 fn new_application(_req: Request, ctx: Context) -> Response {
   let id = database.create_application(ctx.db)
 
-  step_html(id, step_initial)
+  form.step_html(id, step_initial)
   |> html.page
   |> framework.html_response(200)
 }
 
 // TODO: implement
 // TODO: test
-fn update_application(_req: Request, _ctx: Context) -> Response {
-  framework.not_found()
+fn update_application(req: Request, _ctx: Context) -> Response {
+  use formdata <- framework.require_form_urlencoded_body(req)
+  use step <- framework.require(find_step(formdata))
+  io.debug(step)
+  io.debug(formdata)
+
+  framework.html_response(string_builder.from_string("ok!!!"), 200)
 }
 
-fn is_submit(input: Input) -> Bool {
-  case input.kind {
-    Submit(_, _) -> True
-    _ -> False
-  }
-}
-
-fn step_html(application_id: String, step: Step) -> Html {
-  let hidden = fn(name, value) {
-    let attrs = [#("type", "hidden"), #("name", name), #("value", value)]
-    h("input", attrs, [])
-  }
-  let any_submit =
-    step.questions
-    |> list.any(fn(question) { list.any(question.inputs, is_submit) })
-
-  let elements = [
-    hidden("application_id", application_id),
-    hidden("step_id", step.id),
-    ..list.map(step.questions, question_html)
-  ]
-  let elements = case any_submit {
-    False ->
-      elements
-      |> list.append([
-        h("input", [#("type", "submit"), #("value", "Submit")], []),
-      ])
-    True -> elements
-  }
-  h("form", [#("method", "POST"), #("action", "?_method=PATCH")], elements)
-}
-
-fn question_html(question: Question) -> Html {
-  h(
-    "fieldset",
-    [],
-    [
-      h("legend", [], [text(question.text)]),
-      ..list.flat_map(question.inputs, input_html)
-    ],
-  )
-}
-
-fn input_html(input: Input) -> List(Html) {
-  let input_element = fn(type_, name, required) {
-    let attrs = [#("type", type_), #("name", name), #("id", name)]
-    let attrs = case required {
-      True -> [#("required", "required"), ..attrs]
-      False -> attrs
-    }
-    [h("input", attrs, [])]
-  }
-
-  let name = input.name
-  case input.kind {
-    Checkbox(text) ->
-      list.append(
-        input_element("checkbox", name, False),
-        [h("label", [#("for", name)], [html.text(text)])],
-      )
-
-    Text(required) -> input_element("text", name, required)
-
-    Email(required) -> input_element("email", name, required)
-
-    Phone(required) -> input_element("tel", name, required)
-
-    Submit(text, value) -> {
-      let attrs = [
-        #("type", "submit"),
-        #("value", text),
-        #("name", name <> ":" <> value),
-      ]
-      [h("input", attrs, [])]
-    }
-
-    Radio(required, options) -> {
-      let option_html = fn(option) {
-        let attrs = [
-          #("type", "radio"),
-          #("name", name),
-          #("value", option),
-          #("id", name <> ":" <> option),
-        ]
-        let attrs = case required {
-          True -> [#("required", "required"), ..attrs]
-          False -> attrs
-        }
-        let label_attrs = [#("for", name <> ":" <> option)]
-        h("label", label_attrs, [h("input", attrs, []), text(option)])
-      }
-      list.map(options, option_html)
-    }
-  }
+fn find_step(formdata: List(#(String, String))) -> Result(Step, Nil) {
+  use step_id <- result.try(list.key_find(formdata, "step_id"))
+  list.find(steps, fn(s) { s.id == step_id })
 }

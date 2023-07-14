@@ -1,12 +1,14 @@
 import gleam/string_builder.{StringBuilder}
 import gleam/bit_builder.{BitBuilder}
+import gleam/bit_string
 import gleam/bool
-import gleam/result
 import gleam/http.{Method}
-import gleam/http/response.{Response as HttpResponse}
 import gleam/http/request.{Request as HttpRequest}
-import gleam/string
+import gleam/http/response.{Response as HttpResponse}
 import gleam/list
+import gleam/result
+import gleam/string
+import gleam/uri
 
 //
 // Responses
@@ -127,4 +129,36 @@ pub fn method_override(request: HttpRequest(a)) -> HttpRequest(a) {
     })
   }
   |> result.unwrap(request)
+}
+
+// TODO: test
+// TODO: document
+pub fn require_string_body(
+  request: Request,
+  next: fn(String) -> Response,
+) -> Response {
+  require(bit_string.to_string(request.body), next)
+}
+
+// TODO: replace with a function that also supports multipart forms
+// TODO: test
+// TODO: document
+pub fn require_form_urlencoded_body(
+  request: Request,
+  next: fn(List(#(String, String))) -> Response,
+) -> Response {
+  use body <- require_string_body(request)
+  require(uri.parse_query(body), next)
+}
+
+// TODO: test
+// TODO: document
+pub fn require(
+  result: Result(value, error),
+  next: fn(value) -> Response,
+) -> Response {
+  case result {
+    Ok(value) -> next(value)
+    Error(_) -> bad_request()
+  }
 }
