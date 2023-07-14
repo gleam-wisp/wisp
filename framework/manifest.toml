@@ -8,6 +8,6 @@ packages = [
 ]
 
 [requirements]
-gleam_http = { version = ">= 0.0.0" }
+gleam_http = { version = "~> 3.2" }
 gleam_stdlib = { version = "~> 0.29" }
 gleeunit = { version = "~> 0.10" }

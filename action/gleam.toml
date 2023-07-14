@@ -5,10 +5,10 @@ description = "A Gleam web application"
 [dependencies]
 gleam_stdlib = "~> 0.29"
 mist = "~> 0.12"
-nakai = "~> 0.8"
 sqlight = "~> 0.6"
 ids = "~> 0.7"
-# framework = { path = "../framework" }
+framework = { path = "../framework" }
+htmb = { path = "../htmb" }
 
 [dev-dependencies]
 gleeunit = "~> 0.10"

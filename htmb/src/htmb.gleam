@@ -5,7 +5,7 @@
 //// ```gleam
 //// let html = 
 ////   h("h1", [], [text("Hello, Joe!")])
-////  |> render(None)
+////  |> render
 ////  |> string_builder.to_string
 //// assert html == "<h1>Hello, Joe!</h1>"
 //// ```
@@ -21,7 +21,6 @@
 
 import gleam/string_builder.{StringBuilder}
 import gleam/string
-import gleam/option.{Option}
 import gleam/list
 
 pub type Html
@@ -58,15 +57,9 @@ pub fn escape(escaped: String, content: String) -> String {
   }
 }
 
-pub fn render(html: Html, doctype: Option(String)) -> StringBuilder {
-  let html = from_builder(html)
-  case doctype {
-    option.Some(doctype) -> {
-      let doctype = "<!DOCTYPE " <> doctype <> ">"
-      string_builder.prepend(html, doctype)
-    }
-    option.None -> html
-  }
+pub fn render_page(html: Html, doctype doctype: String) -> StringBuilder {
+  render(html)
+  |> string_builder.prepend("<!DOCTYPE " <> doctype <> ">")
 }
 
 fn attribute(content: String, attribute: #(String, String)) -> String {
@@ -74,7 +67,7 @@ fn attribute(content: String, attribute: #(String, String)) -> String {
 }
 
 fn child(siblings: StringBuilder, child: Html) -> StringBuilder {
-  string_builder.append_builder(siblings, from_builder(child))
+  string_builder.append_builder(siblings, render(child))
 }
 
 @external(erlang, "htmb_ffi", "identity")
@@ -83,4 +76,4 @@ pub fn dangerous_unescaped_fragment(s: StringBuilder) -> Html
 
 @external(erlang, "htmb_ffi", "identity")
 @external(javascript, "./htmb_ffi.mjs", "identity")
-fn from_builder(element: Html) -> StringBuilder
+pub fn render(element: Html) -> StringBuilder
