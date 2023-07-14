@@ -1,4 +1,4 @@
-import action/feature/forms
+import action/feature/applications
 import action/html.{h, text}
 import action/web.{Context}
 import framework.{Request, Response}
@@ -7,7 +7,7 @@ import gleam/http.{Get}
 
 pub fn handle_request(req: Request, ctx: Context) -> Response {
   case framework.path_segments(req) {
-    ["form"] -> forms.resource(req, ctx)
+    ["form"] -> applications.resource(req, ctx)
     [] -> home_page(req)
     _ -> framework.not_found()
   }
