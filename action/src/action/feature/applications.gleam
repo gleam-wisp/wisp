@@ -1,12 +1,15 @@
+// TODO: Sign the application id so that bad actors can't generate them.
+
+import action/database
+import action/html.{Html, h, text}
 import action/web.{Context}
 import framework.{Request, Response}
+import gleam/list
 // TODO: import from framework once we have constructor re-exports
 import gleam/http.{Get, Patch}
-import gleam/list
-import action/html.{Html, h, text}
 
 pub type Step {
-  Step(key: String, questions: List(Question))
+  Step(id: String, questions: List(Question))
 }
 
 pub type Question {
@@ -90,10 +93,10 @@ pub fn resource(req: Request, ctx: Context) -> Response {
 
 // TODO: implement
 // TODO: test
-fn new_application(_req: Request, _ctx: Context) -> Response {
-  let steps = [step_initial, step_not_ready, step_ready, contact_details]
+fn new_application(_req: Request, ctx: Context) -> Response {
+  let id = database.create_application(ctx.db)
 
-  h("div", [], list.map(steps, step_html))
+  step_html(id, step_initial)
   |> html.page
   |> framework.html_response(200)
 }
@@ -111,21 +114,29 @@ fn is_submit(input: Input) -> Bool {
   }
 }
 
-fn step_html(step: Step) -> Html {
+fn step_html(application_id: String, step: Step) -> Html {
+  let hidden = fn(name, value) {
+    let attrs = [#("type", "hidden"), #("name", name), #("value", value)]
+    h("input", attrs, [])
+  }
   let any_submit =
     step.questions
     |> list.any(fn(question) { list.any(question.inputs, is_submit) })
-  let submit = case any_submit {
-    False -> [h("input", [#("type", "submit"), #("value", "Submit")], [])]
-    True -> []
+
+  let elements = [
+    hidden("application_id", application_id),
+    hidden("step_id", step.id),
+    ..list.map(step.questions, question_html)
+  ]
+  let elements = case any_submit {
+    False ->
+      elements
+      |> list.append([
+        h("input", [#("type", "submit"), #("value", "Submit")], []),
+      ])
+    True -> elements
   }
-  let elements =
-    list.flatten([
-      [h("h1", [], [text(step.key)])],
-      list.map(step.questions, question_html),
-      submit,
-    ])
-  h("form", [], elements)
+  h("form", [#("method", "POST"), #("action", "?_method=PATCH")], elements)
 }
 
 fn question_html(question: Question) -> Html {
@@ -167,7 +178,7 @@ fn input_html(input: Input) -> List(Html) {
       let attrs = [
         #("type", "submit"),
         #("value", text),
-        #("name", name <> "/" <> value),
+        #("name", name <> ":" <> value),
       ]
       [h("input", attrs, [])]
     }
@@ -178,13 +189,13 @@ fn input_html(input: Input) -> List(Html) {
           #("type", "radio"),
           #("name", name),
           #("value", option),
-          #("id", name <> "/" <> option),
+          #("id", name <> ":" <> option),
         ]
         let attrs = case required {
           True -> [#("required", "required"), ..attrs]
           False -> attrs
         }
-        let label_attrs = [#("for", name <> "/" <> option)]
+        let label_attrs = [#("for", name <> ":" <> option)]
         h("label", label_attrs, [h("input", attrs, []), text(option)])
       }
       list.map(options, option_html)

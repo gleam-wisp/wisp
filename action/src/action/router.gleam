@@ -6,8 +6,10 @@ import framework.{Request, Response}
 import gleam/http.{Get}
 
 pub fn handle_request(req: Request, ctx: Context) -> Response {
+  let req = framework.method_override(req)
+
   case framework.path_segments(req) {
-    ["form"] -> applications.resource(req, ctx)
+    ["take-action"] -> applications.resource(req, ctx)
     [] -> home_page(req)
     _ -> framework.not_found()
   }
