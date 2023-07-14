@@ -37,6 +37,12 @@ pub fn not_found() -> Response {
 
 // TODO: test
 // TODO: document
+pub fn bad_request() -> Response {
+  HttpResponse(400, [], Empty)
+}
+
+// TODO: test
+// TODO: document
 pub fn body_to_string_builder(body: Body) -> StringBuilder {
   case body {
     Empty -> string_builder.new()

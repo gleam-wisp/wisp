@@ -5,7 +5,7 @@ import gleam/http/response
 import gleam/io
 import framework.{Response}
 import mist
-import htmb.{h, text}
+import htmb.{Html, h, text}
 import sqlight
 import action/database
 
@@ -40,6 +40,12 @@ pub fn handle_request(request: Request(_), context: Context) -> Response {
 pub fn home_page(request: Request(_), _context: Context) -> Response {
   use <- framework.require_method(request, Get)
 
+  home_html()
+  |> htmb.render_page(doctype: "html")
+  |> framework.html_response(200)
+}
+
+fn home_html() -> Html {
   h(
     "div",
     [],
@@ -48,8 +54,6 @@ pub fn home_page(request: Request(_), _context: Context) -> Response {
       h("p", [], [text("This is a Gleam app!")]),
     ],
   )
-  |> htmb.render_page(doctype: "html")
-  |> framework.html_response(200)
 }
 
 fn default_responses(response: Response) -> Response {
@@ -64,6 +68,12 @@ fn default_responses(response: Response) -> Response {
       h("h1", [], [text("There's nothing here")])
       |> htmb.render_page(doctype: "html")
       |> framework.html_response(405)
+    }
+
+    400, framework.Empty -> {
+      h("h1", [], [text("Invalid request")])
+      |> htmb.render_page(doctype: "html")
+      |> framework.html_response(400)
     }
 
     _, _ -> response
