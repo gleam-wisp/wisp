@@ -1,6 +1,7 @@
 import gleeunit
 import gleeunit/should
-import action.{Context}
+import action/router
+import action/web.{Context}
 import action/database
 import gleam/string
 import gleam/http/request.{Request}
@@ -36,7 +37,7 @@ pub fn content(response: framework.Response) -> String {
 pub fn page_not_found_test() {
   use context <- test_context()
   let request = request(Get, "/not-found")
-  let response = action.handle_request(request, context)
+  let response = router.handle_request(request, context)
 
   response.status
   |> should.equal(404)
@@ -45,7 +46,7 @@ pub fn page_not_found_test() {
 pub fn home_page_test() {
   use context <- test_context()
   let request = request(Get, "/")
-  let response = action.handle_request(request, context)
+  let response = router.handle_request(request, context)
 
   response.status
   |> should.equal(200)
@@ -58,7 +59,7 @@ pub fn home_page_test() {
 pub fn home_page_post_test() {
   use context <- test_context()
   let request = request(Post, "/")
-  let response = action.handle_request(request, context)
+  let response = router.handle_request(request, context)
 
   response.status
   |> should.equal(405)

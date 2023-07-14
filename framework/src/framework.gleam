@@ -3,6 +3,8 @@ import gleam/bit_builder.{BitBuilder}
 import gleam/http.{Method}
 import gleam/http/response.{Response as HttpResponse}
 import gleam/http/request.{Request as HttpRequest}
+import gleam/string
+import gleam/list
 
 //
 // Responses
@@ -25,8 +27,20 @@ pub fn html_response(html: StringBuilder, status: Int) -> Response {
 
 // TODO: test
 // TODO: document
-pub fn method_not_allowed() -> Response {
-  HttpResponse(405, [], Empty)
+pub fn html_body(response: Response, html: StringBuilder) -> Response {
+  response
+  |> response.set_body(Text(html))
+  |> response.set_header("content-type", "text/html")
+}
+
+// TODO: test
+// TODO: document
+pub fn method_not_allowed(permitted: List(Method)) -> Response {
+  let allowed =
+    permitted
+    |> list.map(http.method_to_string)
+    |> string.join(", ")
+  HttpResponse(405, [#("allow", allowed)], Empty)
 }
 
 // TODO: test
@@ -63,6 +77,9 @@ pub fn body_to_bit_builder(body: Body) -> BitBuilder {
 // Requests
 //
 
+pub type Request =
+  HttpRequest(BitString)
+
 // TODO: test
 // TODO: document
 pub fn require_method(
@@ -72,6 +89,10 @@ pub fn require_method(
 ) -> Response {
   case request.method == method {
     True -> next()
-    False -> method_not_allowed()
+    False -> method_not_allowed([method])
   }
 }
+
+// TODO: test
+// TODO: document
+pub const path_segments = request.path_segments

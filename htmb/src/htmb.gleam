@@ -1,6 +1,6 @@
 //// # HyperText Markup Builder
 //// 
-//// A tiny and fast HTML builder for Gleam.
+//// A tiny HTML builder for Gleam.
 //// 
 //// ```gleam
 //// let html = 
