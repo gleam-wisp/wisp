@@ -15,7 +15,7 @@ pub fn main() {
 }
 
 pub fn app(request: Request(BitString)) {
-  use db <- database.with_connection("db.sqlite")
+  use db <- database.with_connection("db.sqlite3")
 
   let context = Context(db: db)
   router.handle_request(request, context)
