@@ -1,5 +1,6 @@
 import action/web.{Context}
 import framework.{Request, Response}
+// TODO: import from framework once we have constructor re-exports
 import gleam/http.{Get, Patch}
 
 pub fn resource(req: Request, ctx: Context) -> Response {
