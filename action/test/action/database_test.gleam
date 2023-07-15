@@ -17,23 +17,24 @@ pub fn application_creation_test() {
 
 pub fn recording_answers_test() {
   use db <- database.with_connection(":memory:")
-  let id = database.create_application(db)
+  let application_id = database.create_application(db)
+  let id = database.create_submission(db, application_id, "steppy")
   let assert Ok(_) = database.record_answer(db, id, "Who? What?", "Slim Shadey")
   let assert Ok(_) =
     database.record_answer(db, id, "System still working?", "Seems to be")
 
   let assert [] = database.list_answers(db, "wibble")
 
-  let assert [one, two] = database.list_answers(db, id)
+  let assert [one, two] = database.list_answers(db, application_id)
 
   one.question
   |> should.equal("Who? What?")
-  one.answer
+  one.value
   |> should.equal("Slim Shadey")
 
   two.question
   |> should.equal("System still working?")
-  two.answer
+  two.value
   |> should.equal("Seems to be")
 
   one.created_at
@@ -43,20 +44,24 @@ pub fn recording_answers_test() {
 
 pub fn duplicate_answer_test() {
   use db <- database.with_connection(":memory:")
-  let id = database.create_application(db)
+  let application_id = database.create_application(db)
+  let id = database.create_submission(db, application_id, "steppy")
   let question = "Who? What?"
 
   let assert Ok(_) = database.record_answer(db, id, question, "Slim Shadey")
-  let assert Ok(_) = database.record_answer(db, id, question, "Dave")
+  let assert Error(database.AlreadyAnswered) =
+    database.record_answer(db, id, question, "Dave")
 
-  let assert [one] = database.list_answers(db, id)
+  let assert [one] = database.list_answers(db, application_id)
   one.question
   |> should.equal("Who? What?")
-  one.answer
-  |> should.equal("Dave")
+  one.value
+  |> should.equal("Slim Shadey")
 
-  let id2 = database.create_application(db)
+  // The same answer can be recorded for different applications
+  let application_id2 = database.create_application(db)
+  let id2 = database.create_submission(db, application_id2, "steppy")
   let assert Ok(_) = database.record_answer(db, id2, question, "Another")
-  let assert [_] = database.list_answers(db, id)
-  let assert [_] = database.list_answers(db, id2)
+  let assert [_] = database.list_answers(db, application_id)
+  let assert [_] = database.list_answers(db, application_id2)
 }

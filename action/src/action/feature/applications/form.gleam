@@ -129,7 +129,6 @@ fn question_html(question: Question) -> Html {
   )
 }
 
-// TODO: test
 pub fn answer(
   question: Question,
   formdata: List(#(String, String)),
