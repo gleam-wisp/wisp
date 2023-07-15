@@ -1,4 +1,7 @@
 import action/html.{Html, h, text}
+import gleam/regex
+import gleam/result
+import gleam/string
 import gleam/list
 
 pub type Step {
@@ -15,7 +18,18 @@ pub type Input {
   Text(required: Bool)
   Email(required: Bool)
   Phone(required: Bool)
-  Radio(required: Bool, options: List(String))
+  Radio(required: Bool, options: List(#(String, String)))
+}
+
+pub type Answer {
+  Answer(name: String, value: AnswerValue)
+}
+
+pub type AnswerValue {
+  TextAnswer(String)
+  MultipleChoiceAnswer(List(String))
+  BoolAnswer(Bool)
+  NoAnswer
 }
 
 fn is_submit(input: Input) -> Bool {
@@ -38,7 +52,7 @@ pub fn input_html(input: Input, name: String) -> List(Html) {
   case input {
     Checkboxes(options) -> {
       let make = fn(option: #(String, String)) {
-        let name = name <> "|" <> option.0
+        let name = name <> ":" <> option.0
         list.append(
           input_element("checkbox", name, False),
           [h("label", [#("for", name)], [html.text(option.1)])],
@@ -61,7 +75,8 @@ pub fn input_html(input: Input, name: String) -> List(Html) {
     }
 
     Radio(required, options) -> {
-      let option_html = fn(option) {
+      let option_html = fn(pair) {
+        let #(option, text) = pair
         let attrs = [
           #("type", "radio"),
           #("name", name),
@@ -73,7 +88,7 @@ pub fn input_html(input: Input, name: String) -> List(Html) {
           False -> attrs
         }
         let label_attrs = [#("for", name <> ":" <> option)]
-        h("label", label_attrs, [h("input", attrs, []), text(option)])
+        h("label", label_attrs, [h("input", attrs, []), html.text(text)])
       }
       list.map(options, option_html)
     }
@@ -114,21 +129,135 @@ fn question_html(question: Question) -> Html {
   )
 }
 
-pub type Answer {
-  Answer(key: String, answer: AnswerValue)
-}
-
-pub type AnswerValue {
-  TextAnswer(String)
-  MultipleChoiceAnswer(List(String))
-  BoolAnswer(Bool)
-  Blank
-}
-
 // TODO: test
 pub fn answer(
   question: Question,
   formdata: List(#(String, String)),
-) -> Result(Answer, Nil) {
-  todo
+) -> Result(Answer, String) {
+  case question.input {
+    Text(required) -> {
+      text_answer(question, required, formdata)
+    }
+    Phone(required) -> {
+      phone_answer(question, required, formdata)
+    }
+    Email(required) -> {
+      email_answer(question, required, formdata)
+    }
+    Checkboxes(options) -> {
+      checkboxes_answer(question, options, formdata)
+    }
+    BoolSubmitButtons(_, _) -> {
+      bool_submit_buttons_answer(question, formdata)
+    }
+    Radio(required, options) -> {
+      radio_answer(question, required, options, formdata)
+    }
+  }
+  |> result.map(Answer(question.name, _))
+}
+
+fn text_answer(
+  question: Question,
+  required: Bool,
+  formdata: List(#(String, String)),
+) -> Result(AnswerValue, String) {
+  case list.key_find(formdata, question.name) {
+    Ok(value) -> Ok(TextAnswer(value))
+    _ if required -> required_error(question)
+    _ -> Ok(NoAnswer)
+  }
+}
+
+fn try_map_text_answer(
+  value: AnswerValue,
+  mapper: fn(String) -> Result(String, String),
+) -> Result(AnswerValue, String) {
+  case value {
+    TextAnswer(value) -> result.map(mapper(value), TextAnswer)
+    _ -> Ok(value)
+  }
+}
+
+fn email_answer(
+  question: Question,
+  required: Bool,
+  formdata: List(#(String, String)),
+) -> Result(AnswerValue, String) {
+  use answer <- result.try(text_answer(question, required, formdata))
+  use email <- try_map_text_answer(answer)
+  case string.contains(email, "@") {
+    True -> Ok(string.trim(email))
+    False -> Error("\"" <> email <> "\" is not a valid email address")
+  }
+}
+
+fn phone_answer(
+  question: Question,
+  required: Bool,
+  formdata: List(#(String, String)),
+) -> Result(AnswerValue, String) {
+  use answer <- result.try(text_answer(question, required, formdata))
+  use number <- try_map_text_answer(answer)
+  let number = string.replace(in: number, each: " ", with: "")
+  let assert Ok(regex) = regex.from_string("^\\+?[0-9]{8,16}$")
+  case regex.check(regex, number) {
+    True -> Ok(number)
+    False -> Error("\"" <> number <> "\" is not a valid phone number")
+  }
+}
+
+fn checkboxes_answer(
+  question: Question,
+  options: List(#(String, String)),
+  formdata: List(#(String, String)),
+) -> Result(AnswerValue, String) {
+  let make = fn(option: #(String, String)) {
+    let name = question.name <> ":" <> option.0
+    list.key_find(formdata, name)
+    |> result.replace(option.0)
+  }
+  let answers = list.filter_map(options, make)
+  case answers {
+    [] -> Ok(NoAnswer)
+    _ -> Ok(MultipleChoiceAnswer(answers))
+  }
+}
+
+pub fn bool_submit_buttons_answer(
+  question: Question,
+  formdata: List(#(String, String)),
+) -> Result(AnswerValue, String) {
+  let yes_name = question.name <> ":1"
+  let no_name = question.name <> ":0"
+  let yes = list.key_find(formdata, yes_name)
+  let no = list.key_find(formdata, no_name)
+  case yes, no {
+    Ok(_), _ -> Ok(BoolAnswer(True))
+    _, Ok(_) -> Ok(BoolAnswer(False))
+    _, _ -> required_error(question)
+  }
+}
+
+fn radio_answer(
+  question: Question,
+  required: Bool,
+  options: List(#(String, String)),
+  formdata: List(#(String, String)),
+) -> Result(AnswerValue, String) {
+  let value =
+    formdata
+    |> list.key_find(question.name)
+    |> result.unwrap("")
+
+  case list.key_find(options, value) {
+    Ok(_) -> Ok(TextAnswer(value))
+    _ if value == "" && required -> required_error(question)
+    _ if value == "" -> Ok(NoAnswer)
+    _ -> Error("\"" <> question.text <> "\" was not valid")
+  }
+}
+
+fn required_error(question: Question) -> Result(t, String) {
+  Error("\"" <> question.text <> "\" is required")
 }

@@ -14,11 +14,22 @@ import gleam/result
 import gleam/http.{Get, Patch}
 import gleam/string_builder
 
-const region_options = ["London", "etc"]
+const region_options = [#("london", "London"), #("etc", "Etc.")]
 
 const step_initial = Step(
   "intro",
   [
+    Question(
+      text: "What do you need to take part?",
+      name: "help_required",
+      input: Checkboxes(
+        [
+          #("logistics", "I need help getting to London"),
+          #("wibble", "Wibble wobble"),
+          #("stuff", "Stuff, lots of stuff"),
+        ],
+      ),
+    ),
     Question(
       text: "Are you ready to take action?",
       name: "ready",
@@ -96,8 +107,8 @@ fn new_application(_req: Request, ctx: Context) -> Response {
 fn update_application(req: Request, _ctx: Context) -> Response {
   use formdata <- framework.require_form_urlencoded_body(req)
   use step <- framework.require(find_step(formdata))
-  io.debug(step)
-  io.debug(formdata)
+  let answers = list.try_map(step.questions, form.answer(_, formdata))
+  io.debug(answers)
 
   framework.html_response(string_builder.from_string("ok!!!"), 200)
 }
