@@ -1,15 +1,17 @@
-name: test
+name: ci
 
 on:
   push:
     branches:
-      - master
       - main
   pull_request:
 
 jobs:
-  test:
+  test-action:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./action
     steps:
       - uses: actions/checkout@v3.5.1
       - uses: erlef/setup-beam@v1.15.4
