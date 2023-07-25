@@ -11,8 +11,8 @@ packages = [
   { name = "gleeunit", version = "0.10.1", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleeunit", source = "hex", outer_checksum = "ECEA2DE4BE6528D36AFE74F42A21CDF99966EC36D7F25DEB34D47DD0F7977BAF" },
   { name = "glisten", version = "0.7.0", build_tools = ["gleam"], requirements = ["gleam_otp", "gleam_stdlib", "gleam_erlang"], otp_app = "glisten", source = "hex", outer_checksum = "52B530FF25370590843998D1B6C4EC6169DB1300D5E4407A5CDA1575374B7AEC" },
   { name = "htmb", version = "0.1.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], source = "local", path = "/Users/louis/src/gleam/action/htmb" },
-  { name = "ids", version = "0.7.0", build_tools = ["gleam"], requirements = ["gleam_erlang", "gleam_otp", "gleam_stdlib"], otp_app = "ids", source = "hex", outer_checksum = "C54026B680142760DCC30701E49403DC7B3F8EEBD358BC3404A04508FE656B91" },
-  { name = "mist", version = "0.12.0", build_tools = ["gleam"], requirements = ["gleam_erlang", "glisten", "gleam_stdlib", "gleam_http", "gleam_otp"], otp_app = "mist", source = "hex", outer_checksum = "6FD3D24B0E79CA90AE07A695C2ADA2049E16A384BEF960B122E841DE88B6CA67" },
+  { name = "ids", version = "0.8.0", build_tools = ["gleam"], requirements = ["gleam_erlang", "gleam_stdlib", "gleam_otp"], otp_app = "ids", source = "hex", outer_checksum = "7A378014D40E848326FBEE8AC0C9B35EB9C8094DC4414D89F9A5AA99397A6042" },
+  { name = "mist", version = "0.12.0", build_tools = ["gleam"], requirements = ["gleam_stdlib", "gleam_http", "gleam_erlang", "glisten", "gleam_otp"], otp_app = "mist", source = "hex", outer_checksum = "6FD3D24B0E79CA90AE07A695C2ADA2049E16A384BEF960B122E841DE88B6CA67" },
   { name = "sqlight", version = "0.6.1", build_tools = ["gleam"], requirements = ["esqlite", "gleam_stdlib"], otp_app = "sqlight", source = "hex", outer_checksum = "082244304DE85652A5BCF31CFE891BB8E96017B0A4BEA43623D32CC0983BF699" },
 ]
 

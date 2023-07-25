@@ -2,6 +2,9 @@ import gleam/dynamic
 import ids/nanoid
 import sqlight.{SqlightError}
 
+pub type Connection =
+  sqlight.Connection
+
 pub type Error {
   ApplicationNotFound
   DatabaseError(sqlight.Error)
@@ -77,13 +80,8 @@ fn one(
   }
 }
 
-fn generate_nanoid() -> String {
-  let assert Ok(id) = nanoid.generate()
-  id
-}
-
 pub fn create_application(database: sqlight.Connection) -> String {
-  let id = generate_nanoid()
+  let id = nanoid.generate()
   let sql =
     "
   insert into applications 
