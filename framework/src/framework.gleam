@@ -9,6 +9,59 @@ import gleam/list
 import gleam/result
 import gleam/string
 import gleam/uri
+import mist
+
+//
+// Running the server
+//
+
+pub fn mist_service(
+  service: fn(Request) -> Response,
+) -> fn(HttpRequest(mist.Connection)) -> HttpResponse(mist.ResponseData) {
+  fn(request: HttpRequest(_)) {
+    let connection =
+      Connection(
+        reader: mist_body_reader(request),
+        max_body_size: 8_000_000,
+        max_files_size: 32_000_000,
+        read_chunk_size: 1_000_000,
+      )
+    request
+    |> request.set_body(connection)
+    |> service
+    |> mist_response
+  }
+}
+
+fn mist_body_reader(request: HttpRequest(mist.Connection)) -> Reader {
+  case mist.stream(request) {
+    Error(_) -> fn(_) { Ok(ReadingFinished) }
+    Ok(stream) -> fn(size) { wrap_mist_chunk(stream(size)) }
+  }
+}
+
+fn wrap_mist_chunk(
+  chunk: Result(mist.Chunk, mist.ReadError),
+) -> Result(Read, Nil) {
+  chunk
+  |> result.nil_error
+  |> result.map(fn(chunk) {
+    case chunk {
+      mist.Done -> ReadingFinished
+      mist.Chunk(data, consume) ->
+        Chunk(data, fn(size) { wrap_mist_chunk(consume(size)) })
+    }
+  })
+}
+
+fn mist_response(response: Response) -> HttpResponse(mist.ResponseData) {
+  let body = case response.body {
+    Empty -> mist.Bytes(bit_builder.new())
+    Text(text) -> mist.Bytes(bit_builder.from_string_builder(text))
+  }
+  response
+  |> response.set_body(body)
+}
 
 //
 // Responses
@@ -61,6 +114,12 @@ pub fn bad_request() -> Response {
 
 // TODO: test
 // TODO: document
+pub fn entity_too_large() -> Response {
+  HttpResponse(413, [], Empty)
+}
+
+// TODO: test
+// TODO: document
 pub fn body_to_string_builder(body: Body) -> StringBuilder {
   case body {
     Empty -> string_builder.new()
@@ -81,8 +140,47 @@ pub fn body_to_bit_builder(body: Body) -> BitBuilder {
 // Requests
 //
 
+pub opaque type Connection {
+  Connection(
+    reader: Reader,
+    // TODO: document these. Cannot be here as this is opaque.
+    max_body_size: Int,
+    max_files_size: Int,
+    read_chunk_size: Int,
+  )
+}
+
+type Reader =
+  fn(Int) -> Result(Read, Nil)
+
+type Read {
+  Chunk(BitString, next: Reader)
+  ReadingFinished
+}
+
+// TODO: test
+// TODO: document
+pub fn set_max_body_size(request: Request, size: Int) -> Request {
+  Connection(..request.body, max_body_size: size)
+  |> request.set_body(request, _)
+}
+
+// TODO: test
+// TODO: document
+pub fn set_max_files_size(request: Request, size: Int) -> Request {
+  Connection(..request.body, max_files_size: size)
+  |> request.set_body(request, _)
+}
+
+// TODO: test
+// TODO: document
+pub fn set_read_chunk_size(request: Request, size: Int) -> Request {
+  Connection(..request.body, read_chunk_size: size)
+  |> request.set_body(request, _)
+}
+
 pub type Request =
-  HttpRequest(BitString)
+  HttpRequest(Connection)
 
 // TODO: test
 // TODO: document
@@ -121,12 +219,12 @@ pub fn method_override(request: HttpRequest(a)) -> HttpRequest(a) {
   {
     use query <- result.try(request.get_query(request))
     use pair <- result.try(list.key_pop(query, "_method"))
-    use method <- result.try(http.parse_method(pair.0))
+    use method <- result.map(http.parse_method(pair.0))
 
-    Ok(case method {
+    case method {
       http.Put | http.Patch | http.Delete -> request.set_method(request, method)
       _ -> request
-    })
+    }
   }
   |> result.unwrap(request)
 }
@@ -137,7 +235,45 @@ pub fn require_string_body(
   request: Request,
   next: fn(String) -> Response,
 ) -> Response {
-  require(bit_string.to_string(request.body), next)
+  case read_entire_body(request) {
+    Ok(body) -> require(bit_string.to_string(body), next)
+    Error(_) -> entity_too_large()
+  }
+}
+
+// TODO: test
+// TODO: public?
+// TODO: document
+// TODO: note you probably want a `require_` function
+// TODO: note it'll hang if you call it twice
+fn read_entire_body(request: Request) -> Result(BitString, Nil) {
+  let connection = request.body
+  read_body_loop(
+    connection.reader,
+    connection.read_chunk_size,
+    connection.max_body_size,
+    <<>>,
+  )
+}
+
+fn read_body_loop(
+  reader: Reader,
+  read_chunk_size: Int,
+  max_body_size: Int,
+  accumulator: BitString,
+) -> Result(BitString, Nil) {
+  use chunk <- result.try(reader(read_chunk_size))
+  case chunk {
+    ReadingFinished -> Ok(accumulator)
+    Chunk(chunk, next) -> {
+      let accumulator = bit_string.append(accumulator, chunk)
+      case bit_string.byte_size(accumulator) > max_body_size {
+        True -> Error(Nil)
+        False ->
+          read_body_loop(next, read_chunk_size, max_body_size, accumulator)
+      }
+    }
+  }
 }
 
 // TODO: replace with a function that also supports multipart forms

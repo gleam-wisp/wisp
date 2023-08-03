@@ -4,7 +4,7 @@ description = "A Gleam web application"
 
 [dependencies]
 gleam_stdlib = "~> 0.29"
-mist = "~> 0.12"
+mist = "~> 0.13"
 sqlight = "~> 0.6"
 ids = "~> 0.7"
 framework = { path = "../framework" }
