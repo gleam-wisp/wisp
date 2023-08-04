@@ -50,20 +50,17 @@ pub fn mist_service(
 ) -> fn(HttpRequest(mist.Connection)) -> HttpResponse(mist.ResponseData) {
   fn(request: HttpRequest(_)) {
     let connection = make_connection(mist_body_reader(request))
-    request
-    |> request.set_body(connection)
-    |> service
-    |> mist_response
-  }
-}
+    let request = request.set_body(request, connection)
+    let response =
+      request
+      |> service
+      |> mist_response
 
-fn make_connection(body_reader: Reader) -> Connection {
-  Connection(
-    reader: body_reader,
-    max_body_size: 8_000_000,
-    max_files_size: 32_000_000,
-    read_chunk_size: 1_000_000,
-  )
+    // TODO: use some FFI to ensure this always happens, even if there is a crash
+    let assert Ok(_) = delete_temporary_files(request)
+
+    response
+  }
 }
 
 fn mist_body_reader(request: HttpRequest(mist.Connection)) -> Reader {
@@ -205,6 +202,18 @@ pub opaque type Connection {
     max_body_size: Int,
     max_files_size: Int,
     read_chunk_size: Int,
+    temporary_directory: String,
+  )
+}
+
+fn make_connection(body_reader: Reader) -> Connection {
+  Connection(
+    reader: body_reader,
+    max_body_size: 8_000_000,
+    max_files_size: 32_000_000,
+    read_chunk_size: 1_000_000,
+    // TODO: replace with random string in suitable location
+    temporary_directory: "./tmp/123",
   )
 }
 
@@ -409,11 +418,10 @@ pub fn require_multipart_body(
 ) -> Response {
   let quotas =
     Quotas(files: request.body.max_files_size, body: request.body.max_body_size)
-  let chunk_size = request.body.read_chunk_size
   let reader = BufferedReader(request.body.reader, <<>>)
 
   let result =
-    read_multipart(reader, boundary, chunk_size, quotas, FormData([], []))
+    read_multipart(request, reader, boundary, quotas, FormData([], []))
   case result {
     Ok(form_data) -> next(form_data)
     Error(response) -> response
@@ -421,22 +429,28 @@ pub fn require_multipart_body(
 }
 
 fn read_multipart(
+  request: Request,
   reader: BufferedReader,
   boundary: String,
-  read_size: Int,
   quotas: Quotas,
   data: FormData,
 ) -> Result(FormData, Response) {
+  let read_size = request.body.read_chunk_size
+
+  // First we read the headers of the multipart part.
   let header_parser =
     fn_with_bad_request_error(http.parse_multipart_headers(_, boundary))
   let result = multipart_headers(reader, header_parser, read_size, quotas)
   use #(headers, reader, quotas) <- result.try(result)
   use #(name, filename) <- result.try(multipart_content_disposition(headers))
 
+  // Then we read the body of the part.
   let parse = fn_with_bad_request_error(http.parse_multipart_body(_, boundary))
   use #(data, reader, quotas) <- result.try(case filename {
+    // There is a file name, so we treat this as a file upload, streaming the
+    // contents to a temporary file and using the dedicated files size quota.
     option.Some(file_name) -> {
-      let path = todo as "need to create a temp file"
+      use path <- result.try(or_500(new_temporary_file(request)))
       let append = multipart_file_append
       let q = quotas.files
       let result =
@@ -447,6 +461,8 @@ fn read_multipart(
       let data = FormData(..data, files: [#(name, file), ..data.files])
       #(data, reader, quotas)
     }
+
+    // No file name, this is a regular form value that we hold in memory.
     option.None -> {
       let append = fn(data, chunk) { Ok(bit_string.append(data, chunk)) }
       let q = quotas.body
@@ -461,9 +477,11 @@ fn read_multipart(
   })
 
   case reader {
-    option.None -> Ok(FormData(sort_keys(data.values), sort_keys(data.files)))
+    // There's at least one more part, read it.
     option.Some(reader) ->
-      read_multipart(reader, boundary, read_size, quotas, data)
+      read_multipart(request, reader, boundary, quotas, data)
+    // There are no more parts, we're done.
+    option.None -> Ok(FormData(sort_keys(data.values), sort_keys(data.files)))
   }
 }
 
@@ -476,10 +494,18 @@ fn multipart_file_append(
   path: String,
   chunk: BitString,
 ) -> Result(String, Response) {
-  case simplifile.append_bits(chunk, path) {
-    Ok(_) -> Ok(path)
-    Error(_) -> {
+  chunk
+  |> simplifile.append_bits(path)
+  |> or_500
+  |> result.replace(path)
+}
+
+fn or_500(result: Result(a, b)) -> Result(a, Response) {
+  case result {
+    Ok(value) -> Ok(value)
+    Error(error) -> {
       // TODO: log error
+      io.debug(error)
       Error(internal_server_error())
     }
   }
@@ -902,6 +928,34 @@ pub fn serve_static(
     }
     _, _ -> service()
   }
+}
+
+//
+// File uploads
+//
+
+// TODO: test
+// TODO: document
+// TODO: document that you need to call `remove_temporary_files` when you're
+// done, unless you're using `mist_service` which will do it for you.
+pub fn new_temporary_file(
+  request: Request,
+) -> Result(String, simplifile.FileError) {
+  let directory = request.body.temporary_directory
+  use _ <- result.try(simplifile.make_directory(directory))
+  // TODO: use a random filename
+  let path = directory <> "file.tmp"
+  // TODO: use create_file when simplifile has it
+  use _ <- result.map(simplifile.write_bits(<<>>, to: path))
+  path
+}
+
+// TODO: test
+// TODO: document
+pub fn delete_temporary_files(
+  request: Request,
+) -> Result(Nil, simplifile.FileError) {
+  simplifile.delete_directory(request.body.temporary_directory)
 }
 
 @external(erlang, "file", "read_file_info")
