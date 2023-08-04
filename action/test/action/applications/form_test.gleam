@@ -1,4 +1,4 @@
-import action/feature/applications/form.{
+import action/applications/form.{
   Answer, BoolAnswer, BoolSubmitButtons, Checkboxes, Email, MultipleChoiceAnswer,
   NoAnswer, Phone, Question, Radio, Text, TextAnswer,
 }

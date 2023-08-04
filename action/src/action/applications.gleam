@@ -1,7 +1,7 @@
 // TODO: Sign the application id so that bad actors can't generate them.
 
 import action/database
-import action/feature/applications/form.{
+import action/applications/form.{
   BoolSubmitButtons, Checkboxes, Email, Phone, Question, Radio, Step, Text,
 }
 import action/html

@@ -23,6 +23,7 @@
 import gleam/string_builder.{StringBuilder}
 import gleam/bit_builder.{BitBuilder}
 import gleam/bit_string
+import gleam/erlang
 import gleam/bool
 import gleam/http.{Method}
 import gleam/http/request.{Request as HttpRequest}
@@ -143,6 +144,12 @@ pub fn bad_request() -> Response {
 // TODO: document
 pub fn entity_too_large() -> Response {
   HttpResponse(413, [], Empty)
+}
+
+// TODO: test
+// TODO: document
+pub fn internal_server_error() -> Response {
+  HttpResponse(500, [], Empty)
 }
 
 // TODO: test
@@ -324,6 +331,17 @@ pub fn require(
   case result {
     Ok(value) -> next(value)
     Error(_) -> bad_request()
+  }
+}
+
+//
+// Middleware
+//
+
+pub fn rescue_crashes(service: fn() -> Response) -> Response {
+  case erlang.rescue(service) {
+    Ok(response) -> response
+    Error(_) -> internal_server_error()
   }
 }
 

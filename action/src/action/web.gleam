@@ -1,5 +1,5 @@
 import sqlight
-import framework.{Response}
+import framework.{Request, Response}
 import htmb.{h, text}
 import gleam/bool
 
@@ -7,7 +7,16 @@ pub type Context {
   Context(db: sqlight.Connection)
 }
 
-pub fn default_responses(response: Response) -> Response {
+pub fn middleware(req: Request, service: fn(Request) -> Response) -> Response {
+  let req = framework.method_override(req)
+  use <- serve_default_responses
+  use <- framework.rescue_crashes
+
+  service(req)
+}
+
+fn serve_default_responses(service: fn() -> Response) -> Response {
+  let response = service()
   use <- bool.guard(response.body != framework.Empty, return: response)
 
   case response.status {
