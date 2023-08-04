@@ -3,8 +3,8 @@
 //   - [ ] Form data
 //   - [ ] Multipart
 //   - [ ] Json
-//   - [ ] String
-//   - [ ] Bit string
+//   - [x] String
+//   - [x] Bit string
 // - [ ] Body writing
 //   - [x] Html
 //   - [x] Json
@@ -32,6 +32,7 @@ import gleam/http/response.{Response as HttpResponse}
 import gleam/list
 import gleam/result
 import gleam/string
+import gleam/option.{Option}
 import gleam/uri
 import gleam/io
 import gleam/int
@@ -91,21 +92,23 @@ fn mist_response(response: Response) -> HttpResponse(mist.ResponseData) {
   let body = case response.body {
     Empty -> mist.Bytes(bit_builder.new())
     Text(text) -> mist.Bytes(bit_builder.from_string_builder(text))
-    File(path, content_type) -> {
-      let path = <<path:utf8>>
-      case mist_file.open(path) {
-        Error(_) -> {
-          // TODO: log error
-          mist.Bytes(bit_builder.new())
-        }
-        Ok(descriptor) -> {
-          mist.File(descriptor, content_type, 0, mist_file.size(path))
-        }
-      }
-    }
+    File(path, content_type) -> mist_send_file(path, content_type)
   }
   response
   |> response.set_body(body)
+}
+
+fn mist_send_file(path: String, content_type: String) -> mist.ResponseData {
+  let path = <<path:utf8>>
+  case mist_file.open(path) {
+    Error(_) -> {
+      // TODO: log error
+      mist.Bytes(bit_builder.new())
+    }
+    Ok(descriptor) -> {
+      mist.File(descriptor, content_type, 0, mist_file.size(path))
+    }
+  }
 }
 
 //
@@ -123,6 +126,17 @@ pub type ResponseBody {
 pub type Response =
   HttpResponse(ResponseBody)
 
+// TODO: document
+pub fn response(status: Int) -> Response {
+  HttpResponse(status, [], Empty)
+}
+
+pub fn set_body(response: Response, body: ResponseBody) -> Response {
+  response
+  |> response.set_body(body)
+}
+
+// TODO: test
 // TODO: document
 pub fn html_response(html: StringBuilder, status: Int) -> Response {
   HttpResponse(status, [#("content-type", "text/html")], Text(html))
@@ -200,6 +214,37 @@ pub opaque type Connection {
   )
 }
 
+type BufferedReader {
+  BufferedReader(reader: Reader, buffer: BitString)
+}
+
+type Quotas {
+  Quotas(body: Int, files: Int)
+}
+
+fn decrement_body_quota(quotas: Quotas, size: Int) -> Result(Quotas, Response) {
+  let quotas = Quotas(..quotas, body: quotas.body - size)
+  case quotas.body < 0 {
+    True -> Error(entity_too_large())
+    False -> Ok(quotas)
+  }
+}
+
+fn decrement_files_quota(quotas: Quotas, size: Int) -> Result(Quotas, Response) {
+  let quotas = Quotas(..quotas, files: quotas.files - size)
+  case quotas.files < 0 {
+    True -> Error(entity_too_large())
+    False -> Ok(quotas)
+  }
+}
+
+fn buffered_read(reader: BufferedReader, chunk_size: Int) -> Result(Read, Nil) {
+  case reader.buffer {
+    <<>> -> reader.reader(chunk_size)
+    _ -> Ok(Chunk(reader.buffer, reader.reader))
+  }
+}
+
 type Reader =
   fn(Int) -> Result(Read, Nil)
 
@@ -257,6 +302,7 @@ pub fn require_method(
   }
 }
 
+// TODO: re-export once Gleam has a syntax for that
 /// Return the non-empty segments of a request path.
 /// 
 /// # Examples
@@ -347,15 +393,145 @@ fn read_body_loop(
   }
 }
 
-// TODO: replace with a function that also supports multipart forms
+// TODO: make private and replace with a generic require_form function
 // TODO: test
 // TODO: document
 pub fn require_form_urlencoded_body(
   request: Request,
-  next: fn(List(#(String, String))) -> Response,
+  next: fn(FormData) -> Response,
 ) -> Response {
   use body <- require_string_body(request)
-  require(uri.parse_query(body), next)
+  use pairs <- require(uri.parse_query(body))
+  let pairs = sort_keys(pairs)
+  next(FormData(values: pairs, files: []))
+}
+
+// TODO: make private and replace with a generic require_form function
+// TODO: test
+// TODO: document
+pub fn require_multipart_body(
+  request: Request,
+  boundary: String,
+  next: fn(FormData) -> Response,
+) -> Response {
+  let quotas =
+    Quotas(files: request.body.max_files_size, body: request.body.max_body_size)
+  let chunk_size = request.body.read_chunk_size
+  let reader = BufferedReader(request.body.reader, <<>>)
+
+  let result =
+    read_multipart(reader, boundary, chunk_size, quotas, FormData([], []))
+  case result {
+    Ok(form_data) -> next(form_data)
+    Error(response) -> response
+  }
+}
+
+fn read_multipart(
+  reader: BufferedReader,
+  boundary: String,
+  chunk_size: Int,
+  quotas: Quotas,
+  data: FormData,
+) -> Result(FormData, Response) {
+  let header_parser = fn(chunk) {
+    http.parse_multipart_headers(chunk, boundary)
+    |> result.replace_error(bad_request())
+  }
+
+  let result = multipart_headers(reader, header_parser, chunk_size, quotas)
+  use #(headers, reader, quotas) <- result.try(result)
+  use #(name, filename) <- result.try(multipart_content_disposition(headers))
+
+  use #(data, reader, quotas) <- result.try(case filename {
+    option.Some(_) -> multipart_body(reader, boundary, chunk_size, quotas, data)
+    option.None -> multipart_file(reader, boundary, chunk_size, quotas, data)
+  })
+
+  case reader {
+    option.None -> Ok(data)
+    option.Some(reader) ->
+      read_multipart(reader, boundary, chunk_size, quotas, data)
+  }
+}
+
+fn multipart_body(
+  reader: BufferedReader,
+  boundary: String,
+  chunk_size: Int,
+  quotas: Quotas,
+  data: FormData,
+) -> Result(#(FormData, Option(BufferedReader), Quotas), Response) {
+  todo
+}
+
+fn multipart_file(
+  reader: BufferedReader,
+  boundary: String,
+  chunk_size: Int,
+  quotas: Quotas,
+  data: FormData,
+) -> Result(#(FormData, Option(BufferedReader), Quotas), Response) {
+  todo
+}
+
+fn multipart_content_disposition(
+  headers: List(http.Header),
+) -> Result(#(String, Option(String)), Response) {
+  {
+    use header <- result.try(list.key_find(headers, "content-disposition"))
+    use header <- result.try(http.parse_content_disposition(header))
+    use name <- result.map(list.key_find(header.parameters, "name"))
+    let filename =
+      option.from_result(list.key_find(header.parameters, "filename"))
+    #(name, filename)
+  }
+  |> result.replace_error(bad_request())
+}
+
+fn read_chunk(
+  reader: BufferedReader,
+  chunk_size: Int,
+) -> Result(#(BitString, Reader), Response) {
+  buffered_read(reader, chunk_size)
+  |> result.replace_error(bad_request())
+  |> result.try(fn(chunk) {
+    case chunk {
+      Chunk(chunk, next) -> Ok(#(chunk, next))
+      ReadingFinished -> Error(bad_request())
+    }
+  })
+}
+
+fn multipart_headers(
+  reader: BufferedReader,
+  parse: fn(BitString) -> Result(http.MultipartHeaders, Response),
+  chunk_size: Int,
+  quotas: Quotas,
+) -> Result(#(List(http.Header), BufferedReader, Quotas), Response) {
+  use #(chunk, reader) <- result.try(read_chunk(reader, chunk_size))
+  use headers <- result.try(parse(chunk))
+
+  case headers {
+    http.MultipartHeaders(headers, remaining) -> {
+      let used = bit_string.byte_size(chunk) - bit_string.byte_size(remaining)
+      use quotas <- result.map(decrement_body_quota(quotas, used))
+      let reader = BufferedReader(reader, remaining)
+      #(headers, reader, quotas)
+    }
+    http.MoreRequiredForHeaders(parse) -> {
+      let parse = fn(chunk) {
+        parse(chunk)
+        |> result.replace_error(bad_request())
+      }
+      let reader = BufferedReader(reader, <<>>)
+      multipart_headers(reader, parse, chunk_size, quotas)
+    }
+  }
+}
+
+fn sort_keys(pairs: List(#(String, t))) -> List(#(String, t)) {
+  list.sort(pairs, fn(a, b) { string.compare(a.0, b.0) })
 }
 
 // TODO: test
@@ -368,6 +544,17 @@ pub fn require(
     Ok(value) -> next(value)
     Error(_) -> bad_request()
   }
+}
+
+pub type FormData {
+  FormData(
+    values: List(#(String, String)),
+    files: List(#(String, UploadedFile)),
+  )
+}
+
+pub type UploadedFile {
+  UploadedFile(filename: String, path: String, size: Int)
 }
 
 //
@@ -521,7 +708,7 @@ fn extension_to_mime_type(extension: String) -> String {
     "jar" -> "application/java-archive"
     "jpeg" -> "image/jpeg"
     "jpg" -> "image/jpeg"
-    "js" -> "application/javascript"
+    "js" -> "text/javascript"
     "json" -> "application/json"
     "json-api" -> "application/vnd.api+json"
     "json-patch" -> "application/json-patch+json"
