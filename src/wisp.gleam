@@ -38,7 +38,6 @@ import gleam/io
 import gleam/int
 import simplifile
 import mist
-import mist/file as mist_file
 
 //
 // Running the server
@@ -92,23 +91,18 @@ fn mist_response(response: Response) -> HttpResponse(mist.ResponseData) {
   let body = case response.body {
     Empty -> mist.Bytes(bit_builder.new())
     Text(text) -> mist.Bytes(bit_builder.from_string_builder(text))
-    File(path, content_type) -> mist_send_file(path, content_type)
+    File(path) -> mist_send_file(path)
   }
   response
   |> response.set_body(body)
 }
 
-fn mist_send_file(path: String, content_type: String) -> mist.ResponseData {
-  let path = <<path:utf8>>
-  case mist_file.open(path) {
-    Error(_) -> {
-      // TODO: log error
-      mist.Bytes(bit_builder.new())
-    }
-    Ok(descriptor) -> {
-      mist.File(descriptor, content_type, 0, mist_file.size(path))
-    }
-  }
+fn mist_send_file(path: String) -> mist.ResponseData {
+  mist.send_file(path, offset: 0, limit: option.None)
+  |> result.lazy_unwrap(fn() {
+    // TODO: log error
+    mist.Bytes(bit_builder.new())
+  })
 }
 
 //
@@ -118,7 +112,7 @@ fn mist_send_file(path: String, content_type: String) -> mist.ResponseData {
 pub type ResponseBody {
   Empty
   // TODO: remove content type
-  File(path: String, content_type: String)
+  File(path: String)
   Text(StringBuilder)
 }
 
@@ -230,11 +224,10 @@ fn decrement_body_quota(quotas: Quotas, size: Int) -> Result(Quotas, Response) {
   }
 }
 
-fn decrement_files_quota(quotas: Quotas, size: Int) -> Result(Quotas, Response) {
-  let quotas = Quotas(..quotas, files: quotas.files - size)
-  case quotas.files < 0 {
-    True -> Error(entity_too_large())
-    False -> Ok(quotas)
+fn decrement_quota(quota: Int, size: Int) -> Result(Int, Response) {
+  case quota - size {
+    quota if quota < 0 -> Error(entity_too_large())
+    quota -> Ok(quota)
   }
 }
 
@@ -430,49 +423,109 @@ pub fn require_multipart_body(
 fn read_multipart(
   reader: BufferedReader,
   boundary: String,
-  chunk_size: Int,
+  read_size: Int,
   quotas: Quotas,
   data: FormData,
 ) -> Result(FormData, Response) {
-  let header_parser = fn(chunk) {
-    http.parse_multipart_headers(chunk, boundary)
-    |> result.replace_error(bad_request())
-  }
-
-  let result = multipart_headers(reader, header_parser, chunk_size, quotas)
+  let header_parser =
+    fn_with_bad_request_error(http.parse_multipart_headers(_, boundary))
+  let result = multipart_headers(reader, header_parser, read_size, quotas)
   use #(headers, reader, quotas) <- result.try(result)
   use #(name, filename) <- result.try(multipart_content_disposition(headers))
 
+  let parse = fn_with_bad_request_error(http.parse_multipart_body(_, boundary))
   use #(data, reader, quotas) <- result.try(case filename {
-    option.Some(_) -> multipart_body(reader, boundary, chunk_size, quotas, data)
-    option.None -> multipart_file(reader, boundary, chunk_size, quotas, data)
+    option.Some(file_name) -> {
+      let path = todo as "need to create a temp file"
+      let append = multipart_file_append
+      let q = quotas.files
+      let result =
+        multipart_body(reader, parse, boundary, read_size, q, append, path)
+      use #(reader, quota, _) <- result.map(result)
+      let quotas = Quotas(..quotas, files: quota)
+      let file = UploadedFile(path: path, file_name: file_name)
+      let data = FormData(..data, files: [#(name, file), ..data.files])
+      #(data, reader, quotas)
+    }
+    option.None -> {
+      let append = fn(data, chunk) { Ok(bit_string.append(data, chunk)) }
+      let q = quotas.body
+      let result =
+        multipart_body(reader, parse, boundary, read_size, q, append, <<>>)
+      use #(reader, quota, value) <- result.try(result)
+      let quotas = Quotas(..quotas, body: quota)
+      use value <- result.map(bit_string_to_string(value))
+      let data = FormData(..data, values: [#(name, value), ..data.values])
+      #(data, reader, quotas)
+    }
   })
 
   case reader {
-    option.None -> Ok(data)
+    option.None -> Ok(FormData(sort_keys(data.values), sort_keys(data.files)))
     option.Some(reader) ->
-      read_multipart(reader, boundary, chunk_size, quotas, data)
+      read_multipart(reader, boundary, read_size, quotas, data)
+  }
+}
+
+fn bit_string_to_string(bits: BitString) -> Result(String, Response) {
+  bit_string.to_string(bits)
+  |> result.replace_error(bad_request())
+}
+
+fn multipart_file_append(
+  path: String,
+  chunk: BitString,
+) -> Result(String, Response) {
+  case simplifile.append_bits(chunk, path) {
+    Ok(_) -> Ok(path)
+    Error(_) -> {
+      // TODO: log error
+      Error(internal_server_error())
+    }
   }
 }
 
 fn multipart_body(
   reader: BufferedReader,
+  parse: fn(BitString) -> Result(http.MultipartBody, Response),
   boundary: String,
   chunk_size: Int,
-  quotas: Quotas,
-  data: FormData,
-) -> Result(#(FormData, Option(BufferedReader), Quotas), Response) {
-  todo
+  quota: Int,
+  append: fn(t, BitString) -> Result(t, Response),
+  data: t,
+) -> Result(#(Option(BufferedReader), Int, t), Response) {
+  use #(chunk, reader) <- result.try(read_chunk(reader, chunk_size))
+  use output <- result.try(parse(chunk))
+
+  case output {
+    http.MultipartBody(chunk, done, remaining) -> {
+      let used = bit_string.byte_size(chunk) - bit_string.byte_size(remaining)
+      use quotas <- result.try(decrement_quota(quota, used))
+      let reader = BufferedReader(reader, remaining)
+      let reader = case done {
+        True -> option.None
+        False -> option.Some(reader)
+      }
+      use value <- result.map(append(data, chunk))
+      #(reader, quotas, value)
+    }
+
+    http.MoreRequiredForBody(chunk, parse) -> {
+      let parse = fn_with_bad_request_error(parse(_))
+      let reader = BufferedReader(reader, <<>>)
+      use data <- result.try(append(data, chunk))
+      multipart_body(reader, parse, boundary, chunk_size, quota, append, data)
+    }
+  }
 }
 
-fn multipart_file(
-  reader: BufferedReader,
-  boundary: String,
-  chunk_size: Int,
-  quotas: Quotas,
-  data: FormData,
-) -> Result(#(FormData, Option(BufferedReader), Quotas), Response) {
-  todo
+fn fn_with_bad_request_error(
+  f: fn(a) -> Result(b, c),
+) -> fn(a) -> Result(b, Response) {
+  fn(a) {
+    f(a)
+    |> result.replace_error(bad_request())
+  }
 }
 
 fn multipart_content_disposition(
@@ -554,7 +607,7 @@ pub type FormData {
 }
 
 pub type UploadedFile {
-  UploadedFile(filename: String, path: String, size: Int)
+  UploadedFile(file_name: String, path: String)
 }
 
 //
@@ -844,7 +897,7 @@ pub fn serve_static(
         Ok(_) ->
           response.new(200)
           |> response.set_header("content-type", mime_type)
-          |> response.set_body(File(path, mime_type))
+          |> response.set_body(File(path))
       }
     }
     _, _ -> service()
@@ -873,7 +926,7 @@ pub fn body_to_string_builder(body: ResponseBody) -> StringBuilder {
   case body {
     Empty -> string_builder.new()
     Text(text) -> text
-    File(path, _) -> {
+    File(path) -> {
       let assert Ok(contents) = simplifile.read(path)
       string_builder.from_string(contents)
     }
@@ -886,7 +939,7 @@ pub fn body_to_bit_builder(body: ResponseBody) -> BitBuilder {
   case body {
     Empty -> bit_builder.new()
     Text(text) -> bit_builder.from_string_builder(text)
-    File(path, _) -> {
+    File(path) -> {
       let assert Ok(contents) = simplifile.read_bits(path)
       bit_builder.from_bit_string(contents)
     }
