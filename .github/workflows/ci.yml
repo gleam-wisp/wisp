@@ -1,4 +1,4 @@
-name: ci
+name: test
 
 on:
   push:
@@ -9,9 +9,6 @@ on:
 jobs:
   test-action:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./action
     steps:
       - uses: actions/checkout@v3.5.1
       - uses: erlef/setup-beam@v1.15.4
@@ -23,41 +20,3 @@ jobs:
       - run: gleam format --check src test
       - run: gleam deps download
       - run: gleam test
-
-  container-image:
-    runs-on: ubuntu-latest
-    needs: test-action
-    # if: github.ref == 'refs/heads/main'
-    env:
-      REGISTRY: ghcr.io
-      IMAGE_NAME: ${{ github.repository }}
-
-    # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-      - name: Log in to the Container registry
-        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha,prefix=,format=short
-            type=ref,event=branch
-      - name: Build and push Docker image
-        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}

@@ -1,13 +1,6 @@
-# Action!
+# Wisp
 
-A Gleam web application.
+[![Package Version](https://img.shields.io/hexpm/v/wisp)](https://hex.pm/packages/wisp)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/wisp/)
 
-## TODO
-
-- Read database file location from environment.
-- Store answer from form in database.
-  - TODO: And also write tests!
-- Send you to the next question.
-- Eventual "thank you!" page.
-- HTML layouts.
-- Basic styling.
+A Gleam project 🧚
