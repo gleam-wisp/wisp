@@ -9,6 +9,7 @@ pub type Context {
 
 pub fn middleware(req: Request, service: fn(Request) -> Response) -> Response {
   let req = framework.method_override(req)
+  use <- framework.serve_static(req, under: "/static", from: "priv/static")
   use <- framework.log_requests(req)
   use <- serve_default_responses
   use <- framework.rescue_crashes

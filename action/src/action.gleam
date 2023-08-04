@@ -8,7 +8,7 @@ import action/router
 
 pub fn main() {
   let assert Ok(_) =
-    app
+    handle_request
     |> framework.mist_service
     |> mist.new
     |> mist.port(8000)
@@ -17,7 +17,7 @@ pub fn main() {
   process.sleep_forever()
 }
 
-pub fn app(request: framework.Request) {
+pub fn handle_request(request: framework.Request) {
   use db <- database.with_connection("db.sqlite3")
 
   let context = Context(db: db)

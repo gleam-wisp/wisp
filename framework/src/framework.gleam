@@ -8,7 +8,7 @@
 // - [ ] Body writing
 //   - [x] Html
 //   - [x] Json
-// - [ ] Static files
+// - [x] Static files
 // - [ ] Cookies
 //   - [ ] Signed cookies
 // - [ ] Secret keys
@@ -18,12 +18,13 @@
 // - [ ] Websockets
 // - [ ] CSRF
 // - [ ] Project generators
-// - [ ] Exception recovery
+// - [x] Exception recovery
 
 import gleam/string_builder.{StringBuilder}
 import gleam/bit_builder.{BitBuilder}
 import gleam/bit_string
 import gleam/erlang
+import gleam/dynamic.{Dynamic}
 import gleam/bool
 import gleam/http.{Method}
 import gleam/http/request.{Request as HttpRequest}
@@ -34,7 +35,9 @@ import gleam/string
 import gleam/uri
 import gleam/io
 import gleam/int
+import simplifile
 import mist
+import mist/file as mist_file
 
 //
 // Running the server
@@ -88,6 +91,18 @@ fn mist_response(response: Response) -> HttpResponse(mist.ResponseData) {
   let body = case response.body {
     Empty -> mist.Bytes(bit_builder.new())
     Text(text) -> mist.Bytes(bit_builder.from_string_builder(text))
+    File(path, content_type) -> {
+      let path = <<path:utf8>>
+      case mist_file.open(path) {
+        Error(_) -> {
+          // TODO: log error
+          mist.Bytes(bit_builder.new())
+        }
+        Ok(descriptor) -> {
+          mist.File(descriptor, content_type, 0, mist_file.size(path))
+        }
+      }
+    }
   }
   response
   |> response.set_body(body)
@@ -99,6 +114,8 @@ fn mist_response(response: Response) -> HttpResponse(mist.ResponseData) {
 
 pub type ResponseBody {
   Empty
+  // TODO: remove content type
+  File(path: String, content_type: String)
   Text(StringBuilder)
 }
 
@@ -152,24 +169,6 @@ pub fn entity_too_large() -> Response {
 // TODO: document
 pub fn internal_server_error() -> Response {
   HttpResponse(500, [], Empty)
-}
-
-// TODO: test
-// TODO: document
-pub fn body_to_string_builder(body: ResponseBody) -> StringBuilder {
-  case body {
-    Empty -> string_builder.new()
-    Text(text) -> text
-  }
-}
-
-// TODO: test
-// TODO: document
-pub fn body_to_bit_builder(body: ResponseBody) -> BitBuilder {
-  case body {
-    Empty -> bit_builder.new()
-    Text(text) -> bit_builder.from_string_builder(text)
-  }
 }
 
 //
@@ -337,6 +336,228 @@ pub fn require(
 }
 
 //
+// MIME types
+//
+
+// TODO: test
+// TODO: move to another package
+pub fn mime_type_to_extensions(mime_type: String) -> List(String) {
+  case mime_type {
+    "application/atom+xml" -> ["atom"]
+    "application/epub+zip" -> ["epub"]
+    "application/gzip" -> ["gz"]
+    "application/java-archive" -> ["jar"]
+    "application/javascript" -> ["js"]
+    "application/json" -> ["json"]
+    "application/json-patch+json" -> ["json-patch"]
+    "application/ld+json" -> ["jsonld"]
+    "application/manifest+json" -> ["webmanifest"]
+    "application/msword" -> ["doc"]
+    "application/octet-stream" -> ["bin"]
+    "application/ogg" -> ["ogx"]
+    "application/pdf" -> ["pdf"]
+    "application/postscript" -> ["ps", "eps", "ai"]
+    "application/rss+xml" -> ["rss"]
+    "application/rtf" -> ["rtf"]
+    "application/vnd.amazon.ebook" -> ["azw"]
+    "application/vnd.api+json" -> ["json-api"]
+    "application/vnd.apple.installer+xml" -> ["mpkg"]
+    "application/vnd.etsi.asic-e+zip" -> ["asice", "sce"]
+    "application/vnd.etsi.asic-s+zip" -> ["asics", "scs"]
+    "application/vnd.mozilla.xul+xml" -> ["xul"]
+    "application/vnd.ms-excel" -> ["xls"]
+    "application/vnd.ms-fontobject" -> ["eot"]
+    "application/vnd.ms-powerpoint" -> ["ppt"]
+    "application/vnd.oasis.opendocument.presentation" -> ["odp"]
+    "application/vnd.oasis.opendocument.spreadsheet" -> ["ods"]
+    "application/vnd.oasis.opendocument.text" -> ["odt"]
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation" -> [
+      "pptx",
+    ]
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" -> [
+      "xlsx",
+    ]
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document" -> [
+      "docx",
+    ]
+    "application/vnd.rar" -> ["rar"]
+    "application/vnd.visio" -> ["vsd"]
+    "application/wasm" -> ["wasm"]
+    "application/x-7z-compressed" -> ["7z"]
+    "application/x-abiword" -> ["abw"]
+    "application/x-bzip" -> ["bz"]
+    "application/x-bzip2" -> ["bz2"]
+    "application/x-cdf" -> ["cda"]
+    "application/x-csh" -> ["csh"]
+    "application/x-freearc" -> ["arc"]
+    "application/x-httpd-php" -> ["php"]
+    "application/x-msaccess" -> ["mdb"]
+    "application/x-sh" -> ["sh"]
+    "application/x-shockwave-flash" -> ["swf"]
+    "application/x-tar" -> ["tar"]
+    "application/xhtml+xml" -> ["xhtml"]
+    "application/xml" -> ["xml"]
+    "application/zip" -> ["zip"]
+    "audio/3gpp" -> ["3gp"]
+    "audio/3gpp2" -> ["3g2"]
+    "audio/aac" -> ["aac"]
+    "audio/midi" -> ["mid", "midi"]
+    "audio/mpeg" -> ["mp3"]
+    "audio/ogg" -> ["oga"]
+    "audio/opus" -> ["opus"]
+    "audio/wav" -> ["wav"]
+    "audio/webm" -> ["weba"]
+    "font/otf" -> ["otf"]
+    "font/ttf" -> ["ttf"]
+    "font/woff" -> ["woff"]
+    "font/woff2" -> ["woff2"]
+    "image/avif" -> ["avif"]
+    "image/bmp" -> ["bmp"]
+    "image/gif" -> ["gif"]
+    "image/heic" -> ["heic"]
+    "image/heif" -> ["heif"]
+    "image/jpeg" -> ["jpg", "jpeg"]
+    "image/jxl" -> ["jxl"]
+    "image/png" -> ["png"]
+    "image/svg+xml" -> ["svg", "svgz"]
+    "image/tiff" -> ["tiff", "tif"]
+    "image/vnd.adobe.photoshop" -> ["psd"]
+    "image/vnd.microsoft.icon" -> ["ico"]
+    "image/webp" -> ["webp"]
+    "text/calendar" -> ["ics"]
+    "text/css" -> ["css"]
+    "text/csv" -> ["csv"]
+    "text/html" -> ["html", "htm"]
+    "text/javascript" -> ["js", "mjs"]
+    "text/markdown" -> ["md", "markdown"]
+    "text/plain" -> ["txt", "text"]
+    "text/xml" -> ["xml"]
+    "video/3gpp" -> ["3gp"]
+    "video/3gpp2" -> ["3g2"]
+    "video/mp2t" -> ["ts"]
+    "video/mp4" -> ["mp4"]
+    "video/mpeg" -> ["mpeg", "mpg"]
+    "video/ogg" -> ["ogv"]
+    "video/quicktime" -> ["mov"]
+    "video/webm" -> ["webm"]
+    "video/x-ms-wmv" -> ["wmv"]
+    "video/x-msvideo" -> ["avi"]
+    _ -> []
+  }
+}
+
+// TODO: test
+// TODO: move to another package
+fn extension_to_mime_type(extension: String) -> String {
+  case extension {
+    "7z" -> "application/x-7z-compressed"
+    "aac" -> "audio/aac"
+    "abw" -> "application/x-abiword"
+    "ai" -> "application/postscript"
+    "arc" -> "application/x-freearc"
+    "asice" -> "application/vnd.etsi.asic-e+zip"
+    "asics" -> "application/vnd.etsi.asic-s+zip"
+    "atom" -> "application/atom+xml"
+    "avi" -> "video/x-msvideo"
+    "avif" -> "image/avif"
+    "azw" -> "application/vnd.amazon.ebook"
+    "bin" -> "application/octet-stream"
+    "bmp" -> "image/bmp"
+    "bz" -> "application/x-bzip"
+    "bz2" -> "application/x-bzip2"
+    "cda" -> "application/x-cdf"
+    "csh" -> "application/x-csh"
+    "css" -> "text/css"
+    "csv" -> "text/csv"
+    "doc" -> "application/msword"
+    "docx" ->
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    "eot" -> "application/vnd.ms-fontobject"
+    "eps" -> "application/postscript"
+    "epub" -> "application/epub+zip"
+    "gif" -> "image/gif"
+    "gz" -> "application/gzip"
+    "heic" -> "image/heic"
+    "heif" -> "image/heif"
+    "htm" -> "text/html"
+    "html" -> "text/html"
+    "ico" -> "image/vnd.microsoft.icon"
+    "ics" -> "text/calendar"
+    "jar" -> "application/java-archive"
+    "jpeg" -> "image/jpeg"
+    "jpg" -> "image/jpeg"
+    "js" -> "application/javascript"
+    "json" -> "application/json"
+    "json-api" -> "application/vnd.api+json"
+    "json-patch" -> "application/json-patch+json"
+    "jsonld" -> "application/ld+json"
+    "jxl" -> "image/jxl"
+    "markdown" -> "text/markdown"
+    "md" -> "text/markdown"
+    "mdb" -> "application/x-msaccess"
+    "mid" -> "audio/midi"
+    "midi" -> "audio/midi"
+    "mjs" -> "text/javascript"
+    "mov" -> "video/quicktime"
+    "mp3" -> "audio/mpeg"
+    "mp4" -> "video/mp4"
+    "mpeg" -> "video/mpeg"
+    "mpg" -> "video/mpeg"
+    "mpkg" -> "application/vnd.apple.installer+xml"
+    "odp" -> "application/vnd.oasis.opendocument.presentation"
+    "ods" -> "application/vnd.oasis.opendocument.spreadsheet"
+    "odt" -> "application/vnd.oasis.opendocument.text"
+    "oga" -> "audio/ogg"
+    "ogv" -> "video/ogg"
+    "ogx" -> "application/ogg"
+    "opus" -> "audio/opus"
+    "otf" -> "font/otf"
+    "pdf" -> "application/pdf"
+    "php" -> "application/x-httpd-php"
+    "png" -> "image/png"
+    "ppt" -> "application/vnd.ms-powerpoint"
+    "pptx" ->
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    "ps" -> "application/postscript"
+    "psd" -> "image/vnd.adobe.photoshop"
+    "rar" -> "application/vnd.rar"
+    "rss" -> "application/rss+xml"
+    "rtf" -> "application/rtf"
+    "sce" -> "application/vnd.etsi.asic-e+zip"
+    "scs" -> "application/vnd.etsi.asic-s+zip"
+    "sh" -> "application/x-sh"
+    "svg" -> "image/svg+xml"
+    "svgz" -> "image/svg+xml"
+    "swf" -> "application/x-shockwave-flash"
+    "tar" -> "application/x-tar"
+    "text" -> "text/plain"
+    "tif" -> "image/tiff"
+    "tiff" -> "image/tiff"
+    "ts" -> "video/mp2t"
+    "ttf" -> "font/ttf"
+    "txt" -> "text/plain"
+    "vsd" -> "application/vnd.visio"
+    "wasm" -> "application/wasm"
+    "wav" -> "audio/wav"
+    "weba" -> "audio/webm"
+    "webm" -> "video/webm"
+    "webmanifest" -> "application/manifest+json"
+    "webp" -> "image/webp"
+    "wmv" -> "video/x-ms-wmv"
+    "woff" -> "font/woff"
+    "woff2" -> "font/woff2"
+    "xhtml" -> "application/xhtml+xml"
+    "xls" -> "application/vnd.ms-excel"
+    "xlsx" ->
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    "xml" -> "application/xml"
+    "xul" -> "application/vnd.mozilla.xul+xml"
+    "zip" -> "application/zip"
+    _ -> "application/octet-stream"
+  }
+}
+
+//
 // Middleware
 //
 
@@ -370,14 +591,82 @@ pub fn log_requests(req: Request, service: fn() -> Response) -> Response {
   response
 }
 
+// TODO: test
+// TODO: document
+// TODO: remove requirement for preceeding slash on prefix
+pub fn serve_static(
+  req: Request,
+  under prefix: String,
+  from directory: String,
+  next service: fn() -> Response,
+) -> Response {
+  case req.method, string.starts_with(req.path, prefix) {
+    http.Get, True -> {
+      let path =
+        req.path
+        |> string.drop_left(string.length(prefix))
+        |> string.replace(each: "..", with: "")
+        |> string.replace(each: "//", with: "/")
+        |> string.append(directory, _)
+
+      let mime_type =
+        req.path
+        |> string.split(on: ".")
+        |> list.last
+        |> result.unwrap("")
+        |> extension_to_mime_type
+
+      // TODO: better check for file existence.
+      case file_info(path) {
+        Error(_) -> service()
+        Ok(_) ->
+          response.new(200)
+          |> response.set_header("content-type", mime_type)
+          |> response.set_body(File(path, mime_type))
+      }
+    }
+    _, _ -> service()
+  }
+}
+
+@external(erlang, "file", "read_file_info")
+fn file_info(path: String) -> Result(Dynamic, Dynamic)
+
 //
 // Testing
 //
 
 // TODO: test
 // TODO: document
+// TODO: chunk the body
 pub fn test_connection(body: BitString) -> Connection {
   make_connection(fn(_size) {
     Ok(Chunk(body, fn(_size) { Ok(ReadingFinished) }))
   })
+}
+
+// TODO: test
+// TODO: document
+pub fn body_to_string_builder(body: ResponseBody) -> StringBuilder {
+  case body {
+    Empty -> string_builder.new()
+    Text(text) -> text
+    File(path, _) -> {
+      let assert Ok(contents) = simplifile.read(path)
+      string_builder.from_string(contents)
+    }
+  }
+}
+
+// TODO: test
+// TODO: document
+pub fn body_to_bit_builder(body: ResponseBody) -> BitBuilder {
+  case body {
+    Empty -> bit_builder.new()
+    Text(text) -> bit_builder.from_string_builder(text)
+    File(path, _) -> {
+      let assert Ok(contents) = simplifile.read_bits(path)
+      bit_builder.from_bit_string(contents)
+    }
+  }
 }
