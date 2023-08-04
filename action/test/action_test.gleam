@@ -4,7 +4,7 @@ import action/router
 import action/web.{Context}
 import action/database
 import gleam/string
-import gleam/http/request.{Request}
+import gleam/http/request
 import gleam/http.{Get, Method, Post}
 import gleam/string_builder
 import framework
@@ -20,11 +20,11 @@ pub fn test_context(next: fn(Context) -> t) -> t {
 }
 
 // TODO: move this to a helper module
-pub fn request(method: Method, path: String) -> Request(BitString) {
+pub fn request(method: Method, path: String) -> framework.Request {
   request.new()
   |> request.set_method(method)
   |> request.set_path(path)
-  |> request.set_body(<<>>)
+  |> request.set_body(framework.test_connection(<<>>))
 }
 
 // TODO: move this to a helper module

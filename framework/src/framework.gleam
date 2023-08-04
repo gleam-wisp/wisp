@@ -1,3 +1,25 @@
+// - [ ] Test helpers
+// - [ ] Body reading
+//   - [ ] Form data
+//   - [ ] Multipart
+//   - [ ] Json
+//   - [ ] String
+//   - [ ] Bit string
+// - [ ] Body writing
+//   - [x] Html
+//   - [x] Json
+// - [ ] Static files
+// - [ ] Cookies
+//   - [ ] Signed cookies
+// - [ ] Secret keys
+//   - [ ] Key rotation
+// - [ ] Sessions
+// - [ ] Flash messages
+// - [ ] Websockets
+// - [ ] CSRF
+// - [ ] Project generators
+// - [ ] Exception recovery
+
 import gleam/string_builder.{StringBuilder}
 import gleam/bit_builder.{BitBuilder}
 import gleam/bit_string
@@ -15,22 +37,27 @@ import mist
 // Running the server
 //
 
+// TODO: test
+// TODO: document
 pub fn mist_service(
   service: fn(Request) -> Response,
 ) -> fn(HttpRequest(mist.Connection)) -> HttpResponse(mist.ResponseData) {
   fn(request: HttpRequest(_)) {
-    let connection =
-      Connection(
-        reader: mist_body_reader(request),
-        max_body_size: 8_000_000,
-        max_files_size: 32_000_000,
-        read_chunk_size: 1_000_000,
-      )
+    let connection = make_connection(mist_body_reader(request))
     request
     |> request.set_body(connection)
     |> service
     |> mist_response
   }
+}
+
+fn make_connection(body_reader: Reader) -> Connection {
+  Connection(
+    reader: body_reader,
+    max_body_size: 8_000_000,
+    max_files_size: 32_000_000,
+    read_chunk_size: 1_000_000,
+  )
 }
 
 fn mist_body_reader(request: HttpRequest(mist.Connection)) -> Reader {
@@ -67,14 +94,14 @@ fn mist_response(response: Response) -> HttpResponse(mist.ResponseData) {
 // Responses
 //
 
-pub type Body {
+pub type ResponseBody {
   Empty
   Text(StringBuilder)
 }
 
-/// An alias for a HTTP response containing a `Body`.
+/// An alias for a HTTP response containing a `ResponseBody`.
 pub type Response =
-  HttpResponse(Body)
+  HttpResponse(ResponseBody)
 
 // TODO: test
 // TODO: document
@@ -120,7 +147,7 @@ pub fn entity_too_large() -> Response {
 
 // TODO: test
 // TODO: document
-pub fn body_to_string_builder(body: Body) -> StringBuilder {
+pub fn body_to_string_builder(body: ResponseBody) -> StringBuilder {
   case body {
     Empty -> string_builder.new()
     Text(text) -> text
@@ -129,7 +156,7 @@ pub fn body_to_string_builder(body: Body) -> StringBuilder {
 
 // TODO: test
 // TODO: document
-pub fn body_to_bit_builder(body: Body) -> BitBuilder {
+pub fn body_to_bit_builder(body: ResponseBody) -> BitBuilder {
   case body {
     Empty -> bit_builder.new()
     Text(text) -> bit_builder.from_string_builder(text)
@@ -246,6 +273,7 @@ pub fn require_string_body(
 // TODO: document
 // TODO: note you probably want a `require_` function
 // TODO: note it'll hang if you call it twice
+// TODO: note it respects the max body size
 fn read_entire_body(request: Request) -> Result(BitString, Nil) {
   let connection = request.body
   read_body_loop(
@@ -297,4 +325,16 @@ pub fn require(
     Ok(value) -> next(value)
     Error(_) -> bad_request()
   }
+}
+
+//
+// Testing
+//
+
+// TODO: test
+// TODO: document
+pub fn test_connection(body: BitString) -> Connection {
+  make_connection(fn(_size) {
+    Ok(Chunk(body, fn(_size) { Ok(ReadingFinished) }))
+  })
 }
