@@ -9,9 +9,9 @@ pub type Context {
 
 pub fn middleware(req: Request, service: fn(Request) -> Response) -> Response {
   let req = framework.method_override(req)
+  use <- framework.log_requests(req)
   use <- serve_default_responses
   use <- framework.rescue_crashes
-
   service(req)
 }
 
@@ -37,6 +37,11 @@ fn serve_default_responses(service: fn() -> Response) -> Response {
 
     413 ->
       h("h1", [], [text("Request entity too large")])
+      |> htmb.render_page(doctype: "html")
+      |> framework.html_body(response, _)
+
+    500 ->
+      h("h1", [], [text("Internal server error")])
       |> htmb.render_page(doctype: "html")
       |> framework.html_body(response, _)
 

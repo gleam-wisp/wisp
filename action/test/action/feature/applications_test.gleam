@@ -1,6 +1,6 @@
 import gleeunit/should
-import action/feature/applications.{NextStep}
-import action/feature/applications/form
+import action/applications.{NextStep}
+import action/applications/form
 
 pub fn next_ready_test() {
   applications.step_initial

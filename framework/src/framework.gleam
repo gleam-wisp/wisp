@@ -32,6 +32,8 @@ import gleam/list
 import gleam/result
 import gleam/string
 import gleam/uri
+import gleam/io
+import gleam/int
 import mist
 
 //
@@ -338,11 +340,34 @@ pub fn require(
 // Middleware
 //
 
+// TODO: test
+// TODO: document
 pub fn rescue_crashes(service: fn() -> Response) -> Response {
   case erlang.rescue(service) {
     Ok(response) -> response
-    Error(_) -> internal_server_error()
+    Error(error) -> {
+      // TODO: log the error
+      io.debug(error)
+      internal_server_error()
+    }
   }
+}
+
+// TODO: test
+// TODO: document
+// TODO: real implementation that uses the logger
+pub fn log_requests(req: Request, service: fn() -> Response) -> Response {
+  let response = service()
+  [
+    int.to_string(response.status),
+    " ",
+    string.uppercase(http.method_to_string(req.method)),
+    " ",
+    req.path,
+  ]
+  |> string.concat
+  |> io.println
+  response
 }
 
 //
