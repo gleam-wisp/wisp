@@ -11,7 +11,7 @@ description = "A Gleam project"
 
 [dependencies]
 gleam_stdlib = "~> 0.29"
-gleam_http = "~> 3.2"
+gleam_http = "~> 3.5"
 mist = "~> 0.13"
 simplifile = "~> 0.1"
 
