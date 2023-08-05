@@ -147,6 +147,26 @@ pub fn method_not_allowed(permitted: List(Method)) -> Response {
 }
 
 // TODO: document
+pub fn ok() -> Response {
+  HttpResponse(200, [], Empty)
+}
+
+// TODO: document
+pub fn created() -> Response {
+  HttpResponse(201, [], Empty)
+}
+
+// TODO: document
+pub fn accepted() -> Response {
+  HttpResponse(202, [], Empty)
+}
+
+// TODO: document
+pub fn no_content() -> Response {
+  HttpResponse(204, [], Empty)
+}
+
+// TODO: document
 pub fn not_found() -> Response {
   HttpResponse(404, [], Empty)
 }

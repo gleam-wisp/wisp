@@ -11,6 +11,26 @@ pub fn main() {
   gleeunit.main()
 }
 
+pub fn ok_test() {
+  wisp.ok()
+  |> should.equal(Response(200, [], wisp.Empty))
+}
+
+pub fn created_test() {
+  wisp.created()
+  |> should.equal(Response(201, [], wisp.Empty))
+}
+
+pub fn accepted_test() {
+  wisp.accepted()
+  |> should.equal(Response(202, [], wisp.Empty))
+}
+
+pub fn no_content_test() {
+  wisp.no_content()
+  |> should.equal(Response(204, [], wisp.Empty))
+}
+
 pub fn internal_server_error_test() {
   wisp.internal_server_error()
   |> should.equal(Response(500, [], wisp.Empty))
@@ -167,4 +187,22 @@ pub fn method_override_unacceptable_target_method_test() {
   request
   |> wisp.method_override
   |> should.equal(request)
+}
+
+pub fn require_method_test() {
+  {
+    let request = request.new()
+    use <- wisp.require_method(request, http.Get)
+    wisp.ok()
+  }
+  |> should.equal(wisp.ok())
+}
+
+pub fn require_method_invalid_test() {
+  {
+    let request = request.set_method(request.new(), http.Post)
+    use <- wisp.require_method(request, http.Get)
+    wisp.ok()
+  }
+  |> should.equal(wisp.method_not_allowed([http.Get]))
 }
