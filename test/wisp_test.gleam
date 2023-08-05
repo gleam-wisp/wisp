@@ -275,7 +275,7 @@ pub fn serve_static_test() {
   |> should.equal(wisp.File("./README.md"))
 }
 
-pub fn serve_static_under_has_no_preceeding_slash_test() {
+pub fn serve_static_under_has_no_trailing_slash_test() {
   let request =
     wisp.test_request(<<>>)
     |> request.set_path("/stuff/README.md")
@@ -317,4 +317,14 @@ pub fn serve_static_not_found_test() {
   }
   |> should.equal(wisp.ok())
 }
-// TODO: More tests for serve_static!
+
+pub fn serve_static_go_up_test() {
+  let request =
+    wisp.test_request(<<>>)
+    |> request.set_path("/../README.md")
+  {
+    use <- wisp.serve_static(request, under: "/stuff", from: "./src/")
+    wisp.ok()
+  }
+  |> should.equal(wisp.ok())
+}

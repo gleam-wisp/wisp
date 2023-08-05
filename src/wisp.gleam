@@ -126,6 +126,8 @@ pub fn response(status: Int) -> Response {
   HttpResponse(status, [], Empty)
 }
 
+// TODO: test
+// TODO: document
 pub fn set_body(response: Response, body: ResponseBody) -> Response {
   response
   |> response.set_body(body)
@@ -353,6 +355,9 @@ pub fn method_override(request: HttpRequest(a)) -> HttpRequest(a) {
 // TODO: don't always return entity to large. Other errors are possible, such as
 // network errors.
 // TODO: document
+// TODO: note you probably want a `require_` function
+// TODO: note it'll hang if you call it twice
+// TODO: note it respects the max body size
 pub fn require_string_body(
   request: Request,
   next: fn(String) -> Response,
@@ -363,12 +368,7 @@ pub fn require_string_body(
   }
 }
 
-// TODO: test
-// TODO: public?
-// TODO: document
-// TODO: note you probably want a `require_` function
-// TODO: note it'll hang if you call it twice
-// TODO: note it respects the max body size
+// Should we make this public?
 fn read_entire_body(request: Request) -> Result(BitString, Nil) {
   let connection = request.body
   read_body_loop(
@@ -802,9 +802,7 @@ fn join_path(a: String, b: String) -> String {
   }
 }
 
-// TODO: test
 // TODO: document
-// TODO: remove requirement for preceeding slash on prefix
 pub fn serve_static(
   req: Request,
   under prefix: String,
@@ -819,8 +817,6 @@ pub fn serve_static(
         path
         |> string.drop_left(string.length(prefix))
         |> string.replace(each: "..", with: "")
-        |> string.replace(each: "//", with: "/")
-        |> remove_preceeding_slashes
         |> join_path(directory, _)
 
       let mime_type =
