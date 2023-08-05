@@ -123,13 +123,11 @@ pub type ResponseBody {
 pub type Response =
   HttpResponse(ResponseBody)
 
-// TODO: test
 // TODO: document
 pub fn html_response(html: StringBuilder, status: Int) -> Response {
-  HttpResponse(status, [#("Content-Type", "text/html")], Text(html))
+  HttpResponse(status, [#("content-type", "text/html")], Text(html))
 }
 
-// TODO: test
 // TODO: document
 pub fn html_body(response: Response, html: StringBuilder) -> Response {
   response
@@ -190,25 +188,37 @@ type Read {
   ReadingFinished
 }
 
-// TODO: test
 // TODO: document
 pub fn set_max_body_size(request: Request, size: Int) -> Request {
   Connection(..request.body, max_body_size: size)
   |> request.set_body(request, _)
 }
 
-// TODO: test
+// TODO: document
+pub fn get_max_body_size(request: Request) -> Int {
+  request.body.max_body_size
+}
+
 // TODO: document
 pub fn set_max_files_size(request: Request, size: Int) -> Request {
   Connection(..request.body, max_files_size: size)
   |> request.set_body(request, _)
 }
 
-// TODO: test
+// TODO: document
+pub fn get_max_files_size(request: Request) -> Int {
+  request.body.max_files_size
+}
+
 // TODO: document
 pub fn set_read_chunk_size(request: Request, size: Int) -> Request {
   Connection(..request.body, read_chunk_size: size)
   |> request.set_body(request, _)
+}
+
+// TODO: document
+pub fn get_read_chunk_size(request: Request) -> Int {
+  request.body.read_chunk_size
 }
 
 pub type Request =
