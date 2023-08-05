@@ -1,10 +1,11 @@
+import gleam/http
+import gleam/http/request
+import gleam/http/response.{Response}
+import gleam/list
+import gleam/string_builder
 import gleeunit
 import gleeunit/should
 import wisp
-import gleam/http
-import gleam/http/response.{Response}
-import gleam/http/request
-import gleam/string_builder
 
 pub fn main() {
   gleeunit.main()
@@ -104,4 +105,66 @@ pub fn set_get_read_chunk_size_test() {
   |> wisp.set_read_chunk_size(10)
   |> wisp.get_read_chunk_size
   |> should.equal(10)
+}
+
+pub fn path_segments_test() {
+  request.new()
+  |> request.set_path("/one/two/three")
+  |> wisp.path_segments
+  |> should.equal(["one", "two", "three"])
+}
+
+pub fn method_override_test() {
+  // These methods can be overridden to
+  use method <- list.each([http.Put, http.Delete, http.Patch])
+
+  let request =
+    request.new()
+    |> request.set_method(method)
+    |> request.set_query([#("_method", http.method_to_string(method))])
+  request
+  |> wisp.method_override
+  |> should.equal(request.set_method(request, method))
+}
+
+pub fn method_override_unacceptable_unoriginal_method_test() {
+  // These methods are not allowed to be overridden
+  use method <- list.each([
+    http.Head,
+    http.Put,
+    http.Delete,
+    http.Trace,
+    http.Connect,
+    http.Options,
+    http.Patch,
+    http.Other("MYSTERY"),
+  ])
+
+  let request =
+    request.new()
+    |> request.set_method(method)
+    |> request.set_query([#("_method", "DELETE")])
+  request
+  |> wisp.method_override
+  |> should.equal(request)
+}
+
+pub fn method_override_unacceptable_target_method_test() {
+  // These methods are not allowed to be overridden to
+  use method <- list.each([
+    http.Get,
+    http.Head,
+    http.Trace,
+    http.Connect,
+    http.Options,
+    http.Other("MYSTERY"),
+  ])
+
+  let request =
+    request.new()
+    |> request.set_method(http.Post)
+    |> request.set_query([#("_method", http.method_to_string(method))])
+  request
+  |> wisp.method_override
+  |> should.equal(request)
 }

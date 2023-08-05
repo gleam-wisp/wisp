@@ -237,11 +237,19 @@ pub fn require_method(
   }
 }
 
-// TODO: test
-// TODO: document
+/// Return the non-empty segments of a request path.
+/// 
+/// # Examples
+///
+/// ```gleam
+/// > request.new()
+/// > |> request.set_path("/one/two/three")
+/// > |> wisp.path_segments
+/// ["one", "two", "three"]
+/// ```
+///
 pub const path_segments = request.path_segments
 
-// TODO: test
 /// This function overrides an incoming POST request with a method given in
 /// the request's `_method` query paramerter. This is useful as web browsers
 /// typically only support GET and POST requests, but our application may
