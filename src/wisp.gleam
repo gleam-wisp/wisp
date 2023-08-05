@@ -95,11 +95,15 @@ fn mist_response(response: Response) -> HttpResponse(mist.ResponseData) {
 }
 
 fn mist_send_file(path: String) -> mist.ResponseData {
-  mist.send_file(path, offset: 0, limit: option.None)
-  |> result.lazy_unwrap(fn() {
-    // TODO: log error
-    mist.Bytes(bit_builder.new())
-  })
+  case mist.send_file(path, offset: 0, limit: option.None) {
+    Ok(body) -> body
+    Error(error) -> {
+      // TODO: log error
+      io.println("ERROR: " <> string.inspect(error))
+      // TODO: return 500
+      mist.Bytes(bit_builder.new())
+    }
+  }
 }
 
 //
@@ -291,7 +295,6 @@ pub fn get_read_chunk_size(request: Request) -> Int {
 pub type Request =
   HttpRequest(Connection)
 
-// TODO: test
 // TODO: document
 pub fn require_method(
   request: HttpRequest(t),
@@ -347,7 +350,8 @@ pub fn method_override(request: HttpRequest(a)) -> HttpRequest(a) {
   |> result.unwrap(request)
 }
 
-// TODO: test
+// TODO: don't always return entity to large. Other errors are possible, such as
+// network errors.
 // TODO: document
 pub fn require_string_body(
   request: Request,
@@ -505,7 +509,7 @@ fn or_500(result: Result(a, b)) -> Result(a, Response) {
     Ok(value) -> Ok(value)
     Error(error) -> {
       // TODO: log error
-      io.debug(error)
+      io.println("ERROR: " <> string.inspect(error))
       Error(internal_server_error())
     }
   }
@@ -613,7 +617,6 @@ fn sort_keys(pairs: List(#(String, t))) -> List(#(String, t)) {
   list.sort(pairs, fn(a, b) { string.compare(a.0, b.0) })
 }
 
-// TODO: test
 // TODO: document
 pub fn require(
   result: Result(value, error),
@@ -640,114 +643,6 @@ pub type UploadedFile {
 // MIME types
 //
 
-// TODO: test
-// TODO: move to another package
-pub fn mime_type_to_extensions(mime_type: String) -> List(String) {
-  case mime_type {
-    "application/atom+xml" -> ["atom"]
-    "application/epub+zip" -> ["epub"]
-    "application/gzip" -> ["gz"]
-    "application/java-archive" -> ["jar"]
-    "application/javascript" -> ["js"]
-    "application/json" -> ["json"]
-    "application/json-patch+json" -> ["json-patch"]
-    "application/ld+json" -> ["jsonld"]
-    "application/manifest+json" -> ["webmanifest"]
-    "application/msword" -> ["doc"]
-    "application/octet-stream" -> ["bin"]
-    "application/ogg" -> ["ogx"]
-    "application/pdf" -> ["pdf"]
-    "application/postscript" -> ["ps", "eps", "ai"]
-    "application/rss+xml" -> ["rss"]
-    "application/rtf" -> ["rtf"]
-    "application/vnd.amazon.ebook" -> ["azw"]
-    "application/vnd.api+json" -> ["json-api"]
-    "application/vnd.apple.installer+xml" -> ["mpkg"]
-    "application/vnd.etsi.asic-e+zip" -> ["asice", "sce"]
-    "application/vnd.etsi.asic-s+zip" -> ["asics", "scs"]
-    "application/vnd.mozilla.xul+xml" -> ["xul"]
-    "application/vnd.ms-excel" -> ["xls"]
-    "application/vnd.ms-fontobject" -> ["eot"]
-    "application/vnd.ms-powerpoint" -> ["ppt"]
-    "application/vnd.oasis.opendocument.presentation" -> ["odp"]
-    "application/vnd.oasis.opendocument.spreadsheet" -> ["ods"]
-    "application/vnd.oasis.opendocument.text" -> ["odt"]
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation" -> [
-      "pptx",
-    ]
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" -> [
-      "xlsx",
-    ]
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document" -> [
-      "docx",
-    ]
-    "application/vnd.rar" -> ["rar"]
-    "application/vnd.visio" -> ["vsd"]
-    "application/wasm" -> ["wasm"]
-    "application/x-7z-compressed" -> ["7z"]
-    "application/x-abiword" -> ["abw"]
-    "application/x-bzip" -> ["bz"]
-    "application/x-bzip2" -> ["bz2"]
-    "application/x-cdf" -> ["cda"]
-    "application/x-csh" -> ["csh"]
-    "application/x-freearc" -> ["arc"]
-    "application/x-httpd-php" -> ["php"]
-    "application/x-msaccess" -> ["mdb"]
-    "application/x-sh" -> ["sh"]
-    "application/x-shockwave-flash" -> ["swf"]
-    "application/x-tar" -> ["tar"]
-    "application/xhtml+xml" -> ["xhtml"]
-    "application/xml" -> ["xml"]
-    "application/zip" -> ["zip"]
-    "audio/3gpp" -> ["3gp"]
-    "audio/3gpp2" -> ["3g2"]
-    "audio/aac" -> ["aac"]
-    "audio/midi" -> ["mid", "midi"]
-    "audio/mpeg" -> ["mp3"]
-    "audio/ogg" -> ["oga"]
-    "audio/opus" -> ["opus"]
-    "audio/wav" -> ["wav"]
-    "audio/webm" -> ["weba"]
-    "font/otf" -> ["otf"]
-    "font/ttf" -> ["ttf"]
-    "font/woff" -> ["woff"]
-    "font/woff2" -> ["woff2"]
-    "image/avif" -> ["avif"]
-    "image/bmp" -> ["bmp"]
-    "image/gif" -> ["gif"]
-    "image/heic" -> ["heic"]
-    "image/heif" -> ["heif"]
-    "image/jpeg" -> ["jpg", "jpeg"]
-    "image/jxl" -> ["jxl"]
-    "image/png" -> ["png"]
-    "image/svg+xml" -> ["svg", "svgz"]
-    "image/tiff" -> ["tiff", "tif"]
-    "image/vnd.adobe.photoshop" -> ["psd"]
-    "image/vnd.microsoft.icon" -> ["ico"]
-    "image/webp" -> ["webp"]
-    "text/calendar" -> ["ics"]
-    "text/css" -> ["css"]
-    "text/csv" -> ["csv"]
-    "text/html" -> ["html", "htm"]
-    "text/javascript" -> ["js", "mjs"]
-    "text/markdown" -> ["md", "markdown"]
-    "text/plain" -> ["txt", "text"]
-    "text/xml" -> ["xml"]
-    "video/3gpp" -> ["3gp"]
-    "video/3gpp2" -> ["3g2"]
-    "video/mp2t" -> ["ts"]
-    "video/mp4" -> ["mp4"]
-    "video/mpeg" -> ["mpeg", "mpg"]
-    "video/ogg" -> ["ogv"]
-    "video/quicktime" -> ["mov"]
-    "video/webm" -> ["webm"]
-    "video/x-ms-wmv" -> ["wmv"]
-    "video/x-msvideo" -> ["avi"]
-    _ -> []
-  }
-}
-
-// TODO: test
 // TODO: move to another package
 fn extension_to_mime_type(extension: String) -> String {
   case extension {
@@ -862,14 +757,13 @@ fn extension_to_mime_type(extension: String) -> String {
 // Middleware
 //
 
-// TODO: test
 // TODO: document
 pub fn rescue_crashes(service: fn() -> Response) -> Response {
   case erlang.rescue(service) {
     Ok(response) -> response
     Error(error) -> {
       // TODO: log the error
-      io.debug(error)
+      io.println("ERROR: " <> string.inspect(error))
       internal_server_error()
     }
   }
@@ -892,6 +786,22 @@ pub fn log_requests(req: Request, service: fn() -> Response) -> Response {
   response
 }
 
+fn remove_preceeding_slashes(string: String) -> String {
+  case string {
+    "/" <> rest -> remove_preceeding_slashes(rest)
+    _ -> string
+  }
+}
+
+// TODO: replace with simplifile function when it exists
+fn join_path(a: String, b: String) -> String {
+  let b = remove_preceeding_slashes(b)
+  case string.ends_with(a, "/") {
+    True -> a <> b
+    False -> a <> "/" <> b
+  }
+}
+
 // TODO: test
 // TODO: document
 // TODO: remove requirement for preceeding slash on prefix
@@ -901,14 +811,17 @@ pub fn serve_static(
   from directory: String,
   next service: fn() -> Response,
 ) -> Response {
-  case req.method, string.starts_with(req.path, prefix) {
+  let path = remove_preceeding_slashes(req.path)
+  let prefix = remove_preceeding_slashes(prefix)
+  case req.method, string.starts_with(path, prefix) {
     http.Get, True -> {
       let path =
-        req.path
+        path
         |> string.drop_left(string.length(prefix))
         |> string.replace(each: "..", with: "")
         |> string.replace(each: "//", with: "/")
-        |> string.append(directory, _)
+        |> remove_preceeding_slashes
+        |> join_path(directory, _)
 
       let mime_type =
         req.path
@@ -972,6 +885,14 @@ pub fn test_connection(body: BitString) -> Connection {
   make_connection(fn(_size) {
     Ok(Chunk(body, fn(_size) { Ok(ReadingFinished) }))
   })
+}
+
+// TODO: better API
+// TODO: test
+// TODO: document
+pub fn test_request(body: BitString) -> Request {
+  request.new()
+  |> request.set_body(test_connection(body))
 }
 
 // TODO: test

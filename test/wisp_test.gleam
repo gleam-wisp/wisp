@@ -83,9 +83,7 @@ pub fn html_body_test() {
 }
 
 pub fn set_get_max_body_size_test() {
-  let request =
-    request.new()
-    |> request.set_body(wisp.test_connection(<<>>))
+  let request = wisp.test_request(<<>>)
 
   request
   |> wisp.get_max_body_size
@@ -202,7 +200,121 @@ pub fn require_method_invalid_test() {
   {
     let request = request.set_method(request.new(), http.Post)
     use <- wisp.require_method(request, http.Get)
-    wisp.ok()
+    panic as "should be unreachable"
   }
   |> should.equal(wisp.method_not_allowed([http.Get]))
 }
+
+pub fn require_ok_test() {
+  {
+    use x <- wisp.require(Ok(1))
+    x
+    |> should.equal(1)
+    wisp.accepted()
+  }
+  |> should.equal(wisp.accepted())
+}
+
+pub fn require_error_test() {
+  {
+    use _ <- wisp.require(Error(1))
+    panic as "should be unreachable"
+  }
+  |> should.equal(wisp.bad_request())
+}
+
+pub fn require_string_body_test() {
+  {
+    let request = wisp.test_request(<<"Hello, Joe!":utf8>>)
+    use body <- wisp.require_string_body(request)
+    body
+    |> should.equal("Hello, Joe!")
+    wisp.accepted()
+  }
+  |> should.equal(wisp.accepted())
+}
+
+pub fn require_string_body_invalid_test() {
+  {
+    let request = wisp.test_request(<<254>>)
+    use _ <- wisp.require_string_body(request)
+    panic as "should be unreachable"
+  }
+  |> should.equal(wisp.bad_request())
+}
+
+pub fn rescue_crashes_error_test() {
+  {
+    use <- wisp.rescue_crashes
+    panic as "we need to crash to test the middleware"
+  }
+  |> should.equal(wisp.internal_server_error())
+}
+
+pub fn rescue_crashes_ok_test() {
+  {
+    use <- wisp.rescue_crashes
+    wisp.ok()
+  }
+  |> should.equal(wisp.ok())
+}
+
+pub fn serve_static_test() {
+  let request =
+    wisp.test_request(<<>>)
+    |> request.set_path("/stuff/README.md")
+  let response = {
+    use <- wisp.serve_static(request, under: "/stuff", from: "./")
+    wisp.ok()
+  }
+  response.status
+  |> should.equal(200)
+  response.headers
+  |> should.equal([#("content-type", "text/markdown")])
+  response.body
+  |> should.equal(wisp.File("./README.md"))
+}
+
+pub fn serve_static_under_has_no_preceeding_slash_test() {
+  let request =
+    wisp.test_request(<<>>)
+    |> request.set_path("/stuff/README.md")
+  let response = {
+    use <- wisp.serve_static(request, under: "stuff", from: "./")
+    wisp.ok()
+  }
+  response.status
+  |> should.equal(200)
+  response.headers
+  |> should.equal([#("content-type", "text/markdown")])
+  response.body
+  |> should.equal(wisp.File("./README.md"))
+}
+
+pub fn serve_static_from_has_no_trailing_slash_test() {
+  let request =
+    wisp.test_request(<<>>)
+    |> request.set_path("/stuff/README.md")
+  let response = {
+    use <- wisp.serve_static(request, under: "stuff", from: ".")
+    wisp.ok()
+  }
+  response.status
+  |> should.equal(200)
+  response.headers
+  |> should.equal([#("content-type", "text/markdown")])
+  response.body
+  |> should.equal(wisp.File("./README.md"))
+}
+
+pub fn serve_static_not_found_test() {
+  let request =
+    wisp.test_request(<<>>)
+    |> request.set_path("/stuff/credit_card_details.txt")
+  {
+    use <- wisp.serve_static(request, under: "/stuff", from: "./")
+    wisp.ok()
+  }
+  |> should.equal(wisp.ok())
+}
+// TODO: More tests for serve_static!
