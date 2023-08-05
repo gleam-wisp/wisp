@@ -864,7 +864,10 @@ pub fn new_temporary_file(
 pub fn delete_temporary_files(
   request: Request,
 ) -> Result(Nil, simplifile.FileError) {
-  simplifile.delete_directory(request.body.temporary_directory)
+  case simplifile.delete_directory(request.body.temporary_directory) {
+    Error(simplifile.Enoent) -> Ok(Nil)
+    other -> other
+  }
 }
 
 @external(erlang, "file", "read_file_info")
