@@ -137,35 +137,32 @@ pub fn html_body(response: Response, html: StringBuilder) -> Response {
   |> response.set_header("content-type", "text/html")
 }
 
-// TODO: test
 // TODO: document
 pub fn method_not_allowed(permitted: List(Method)) -> Response {
   let allowed =
     permitted
     |> list.map(http.method_to_string)
+    |> list.sort(string.compare)
     |> string.join(", ")
+    |> string.uppercase
   HttpResponse(405, [#("allow", allowed)], Empty)
 }
 
-// TODO: test
 // TODO: document
 pub fn not_found() -> Response {
   HttpResponse(404, [], Empty)
 }
 
-// TODO: test
 // TODO: document
 pub fn bad_request() -> Response {
   HttpResponse(400, [], Empty)
 }
 
-// TODO: test
 // TODO: document
 pub fn entity_too_large() -> Response {
   HttpResponse(413, [], Empty)
 }
 
-// TODO: test
 // TODO: document
 pub fn internal_server_error() -> Response {
   HttpResponse(500, [], Empty)
