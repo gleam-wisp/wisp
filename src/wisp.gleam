@@ -453,7 +453,6 @@ pub fn get_read_chunk_size(request: Request) -> Int {
 pub type Request =
   HttpRequest(Connection)
 
-// TODO: document
 /// This middleware function ensures that the request has a specific HTTP
 /// method, returning an empty response with status code 405: Method not allowed
 /// if the method is not correct.
@@ -535,6 +534,23 @@ pub fn method_override(request: HttpRequest(a)) -> HttpRequest(a) {
 // TODO: note you probably want a `require_` function
 // TODO: note it'll hang if you call it twice
 // TODO: note it respects the max body size
+/// A middleware function which reads the entire body of the request as a string.
+/// 
+/// If the body is larger than the `max_body_size` limit then an empty response
+/// with status code 413: Entity too large will be returned to the client.
+/// 
+/// If the body is found not to be valid UTF-8 then an empty response with
+/// status code 400: Bad request will be returned to the client.
+/// 
+/// # Examples
+///
+/// ```gleam
+/// fn handle_request(request: Request) -> Response {
+///   use body <- wisp.require_string_body(request)
+///   // ...
+/// }
+/// ```
+///
 pub fn require_string_body(
   request: Request,
   next: fn(String) -> Response,
@@ -794,9 +810,24 @@ fn sort_keys(pairs: List(#(String, t))) -> List(#(String, t)) {
   list.sort(pairs, fn(a, b) { string.compare(a.0, b.0) })
 }
 
-// TODO: document
 // TODO: determine is this a good API. Perhaps the response should be
 // parameterised?
+/// A middleware function which returns an empty response with the status code
+/// 400: Bad request if the result is an error.
+/// 
+/// This function is similar to the `try` function of the `gleam/result` module,
+/// except returning a HTTP response rather than the error when the result is
+/// not OK.
+/// 
+/// # Example
+/// 
+/// ```gleam
+/// fn handle_request(request: Request) -> Response {
+///   use value <- wisp.request(result_returning_function())
+///   // ...
+/// }
+/// ```
+/// 
 pub fn require(
   result: Result(value, error),
   next: fn(value) -> Response,
