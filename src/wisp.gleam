@@ -1,31 +1,11 @@
-// - [ ] Test helpers
-// - [ ] Body reading
-//   - [ ] Form data
-//   - [ ] Multipart
-//   - [ ] Json
-//   - [x] String
-//   - [x] Bit string
-// - [ ] Body writing
-//   - [x] Html
-//   - [x] Json
-// - [x] Static files
-// - [ ] Cookies
-//   - [ ] Signed cookies
-// - [ ] Secret keys
-//   - [ ] Key rotation
-// - [ ] Sessions
-// - [ ] Flash messages
-// - [ ] Websockets
-// - [ ] CSRF
-// - [ ] Project generators
-// - [x] Exception recovery
-
 import gleam/string_builder.{StringBuilder}
 import gleam/bit_builder.{BitBuilder}
 import gleam/bit_string
 import gleam/erlang
 import gleam/dynamic.{Dynamic}
+import gleam/base
 import gleam/bool
+import gleam/crypto
 import gleam/http.{Method}
 import gleam/http/request.{Request as HttpRequest}
 import gleam/http/response.{Response as HttpResponse}
@@ -213,13 +193,16 @@ pub opaque type Connection {
 }
 
 fn make_connection(body_reader: Reader) -> Connection {
+  // TODO: remove this once simplifile has mkdir -p
+  let assert Ok(_) = make_directory("./tmp")
+  // TODO: replace `./tmp` with appropriate for the OS
+  let temporary_directory = join_path("./tmp/", random_slug())
   Connection(
     reader: body_reader,
     max_body_size: 8_000_000,
     max_files_size: 32_000_000,
     read_chunk_size: 1_000_000,
-    // TODO: replace with random string in suitable location
-    temporary_directory: "./tmp/123",
+    temporary_directory: temporary_directory,
   )
 }
 
@@ -843,6 +826,14 @@ pub fn serve_static(
 // File uploads
 //
 
+// TODO: remove once simplifile has this
+fn make_directory(path: String) -> Result(Nil, simplifile.FileError) {
+  case simplifile.make_directory(path) {
+    Error(simplifile.Eexist) -> Ok(Nil)
+    other -> other
+  }
+}
+
 // TODO: test
 // TODO: document
 // TODO: document that you need to call `remove_temporary_files` when you're
@@ -851,27 +842,43 @@ pub fn new_temporary_file(
   request: Request,
 ) -> Result(String, simplifile.FileError) {
   let directory = request.body.temporary_directory
-  use _ <- result.try(simplifile.make_directory(directory))
-  // TODO: use a random filename
-  let path = directory <> "file.tmp"
+  use _ <- result.try(make_directory(directory))
+  let path = join_path(directory, random_slug())
   // TODO: use create_file when simplifile has it
   use _ <- result.map(simplifile.write_bits(<<>>, to: path))
   path
 }
+
+// TODO: remove this once simplifile can delete directorie that have contents
+@external(erlang, "file", "del_dir_r")
+fn del_dir(path: String) -> Dynamic
 
 // TODO: test
 // TODO: document
 pub fn delete_temporary_files(
   request: Request,
 ) -> Result(Nil, simplifile.FileError) {
-  case simplifile.delete_directory(request.body.temporary_directory) {
-    Error(simplifile.Enoent) -> Ok(Nil)
-    other -> other
-  }
+  del_dir(request.body.temporary_directory)
+  // case io.debug(simplifile.delete_directory(request.body.temporary_directory)) {
+  //   Error(simplifile.Enoent) -> Ok(Nil)
+  //   other -> other
+  // }
+  Ok(Nil)
 }
 
 @external(erlang, "file", "read_file_info")
 fn file_info(path: String) -> Result(Dynamic, Dynamic)
+
+//
+// Cryptography
+//
+
+pub const strong_random_bytes = crypto.strong_random_bytes
+
+fn random_slug() -> String {
+  strong_random_bytes(16)
+  |> base.url_encode64(False)
+}
 
 //
 // Testing

@@ -5,6 +5,7 @@ import gleam/list
 import gleam/string_builder
 import gleeunit
 import gleeunit/should
+import simplifile
 import wisp
 
 pub fn main() {
@@ -327,4 +328,46 @@ pub fn serve_static_go_up_test() {
     wisp.ok()
   }
   |> should.equal(wisp.ok())
+}
+
+pub fn temporary_file_test() {
+  // Create tmp files for a first request
+  let request1 = wisp.test_request(<<>>)
+  let assert Ok(request1_file1) = wisp.new_temporary_file(request1)
+  let assert Ok(request1_file2) = wisp.new_temporary_file(request1)
+
+  // The files exist
+  request1_file1
+  |> should.not_equal(request1_file2)
+  let assert Ok(_) = simplifile.read(request1_file1)
+  let assert Ok(_) = simplifile.read(request1_file2)
+
+  // Create tmp files for a second request
+  let request2 = wisp.test_request(<<>>)
+  let assert Ok(request2_file1) = wisp.new_temporary_file(request2)
+  let assert Ok(request2_file2) = wisp.new_temporary_file(request2)
+
+  // The files exist
+  request2_file1
+  |> should.not_equal(request1_file2)
+  let assert Ok(_) = simplifile.read(request2_file1)
+  let assert Ok(_) = simplifile.read(request2_file2)
+
+  // Delete the files for the first request
+  let assert Ok(_) = wisp.delete_temporary_files(request1)
+
+  // They no longer exist
+  let assert Error(simplifile.Enoent) = simplifile.read(request1_file1)
+  let assert Error(simplifile.Enoent) = simplifile.read(request1_file2)
+
+  // The files for the second request still exist
+  let assert Ok(_) = simplifile.read(request2_file1)
+  let assert Ok(_) = simplifile.read(request2_file2)
+
+  // Delete the files for the first request
+  let assert Ok(_) = wisp.delete_temporary_files(request2)
+
+  // They no longer exist
+  let assert Error(simplifile.Enoent) = simplifile.read(request2_file1)
+  let assert Error(simplifile.Enoent) = simplifile.read(request2_file2)
 }
