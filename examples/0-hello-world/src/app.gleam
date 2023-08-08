@@ -16,7 +16,7 @@ pub fn middleware(
   service: fn(wisp.Request) -> wisp.Response,
 ) -> wisp.Response {
   let req = wisp.method_override(req)
-  use <- wisp.log_requests(req)
+  use <- wisp.log_request(req)
   use <- wisp.rescue_crashes
 
   service(req)
