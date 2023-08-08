@@ -90,43 +90,114 @@ fn mist_send_file(path: String) -> mist.ResponseData {
 // Responses
 //
 
-pub type ResponseBody {
-  Empty
-  // TODO: remove content type
-  File(path: String)
+/// The body of a HTTP response, to be sent to the client.
+///
+pub type Body {
+  /// A body of unicode text.
+  ///
+  /// The body is represented using a `StringBuilder`. If you have a `String`
+  /// you can use the `string_builder.from_string` function to convert it.
+  ///
   Text(StringBuilder)
+  /// A body of the contents of a file.
+  ///
+  /// This will be sent efficiently using the `send_file` function of the
+  /// underlying HTTP server. The file will not be read into memory so it is
+  /// safe to send large files this way.
+  ///
+  File(path: String)
+  /// An empty body. This may be returned by the `require_*` middleware
+  /// functions in the event of a failure, invalid request, or other situation
+  /// in which the request cannot be processed.
+  ///
+  /// Your application may wish to use a middleware to provide default responses
+  /// in place of any with an empty body.
+  ///
+  Empty
 }
 
-/// An alias for a HTTP response containing a `ResponseBody`.
+/// An alias for a HTTP response containing a `Body`.
 pub type Response =
-  HttpResponse(ResponseBody)
+  HttpResponse(Body)
 
-// TODO: document
+/// Create an empty response with the given status code.
+/// 
+/// # Examples
+/// 
+/// ```gleam
+/// response(200)
+/// // -> Response(200, [], Empty)
+/// ```
+/// 
 pub fn response(status: Int) -> Response {
   HttpResponse(status, [], Empty)
 }
 
-// TODO: test
-// TODO: document
-pub fn set_body(response: Response, body: ResponseBody) -> Response {
+/// Set the body of a response.
+/// 
+/// # Examples
+/// 
+/// ```gleam
+/// response(200)
+/// |> set_body(File("/tmp/myfile.txt"))
+/// // -> Response(200, [], File("/tmp/myfile.txt"))
+/// ```
+/// 
+pub fn set_body(response: Response, body: Body) -> Response {
   response
   |> response.set_body(body)
 }
 
-// TODO: test
-// TODO: document
+/// Create a HTML response.
+/// 
+/// The body is expected to be valid HTML, though this is not validated.
+/// The `content-type` header will be set to `text/html`.
+/// 
+/// # Examples
+/// 
+/// ```gleam
+/// let body = string_builder.from_string("<h1>Hello, Joe!</h1>")
+/// html_response(body, 200)
+/// // -> Response(200, [#("content-type", "text/html")], Text(body))
+/// ```
+/// 
 pub fn html_response(html: StringBuilder, status: Int) -> Response {
   HttpResponse(status, [#("content-type", "text/html")], Text(html))
 }
 
-// TODO: document
+/// Set the body of a response to a given HTML document, and set the
+/// `content-type` header to `text/html`.
+/// 
+/// The body is expected to be valid HTML, though this is not validated.
+/// 
+/// # Examples
+/// 
+/// ```gleam
+/// let body = string_builder.from_string("<h1>Hello, Joe!</h1>")
+/// response(201)
+/// |> html_body(body)
+/// // -> Response(201, [#("content-type", "text/html")], Text(body))
+/// ```
+/// 
 pub fn html_body(response: Response, html: StringBuilder) -> Response {
   response
   |> response.set_body(Text(html))
   |> response.set_header("content-type", "text/html")
 }
 
-// TODO: document
+/// Create an empty response with status code 405: Method Not Allowed. Use this
+/// when a request does not have an appropriate method to be handled.
+///
+/// The `allow` header will be set to a comma separated list of the permitted
+/// methods.
+///
+/// # Examples
+///
+/// ```gleam
+/// method_not_allowed([Get, Post])
+/// // -> Response(405, [#("allow", "GET, POST")], Empty)
+/// ```
+///
 pub fn method_not_allowed(permitted: List(Method)) -> Response {
   let allowed =
     permitted
@@ -137,42 +208,106 @@ pub fn method_not_allowed(permitted: List(Method)) -> Response {
   HttpResponse(405, [#("allow", allowed)], Empty)
 }
 
-// TODO: document
+/// Create an empty response with status code 200: OK.
+///
+/// # Examples
+///
+/// ```gleam
+/// ok()
+/// // -> Response(200, [], Empty)
+/// ```
+///
 pub fn ok() -> Response {
   HttpResponse(200, [], Empty)
 }
 
-// TODO: document
+/// Create an empty response with status code 201: Created.
+///
+/// # Examples
+///
+/// ```gleam
+/// created()
+/// // -> Response(201, [], Empty)
+/// ```
+///
 pub fn created() -> Response {
   HttpResponse(201, [], Empty)
 }
 
-// TODO: document
+/// Create an empty response with status code 202: Accepted.
+///
+/// # Examples
+///
+/// ```gleam
+/// created()
+/// // -> Response(202, [], Empty)
+/// ```
+///
 pub fn accepted() -> Response {
   HttpResponse(202, [], Empty)
 }
 
-// TODO: document
+/// Create an empty response with status code 204: No content.
+///
+/// # Examples
+///
+/// ```gleam
+/// no_content()
+/// // -> Response(204, [], Empty)
+/// ```
+///
 pub fn no_content() -> Response {
   HttpResponse(204, [], Empty)
 }
 
-// TODO: document
+/// Create an empty response with status code 404: No content.
+///
+/// # Examples
+///
+/// ```gleam
+/// not_found()
+/// // -> Response(404, [], Empty)
+/// ```
+///
 pub fn not_found() -> Response {
   HttpResponse(404, [], Empty)
 }
 
-// TODO: document
+/// Create an empty response with status code 400: Bad request.
+///
+/// # Examples
+///
+/// ```gleam
+/// bad_request()
+/// // -> Response(400, [], Empty)
+/// ```
+///
 pub fn bad_request() -> Response {
   HttpResponse(400, [], Empty)
 }
 
-// TODO: document
+/// Create an empty response with status code 413: Entity too large.
+///
+/// # Examples
+///
+/// ```gleam
+/// entity_too_large()
+/// // -> Response(413, [], Empty)
+/// ```
+///
 pub fn entity_too_large() -> Response {
   HttpResponse(413, [], Empty)
 }
 
-// TODO: document
+/// Create an empty response with status code 500: Internal server error.
+///
+/// # Examples
+///
+/// ```gleam
+/// internal_server_error()
+/// // -> Response(500, [], Empty)
+/// ```
+///
 pub fn internal_server_error() -> Response {
   HttpResponse(500, [], Empty)
 }
@@ -181,6 +316,11 @@ pub fn internal_server_error() -> Response {
 // Requests
 //
 
+/// The connection to the client for a HTTP request.
+/// 
+/// The body of the request can be read from this connection using functions
+/// such as `require_multipart_body`.
+/// 
 pub opaque type Connection {
   Connection(
     reader: Reader,
@@ -245,43 +385,88 @@ type Read {
   ReadingFinished
 }
 
-// TODO: document
+/// Set the maximum permitted size of a request body of the request in bytes.
+///
+/// If a body is larger than this size attempting to read the body will result
+/// in a response with status code 413: Entity too large will be returned to the
+/// client.
+///
+/// This limit only applies for headers and bodies that get read into memory.
+/// Part of a multipart body that contain files and so are streamed to disc
+/// instead use the `max_files_size` limit.
+///
 pub fn set_max_body_size(request: Request, size: Int) -> Request {
   Connection(..request.body, max_body_size: size)
   |> request.set_body(request, _)
 }
 
-// TODO: document
+/// Get the maximum permitted size of a request body of the request in bytes.
+/// 
 pub fn get_max_body_size(request: Request) -> Int {
   request.body.max_body_size
 }
 
-// TODO: document
+/// Set the maximum permitted size of all files uploaded by a request, in bytes.
+///
+/// If a request contains fails which are larger in total than this size
+/// then attempting to read the body will result in a response with status code
+/// 413: Entity too large will be returned to the client.
+///
+/// This limit only applies for files in a multipart body that get streamed to
+/// disc. For headers and other content that gets read into memory use the
+/// `max_files_size` limit.
+///
 pub fn set_max_files_size(request: Request, size: Int) -> Request {
   Connection(..request.body, max_files_size: size)
   |> request.set_body(request, _)
 }
 
-// TODO: document
+/// Get the maximum permitted total size of a files uploaded by a request in
+/// bytes.
+/// 
 pub fn get_max_files_size(request: Request) -> Int {
   request.body.max_files_size
 }
 
-// TODO: document
+/// The the size limit for each chunk of the request body when read from the
+/// client.
+///
+/// This value is passed to the underlying web server when reading the body and
+/// the exact size of chunks read depends on the server implementation. It most
+/// likely will read chunks smaller than this size if not yet enough data has
+/// been received from the client.
+///
 pub fn set_read_chunk_size(request: Request, size: Int) -> Request {
   Connection(..request.body, read_chunk_size: size)
   |> request.set_body(request, _)
 }
 
-// TODO: document
+/// Get the size limit for each chunk of the request body when read from the
+/// client.
+/// 
 pub fn get_read_chunk_size(request: Request) -> Int {
   request.body.read_chunk_size
 }
 
+/// A convenient alias for a HTTP request with a Wisp connection as the body.
+/// 
 pub type Request =
   HttpRequest(Connection)
 
 // TODO: document
+/// This middleware function ensures that the request has a specific HTTP
+/// method, returning an empty response with status code 405: Method not allowed
+/// if the method is not correct.
+///
+/// # Examples
+/// 
+/// ```gleam
+/// fn handle_request(request: Request) -> Response {
+///   use <- wisp.require_method(request, http.Patch)
+///   // ...
+/// }
+/// ```
+///
 pub fn require_method(
   request: HttpRequest(t),
   method: Method,
@@ -320,6 +505,14 @@ pub const path_segments = request.path_segments
 ///    <form method="POST" action="/item/1?_method=DELETE">
 ///      <button type="submit">Delete item</button>
 ///    </form>
+///
+/// # Examples
+///
+/// ```gleam
+/// fn handle_request(request: Request) -> Response {
+///   let request = wisp.method_override(request)
+///   // The method has now been overridden if appropriate
+/// }
 ///
 pub fn method_override(request: HttpRequest(a)) -> HttpRequest(a) {
   use <- bool.guard(when: request.method != http.Post, return: request)
@@ -904,7 +1097,7 @@ pub fn test_request(body: BitString) -> Request {
 
 // TODO: test
 // TODO: document
-pub fn body_to_string_builder(body: ResponseBody) -> StringBuilder {
+pub fn body_to_string_builder(body: Body) -> StringBuilder {
   case body {
     Empty -> string_builder.new()
     Text(text) -> text
@@ -917,7 +1110,7 @@ pub fn body_to_string_builder(body: ResponseBody) -> StringBuilder {
 
 // TODO: test
 // TODO: document
-pub fn body_to_bit_builder(body: ResponseBody) -> BitBuilder {
+pub fn body_to_bit_builder(body: Body) -> BitBuilder {
   case body {
     Empty -> bit_builder.new()
     Text(text) -> bit_builder.from_string_builder(text)
