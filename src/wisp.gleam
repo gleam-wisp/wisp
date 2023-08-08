@@ -193,10 +193,11 @@ pub opaque type Connection {
 }
 
 fn make_connection(body_reader: Reader) -> Connection {
+  // TODO: replace `/tmp` with appropriate for the OS
+  let prefix = "/tmp/gleam-wisp/"
   // TODO: remove this once simplifile has mkdir -p
-  let assert Ok(_) = make_directory("./tmp")
-  // TODO: replace `./tmp` with appropriate for the OS
-  let temporary_directory = join_path("./tmp/", random_slug())
+  let assert Ok(_) = make_directory(prefix)
+  let temporary_directory = join_path(prefix, random_slug())
   Connection(
     reader: body_reader,
     max_body_size: 8_000_000,
