@@ -26,14 +26,14 @@ import mist
 // TODO: test
 // TODO: document
 pub fn mist_service(
-  service: fn(Request) -> Response,
+  handler: fn(Request) -> Response,
 ) -> fn(HttpRequest(mist.Connection)) -> HttpResponse(mist.ResponseData) {
   fn(request: HttpRequest(_)) {
     let connection = make_connection(mist_body_reader(request))
     let request = request.set_body(request, connection)
     let response =
       request
-      |> service
+      |> handler
       |> mist_response
 
     // TODO: use some FFI to ensure this always happens, even if there is a crash
@@ -795,6 +795,8 @@ fn sort_keys(pairs: List(#(String, t))) -> List(#(String, t)) {
 }
 
 // TODO: document
+// TODO: determine is this a good API. Perhaps the response should be
+// parameterised?
 pub fn require(
   result: Result(value, error),
   next: fn(value) -> Response,
@@ -934,9 +936,20 @@ fn extension_to_mime_type(extension: String) -> String {
 // Middleware
 //
 
-// TODO: document
-pub fn rescue_crashes(service: fn() -> Response) -> Response {
-  case erlang.rescue(service) {
+/// A middleware function that rescues crashes and returns an empty response
+/// with status code 500: Internal server error.
+///
+/// # Examples
+///
+/// ```gleam
+/// fn handle_request(req: Request) -> Response {
+///   use <- wisp.rescue_crashes
+///   // ...
+/// }
+/// ```
+///
+pub fn rescue_crashes(handler: fn() -> Response) -> Response {
+  case erlang.rescue(handler) {
     Ok(response) -> response
     Error(error) -> {
       // TODO: log the error
@@ -947,10 +960,22 @@ pub fn rescue_crashes(service: fn() -> Response) -> Response {
 }
 
 // TODO: test
-// TODO: document
-// TODO: real implementation that uses the logger
-pub fn log_requests(req: Request, service: fn() -> Response) -> Response {
-  let response = service()
+/// A middleware function that logs details about the request and response.
+///
+/// The format used logged by this middleware may change in future versions of
+/// Wisp.
+///
+/// # Examples
+///
+/// ```gleam
+/// fn handle_request(req: Request) -> Response {
+///   use <- wisp.log_request(req)
+///   // ...
+/// }
+/// ```
+///
+pub fn log_request(req: Request, handler: fn() -> Response) -> Response {
+  let response = handler()
   [
     int.to_string(response.status),
     " ",
@@ -959,6 +984,7 @@ pub fn log_requests(req: Request, service: fn() -> Response) -> Response {
     req.path,
   ]
   |> string.concat
+  // TODO: use the logger
   |> io.println
   response
 }
@@ -979,12 +1005,40 @@ fn join_path(a: String, b: String) -> String {
   }
 }
 
-// TODO: document
+/// A middleware function that serves files from a directory, along with a
+/// suitable `content-type` header for known file extensions.
+///
+/// Files are sent using the `File` response body type, so they will be sent
+/// directly to the client from the disc, without being read into memory.
+///
+/// The `under` parameter is the request path prefix that must match for the
+/// file to be served.
+/// 
+/// | `under`   | `from`  | `request.path`     | `file`                  |
+/// |-----------|---------|--------------------|-------------------------|
+/// | `/static` | `/data` | `/static/file.txt` | `/data/file.txt`        |
+/// | ``        | `/data` | `/static/file.txt` | `/data/static/file.txt` |
+/// | `/static` | ``      | `/static/file.txt` | `file.txt`              |
+///
+/// This middleware will discard any `..` path segments in the request path to
+/// prevent the client from accessing files outside of the directory. It is
+/// advised not to serve a directory that contains your source code, application
+/// configuration, database, or other private files.
+///
+/// # Examples
+///
+/// ```gleam
+/// fn handle_request(req: Request) -> Response {
+///   use <- wisp.log_request(req)
+///   // ...
+/// }
+/// ```
+///
 pub fn serve_static(
   req: Request,
   under prefix: String,
   from directory: String,
-  next service: fn() -> Response,
+  next handler: fn() -> Response,
 ) -> Response {
   let path = remove_preceeding_slashes(req.path)
   let prefix = remove_preceeding_slashes(prefix)
@@ -1005,14 +1059,14 @@ pub fn serve_static(
 
       // TODO: better check for file existence.
       case file_info(path) {
-        Error(_) -> service()
+        Error(_) -> handler()
         Ok(_) ->
           response.new(200)
           |> response.set_header("content-type", mime_type)
           |> response.set_body(File(path))
       }
     }
-    _, _ -> service()
+    _, _ -> handler()
   }
 }
 
@@ -1031,7 +1085,7 @@ fn make_directory(path: String) -> Result(Nil, simplifile.FileError) {
 // TODO: test
 // TODO: document
 // TODO: document that you need to call `remove_temporary_files` when you're
-// done, unless you're using `mist_service` which will do it for you.
+// done, unless you're using `mist_handler` which will do it for you.
 pub fn new_temporary_file(
   request: Request,
 ) -> Result(String, simplifile.FileError) {
