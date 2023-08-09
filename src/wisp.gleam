@@ -305,6 +305,38 @@ pub fn accepted() -> Response {
   HttpResponse(202, [], Empty)
 }
 
+/// Create an empty response with status code 303: See Other, and the `location`
+/// header set to the given URL. Used to redirect the client to another page.
+///
+/// # Examples
+///
+/// ```gleam
+/// redirect(to: "https://example.com")
+/// // -> Response(303, [#("location", "https://example.com")], Empty)
+/// ```
+///
+pub fn redirect(to url: String) -> Response {
+  HttpResponse(303, [#("location", url)], Empty)
+}
+
+/// Create an empty response with status code 308: Moved Permanently, and the
+/// `location` header set to the given URL. Used to redirect the client to
+/// another page.
+///
+/// This redirect is permanent and the client is expected to cache the new
+/// location, using it for future requests.
+///
+/// # Examples
+///
+/// ```gleam
+/// moved_permanently(to: "https://example.com")
+/// // -> Response(308, [#("location", "https://example.com")], Empty)
+/// ```
+///
+pub fn moved_permanently(to url: String) -> Response {
+  HttpResponse(308, [#("location", url)], Empty)
+}
+
 /// Create an empty response with status code 204: No content.
 ///
 /// # Examples

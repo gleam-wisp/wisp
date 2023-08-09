@@ -32,6 +32,24 @@ pub fn no_content_test() {
   |> should.equal(Response(204, [], wisp.Empty))
 }
 
+pub fn redirect_test() {
+  wisp.redirect(to: "https://example.com/wibble")
+  |> should.equal(Response(
+    303,
+    [#("location", "https://example.com/wibble")],
+    wisp.Empty,
+  ))
+}
+
+pub fn moved_permanently_test() {
+  wisp.moved_permanently(to: "https://example.com/wobble")
+  |> should.equal(Response(
+    308,
+    [#("location", "https://example.com/wobble")],
+    wisp.Empty,
+  ))
+}
+
 pub fn internal_server_error_test() {
   wisp.internal_server_error()
   |> should.equal(Response(500, [], wisp.Empty))
@@ -245,6 +263,7 @@ pub fn require_string_body_invalid_test() {
 }
 
 pub fn rescue_crashes_error_test() {
+  // TODO: Determine how to silence the logger for this test.
   {
     use <- wisp.rescue_crashes
     panic as "we need to crash to test the middleware"
