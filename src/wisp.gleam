@@ -342,6 +342,20 @@ pub fn entity_too_large() -> Response {
   HttpResponse(413, [], Empty)
 }
 
+// TODO: test
+/// Create an empty response with status code 415: Unsupported media type.
+///
+/// # Examples
+///
+/// ```gleam
+/// unsupported_media_type()
+/// // -> Response(415, [], Empty)
+/// ```
+///
+pub fn unsupported_media_type() -> Response {
+  HttpResponse(415, [], Empty)
+}
+
 /// Create an empty response with status code 500: Internal server error.
 ///
 /// # Examples
@@ -633,10 +647,62 @@ fn read_body_loop(
   }
 }
 
-// TODO: make private and replace with a generic require_form function
-// TODO: test
-// TODO: document
-pub fn require_form_urlencoded_body(
+// TODO: test - urlencoded
+// TODO: test - urlencoded body invalid
+// TODO: test - multipart
+// TODO: test - multipart no boundary
+// TODO: test - multipart body invalid
+// TODO: test - files
+// TODO: test - body too big
+// TODO: test - files too big
+// TODO: test - unknown content type
+/// A middleware which extracts form data from the body of a request that is
+/// encoded as either `application/x-www-form-urlencoded` or
+/// `multipart/form-data`.
+///
+/// The `set_max_body_size`, `set_max_files_size`, and `set_read_chunk_size` can
+/// be used to configure the reading of the request body.
+///
+/// Any file uploads will streamed into temporary files on disc. These files are
+/// automatically deleted when the request handler returns, so if you wish to
+/// use them after the request has completed you will need to move them to a new
+/// location.
+///
+/// If the request does not have a recognised `content-type` header then an
+/// empty response with status code 415: Unsupported media type will be returned
+/// to the client.
+///
+/// If the request body is larger than the `max_body_size` or `max_files_size`
+/// limits then an empty response with status code 413: Entity too large will be
+/// returned to the client.
+///
+/// If the body cannot be parsed successfully then an empty response with status
+/// code 400: Bad request will be returned to the client.
+/// 
+/// # Examples
+/// 
+/// ```gleam
+/// fn handle_request(request: Request) -> Response {
+///   use form <- wisp.require_form(request)
+///   // ...
+/// }
+/// ```
+pub fn require_form(
+  request: Request,
+  next: fn(FormData) -> Response,
+) -> Response {
+  case list.key_find(request.headers, "content-type") {
+    Ok("application/x-www-form-urlencoded") ->
+      require_urlencoded_form(request, next)
+
+    Ok("multipart/form-data; boundary=" <> boundary) ->
+      require_multipart_form(request, boundary, next)
+
+    _ -> unsupported_media_type()
+  }
+}
+
+fn require_urlencoded_form(
   request: Request,
   next: fn(FormData) -> Response,
 ) -> Response {
@@ -646,10 +712,7 @@ pub fn require_form_urlencoded_body(
   next(FormData(values: pairs, files: []))
 }
 
-// TODO: make private and replace with a generic require_form function
-// TODO: test
-// TODO: document
-pub fn require_multipart_body(
+fn require_multipart_form(
   request: Request,
   boundary: String,
   next: fn(FormData) -> Response,
