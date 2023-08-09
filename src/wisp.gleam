@@ -23,8 +23,21 @@ import mist
 // Running the server
 //
 
-// TODO: test
-// TODO: document
+/// Convert a Wisp request handler into a function that can be run with the Mist
+/// web server.
+///
+/// # Examples
+///
+/// ```gleam
+/// pub fn main() {
+///   let assert Ok(_) =
+///     wisp.mist_service(handle_request)
+///     |> mist.new
+///     |> mist.port(8000)
+///     |> mist.start_http
+///   process.sleep_forever()
+/// }
+/// ```
 pub fn mist_service(
   handler: fn(Request) -> Response,
 ) -> fn(HttpRequest(mist.Connection)) -> HttpResponse(mist.ResponseData) {
@@ -838,15 +851,27 @@ pub fn require(
   }
 }
 
+/// Data parsed from form sent in a request's body.
+/// 
 pub type FormData {
   FormData(
+    /// String values of the form's fields.
     values: List(#(String, String)),
+    /// Uploaded files.
     files: List(#(String, UploadedFile)),
   )
 }
 
 pub type UploadedFile {
-  UploadedFile(file_name: String, path: String)
+  UploadedFile(
+    /// The name that was given to the file in the form.
+    /// This is user input and should not be trusted.
+    file_name: String,
+    /// The location of the file on the server.
+    /// This is a temporary file and will be deleted when the request has
+    /// finished being handled.
+    path: String,
+  )
 }
 
 //
@@ -990,7 +1015,7 @@ pub fn rescue_crashes(handler: fn() -> Response) -> Response {
   }
 }
 
-// TODO: test
+// TODO: test, somehow.
 /// A middleware function that logs details about the request and response.
 ///
 /// The format used logged by this middleware may change in future versions of
@@ -1113,10 +1138,13 @@ fn make_directory(path: String) -> Result(Nil, simplifile.FileError) {
   }
 }
 
-// TODO: test
-// TODO: document
-// TODO: document that you need to call `remove_temporary_files` when you're
-// done, unless you're using `mist_handler` which will do it for you.
+/// Create a new temporary directory for the given request.
+///
+/// If you are using the `mist_service` function or another compliant web server
+/// adapter then this file will be deleted for you when the request is complete.
+/// Otherwise you will need to call the `delete_temporary_files` function
+/// yourself.
+///
 pub fn new_temporary_file(
   request: Request,
 ) -> Result(String, simplifile.FileError) {
@@ -1132,8 +1160,12 @@ pub fn new_temporary_file(
 @external(erlang, "file", "del_dir_r")
 fn del_dir(path: String) -> Dynamic
 
-// TODO: test
-// TODO: document
+/// Delete any temporary files created for the given request.
+///
+/// If you are using the `mist_service` function or another compliant web server
+/// adapter then this file will be deleted for you when the request is complete.
+/// Otherwise you will need to call this function yourself.
+///
 pub fn delete_temporary_files(
   request: Request,
 ) -> Result(Nil, simplifile.FileError) {
@@ -1152,10 +1184,8 @@ fn file_info(path: String) -> Result(Dynamic, Dynamic)
 // Cryptography
 //
 
-pub const strong_random_bytes = crypto.strong_random_bytes
-
 fn random_slug() -> String {
-  strong_random_bytes(16)
+  crypto.strong_random_bytes(16)
   |> base.url_encode64(False)
 }
 
