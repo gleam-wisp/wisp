@@ -24,6 +24,8 @@ pub fn middleware(
 
 /// Lastly, the main function that runs the service using the Mist HTTP server.
 pub fn main() {
+  wisp.configure_logger()
+
   let assert Ok(_) =
     wisp.mist_service(handle_request)
     |> mist.new

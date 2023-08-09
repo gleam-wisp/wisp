@@ -60,10 +60,10 @@ import gleam/result
 import gleam/string
 import gleam/option.{Option}
 import gleam/uri
-import gleam/io
 import gleam/int
 import simplifile
 import mist
+import wisp/internal/logger
 
 //
 // Running the server
@@ -137,8 +137,7 @@ fn mist_send_file(path: String) -> mist.ResponseData {
   case mist.send_file(path, offset: 0, limit: option.None) {
     Ok(body) -> body
     Error(error) -> {
-      // TODO: log error
-      io.println("ERROR: " <> string.inspect(error))
+      log_error(string.inspect(error))
       // TODO: return 500
       mist.Bytes(bit_builder.new())
     }
@@ -758,8 +757,7 @@ fn or_500(result: Result(a, b)) -> Result(a, Response) {
   case result {
     Ok(value) -> Ok(value)
     Error(error) -> {
-      // TODO: log error
-      io.println("ERROR: " <> string.inspect(error))
+      log_error(string.inspect(error))
       Error(internal_server_error())
     }
   }
@@ -1053,7 +1051,7 @@ pub fn rescue_crashes(handler: fn() -> Response) -> Response {
     Ok(response) -> response
     Error(error) -> {
       // TODO: log the error
-      io.println("ERROR: " <> string.inspect(error))
+      log_error(string.inspect(error))
       internal_server_error()
     }
   }
@@ -1085,7 +1083,7 @@ pub fn log_request(req: Request, handler: fn() -> Response) -> Response {
   ]
   |> string.concat
   // TODO: use the logger
-  |> io.println
+  |> log_info
   response
 }
 
@@ -1203,6 +1201,102 @@ pub fn delete_temporary_files(
     Error(simplifile.Enoent) -> Ok(Nil)
     other -> other
   }
+}
+
+//
+// Logging
+//
+
+/// Configure the Erlang logger, setting the minimum log level to `info`, to be
+/// called when your application starts.
+/// 
+/// You may wish to use an alternative for this such as one provided by a more
+/// sophisticated logging library.
+/// 
+/// In future this function may be extended to change the output format.
+/// 
+pub fn configure_logger() -> Nil {
+  logger.configure_logger()
+}
+
+/// Log a message to the Erlang logger with the level of `emergency`.
+/// 
+/// See the [Erlang logger documentation][1] for more information.
+/// 
+/// [1]: https://www.erlang.org/doc/man/logger
+/// 
+pub fn log_emergency(message: String) -> Nil {
+  logger.log(logger.Emergency, message)
+}
+
+/// Log a message to the Erlang logger with the level of `alert`.
+/// 
+/// See the [Erlang logger documentation][1] for more information.
+/// 
+/// [1]: https://www.erlang.org/doc/man/logger
+/// 
+pub fn log_alert(message: String) -> Nil {
+  logger.log(logger.Alert, message)
+}
+
+/// Log a message to the Erlang logger with the level of `critical`.
+/// 
+/// See the [Erlang logger documentation][1] for more information.
+/// 
+/// [1]: https://www.erlang.org/doc/man/logger
+/// 
+pub fn log_critical(message: String) -> Nil {
+  logger.log(logger.Critical, message)
+}
+
+/// Log a message to the Erlang logger with the level of `error`.
+/// 
+/// See the [Erlang logger documentation][1] for more information.
+/// 
+/// [1]: https://www.erlang.org/doc/man/logger
+/// 
+pub fn log_error(message: String) -> Nil {
+  logger.log(logger.Error, message)
+}
+
+/// Log a message to the Erlang logger with the level of `warning`.
+/// 
+/// See the [Erlang logger documentation][1] for more information.
+/// 
+/// [1]: https://www.erlang.org/doc/man/logger
+/// 
+pub fn log_warning(message: String) -> Nil {
+  logger.log(logger.Warning, message)
+}
+
+/// Log a message to the Erlang logger with the level of `notice`.
+/// 
+/// See the [Erlang logger documentation][1] for more information.
+/// 
+/// [1]: https://www.erlang.org/doc/man/logger
+/// 
+pub fn log_notice(message: String) -> Nil {
+  logger.log(logger.Notice, message)
+}
+
+/// Log a message to the Erlang logger with the level of `info`.
+/// 
+/// See the [Erlang logger documentation][1] for more information.
+/// 
+/// [1]: https://www.erlang.org/doc/man/logger
+/// 
+pub fn log_info(message: String) -> Nil {
+  logger.log(logger.Info, message)
+}
+
+/// Log a message to the Erlang logger with the level of `debug`.
+/// 
+/// See the [Erlang logger documentation][1] for more information.
+/// 
+/// [1]: https://www.erlang.org/doc/man/logger
+/// 
+pub fn log_debug(message: String) -> Nil {
+  logger.log(logger.Debug, message)
 }
 
 //
