@@ -9,9 +9,9 @@ packages = [
   { name = "gleam_otp", version = "0.6.0", build_tools = ["gleam"], requirements = ["gleam_erlang", "gleam_stdlib"], otp_app = "gleam_otp", source = "hex", outer_checksum = "E31B158857E3D2AF946FE6E90E0CB21699AF226F4630E93FBEAC5DB4515F8920" },
   { name = "gleam_stdlib", version = "0.30.1", build_tools = ["gleam"], requirements = [], otp_app = "gleam_stdlib", source = "hex", outer_checksum = "704258528887F95075FFED7AAE1CCF836A9B88E3AADA2F69F9DA15815F94A4F9" },
   { name = "gleeunit", version = "0.11.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleeunit", source = "hex", outer_checksum = "1397E5C4AC4108769EE979939AC39BF7870659C5AFB714630DEEEE16B8272AD5" },
-  { name = "glisten", version = "0.8.1", build_tools = ["gleam"], requirements = ["gleam_otp", "gleam_stdlib", "gleam_erlang"], otp_app = "glisten", source = "hex", outer_checksum = "B156D92DD8508D05C7E2D54FA6EB4EC57510E70F1B156F40B0FF1589CE72095D" },
-  { name = "mist", version = "0.13.1", build_tools = ["gleam"], requirements = ["gleam_stdlib", "gleam_http", "glisten", "gleam_erlang"], otp_app = "mist", source = "hex", outer_checksum = "178EDF5F396570DD53BE2A94C8F9759072093DACB81B62CD47A620B961DB2F2D" },
-  { name = "simplifile", version = "0.1.8", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "simplifile", source = "hex", outer_checksum = "9CED66E65AF32C98AA336A65365A498DCF018D2A3D96A05D861C4005DCDE4D2D" },
+  { name = "glisten", version = "0.8.1", build_tools = ["gleam"], requirements = ["gleam_stdlib", "gleam_erlang", "gleam_otp"], otp_app = "glisten", source = "hex", outer_checksum = "B156D92DD8508D05C7E2D54FA6EB4EC57510E70F1B156F40B0FF1589CE72095D" },
+  { name = "mist", version = "0.13.1", build_tools = ["gleam"], requirements = ["gleam_erlang", "glisten", "gleam_http", "gleam_stdlib"], otp_app = "mist", source = "hex", outer_checksum = "178EDF5F396570DD53BE2A94C8F9759072093DACB81B62CD47A620B961DB2F2D" },
+  { name = "simplifile", version = "0.1.10", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "simplifile", source = "hex", outer_checksum = "263B7C7F4B29263555DEA2D30BA918425A27120CDD1E1352744EAB4D56CE01CE" },
 ]
 
 [requirements]

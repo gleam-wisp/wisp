@@ -2,7 +2,6 @@ import gleam/string_builder.{StringBuilder}
 import gleam/bit_builder.{BitBuilder}
 import gleam/bit_string
 import gleam/erlang
-import gleam/dynamic.{Dynamic}
 import gleam/base
 import gleam/bool
 import gleam/crypto
@@ -348,8 +347,6 @@ pub opaque type Connection {
 fn make_connection(body_reader: Reader) -> Connection {
   // TODO: replace `/tmp` with appropriate for the OS
   let prefix = "/tmp/gleam-wisp/"
-  // TODO: remove this once simplifile has mkdir -p
-  let assert Ok(_) = make_directory(prefix)
   let temporary_directory = join_path(prefix, random_slug())
   Connection(
     reader: body_reader,
@@ -1113,10 +1110,9 @@ pub fn serve_static(
         |> result.unwrap("")
         |> extension_to_mime_type
 
-      // TODO: better check for file existence.
-      case file_info(path) {
-        Error(_) -> handler()
-        Ok(_) ->
+      case simplifile.is_file(path) {
+        False -> handler()
+        True ->
           response.new(200)
           |> response.set_header("content-type", mime_type)
           |> response.set_body(File(path))
@@ -1130,14 +1126,6 @@ pub fn serve_static(
 // File uploads
 //
 
-// TODO: remove once simplifile has this
-fn make_directory(path: String) -> Result(Nil, simplifile.FileError) {
-  case simplifile.make_directory(path) {
-    Error(simplifile.Eexist) -> Ok(Nil)
-    other -> other
-  }
-}
-
 /// Create a new temporary directory for the given request.
 ///
 /// If you are using the `mist_service` function or another compliant web server
@@ -1149,16 +1137,11 @@ pub fn new_temporary_file(
   request: Request,
 ) -> Result(String, simplifile.FileError) {
   let directory = request.body.temporary_directory
-  use _ <- result.try(make_directory(directory))
+  use _ <- result.try(simplifile.create_directory_all(directory))
   let path = join_path(directory, random_slug())
-  // TODO: use create_file when simplifile has it
-  use _ <- result.map(simplifile.write_bits(<<>>, to: path))
+  use _ <- result.map(simplifile.create_file(path))
   path
 }
-
-// TODO: remove this once simplifile can delete directorie that have contents
-@external(erlang, "file", "del_dir_r")
-fn del_dir(path: String) -> Dynamic
 
 /// Delete any temporary files created for the given request.
 ///
@@ -1169,16 +1152,11 @@ fn del_dir(path: String) -> Dynamic
 pub fn delete_temporary_files(
   request: Request,
 ) -> Result(Nil, simplifile.FileError) {
-  del_dir(request.body.temporary_directory)
-  // case io.debug(simplifile.delete_directory(request.body.temporary_directory)) {
-  //   Error(simplifile.Enoent) -> Ok(Nil)
-  //   other -> other
-  // }
-  Ok(Nil)
+  case simplifile.delete(request.body.temporary_directory) {
+    Error(simplifile.Enoent) -> Ok(Nil)
+    other -> other
+  }
 }
-
-@external(erlang, "file", "read_file_info")
-fn file_info(path: String) -> Result(Dynamic, Dynamic)
 
 //
 // Cryptography
