@@ -577,9 +577,9 @@ Content-Disposition: form-data; name=\"two\"; filename=\"another.txt\"\r
   |> should.equal(Response(200, [], wisp.Empty))
 }
 
-pub fn handle_head_via_get_test() {
+pub fn handle_head_test() {
   let handler = fn(request, header) {
-    use request <- wisp.handle_head_via_get(request)
+    use request <- wisp.handle_head(request)
     use <- wisp.require_method(request, http.Get)
 
     list.key_find(request.headers, "x-original-method")
