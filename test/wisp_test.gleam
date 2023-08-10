@@ -12,6 +12,15 @@ pub fn main() {
   gleeunit.main()
 }
 
+fn form_handler(
+  request: wisp.Request,
+  callback: fn(wisp.FormData) -> anything,
+) -> wisp.Response {
+  use form <- wisp.require_form(request)
+  callback(form)
+  wisp.ok()
+}
+
 pub fn ok_test() {
   wisp.ok()
   |> should.equal(Response(200, [], wisp.Empty))
@@ -389,4 +398,168 @@ pub fn temporary_file_test() {
   // They no longer exist
   let assert Error(simplifile.Enoent) = simplifile.read(request2_file1)
   let assert Error(simplifile.Enoent) = simplifile.read(request2_file2)
+}
+
+pub fn urlencoded_form_test() {
+  <<"one=1&two=2":utf8>>
+  |> wisp.test_request
+  |> request.set_header("content-type", "application/x-www-form-urlencoded")
+  |> form_handler(fn(form) {
+    form
+    |> should.equal(wisp.FormData([#("one", "1"), #("two", "2")], []))
+  })
+  |> should.equal(wisp.ok())
+}
+
+pub fn urlencoded_too_big_form_test() {
+  <<"12":utf8>>
+  |> wisp.test_request
+  |> request.set_header("content-type", "application/x-www-form-urlencoded")
+  |> wisp.set_max_body_size(1)
+  |> form_handler(fn(_) { panic as "should be unreachable" })
+  |> should.equal(Response(413, [], wisp.Empty))
+}
+
+pub fn multipart_form_test() {
+  <<
+    "--theboundary\r
+Content-Disposition: form-data; name=\"one\"\r
+\r
+1\r
+--theboundary\r
+Content-Disposition: form-data; name=\"two\"\r
+\r
+2\r
+--theboundary--\r
+":utf8,
+  >>
+  |> wisp.test_request
+  |> request.set_header(
+    "content-type",
+    "multipart/form-data; boundary=theboundary",
+  )
+  |> form_handler(fn(form) {
+    form
+    |> should.equal(wisp.FormData([#("one", "1"), #("two", "2")], []))
+  })
+  |> should.equal(wisp.ok())
+}
+
+pub fn multipart_form_too_big_test() {
+  <<
+    "--theboundary\r
+Content-Disposition: form-data; name=\"one\"\r
+\r
+1\r
+--theboundary--\r
+":utf8,
+  >>
+  |> wisp.test_request
+  |> wisp.set_max_body_size(1)
+  |> request.set_header(
+    "content-type",
+    "multipart/form-data; boundary=theboundary",
+  )
+  |> form_handler(fn(_) { panic as "should be unreachable" })
+  |> should.equal(Response(413, [], wisp.Empty))
+}
+
+pub fn multipart_form_no_boundary_test() {
+  <<
+    "--theboundary\r
+Content-Disposition: form-data; name=\"one\"\r
+\r
+1\r
+--theboundary--\r
+":utf8,
+  >>
+  |> wisp.test_request
+  |> request.set_header("content-type", "multipart/form-data")
+  |> form_handler(fn(_) { panic as "should be unreachable" })
+  |> should.equal(Response(400, [], wisp.Empty))
+}
+
+pub fn multipart_form_invalid_format_test() {
+  <<"--theboundary\r\n--theboundary--\r\n":utf8>>
+  |> wisp.test_request
+  |> request.set_header(
+    "content-type",
+    "multipart/form-data; boundary=theboundary",
+  )
+  |> form_handler(fn(_) { panic as "should be unreachable" })
+  |> should.equal(Response(400, [], wisp.Empty))
+}
+
+pub fn form_unknown_content_type_test() {
+  <<"one=1&two=2":utf8>>
+  |> wisp.test_request
+  |> request.set_header("content-type", "text/form")
+  |> form_handler(fn(_) { panic as "should be unreachable" })
+  |> should.equal(Response(415, [], wisp.Empty))
+}
+
+pub fn multipart_form_with_files_test() {
+  <<
+    "--theboundary\r
+Content-Disposition: form-data; name=\"one\"\r
+\r
+1\r
+--theboundary\r
+Content-Disposition: form-data; name=\"two\"; filename=\"file.txt\"\r
+\r
+file contents\r
+--theboundary--\r
+":utf8,
+  >>
+  |> wisp.test_request
+  |> request.set_header(
+    "content-type",
+    "multipart/form-data; boundary=theboundary",
+  )
+  |> form_handler(fn(form) {
+    let assert [#("one", "1")] = form.values
+    let assert [#("two", wisp.UploadedFile("file.txt", path))] = form.files
+    let assert Ok("file contents") = simplifile.read(path)
+  })
+  |> should.equal(wisp.ok())
+}
+
+pub fn multipart_form_files_too_big_test() {
+  let test = fn(limit, callback) {
+    <<
+      "--theboundary\r
+Content-Disposition: form-data; name=\"two\"; filename=\"file.txt\"\r
+\r
+12\r
+--theboundary\r
+Content-Disposition: form-data; name=\"two\"\r
+\r
+this one isn't a file. If it was it would use the entire quota.\r
+--theboundary\r
+Content-Disposition: form-data; name=\"two\"; filename=\"another.txt\"\r
+\r
+34\r
+--theboundary--\r
+":utf8,
+    >>
+    |> wisp.test_request
+    |> wisp.set_max_files_size(limit)
+    |> request.set_header(
+      "content-type",
+      "multipart/form-data; boundary=theboundary",
+    )
+    |> form_handler(callback)
+  }
+
+  test(1, fn(_) { panic as "should be unreachable for limit of 1" })
+  |> should.equal(Response(413, [], wisp.Empty))
+
+  test(2, fn(_) { panic as "should be unreachable for limit of 2" })
+  |> should.equal(Response(413, [], wisp.Empty))
+
+  test(3, fn(_) { panic as "should be unreachable for limit of 3" })
+  |> should.equal(Response(413, [], wisp.Empty))
+
+  test(4, fn(_) { Nil })
+  |> should.equal(Response(200, [], wisp.Empty))
 }
