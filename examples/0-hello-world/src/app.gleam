@@ -32,7 +32,7 @@ pub fn main() {
   let secret_key_base = wisp.random_string(64)
 
   let assert Ok(_) =
-    wisp.mist_service(handle_request)
+    wisp.mist_service(handle_request, secret_key_base)
     |> mist.new
     |> mist.port(8000)
     |> mist.start_http

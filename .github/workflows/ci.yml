@@ -20,3 +20,6 @@ jobs:
       - run: gleam format --check src test
       - run: gleam deps download
       - run: gleam test
+
+      - run: gleam test
+        working-directory: examples/0-hello-world
