@@ -11,6 +11,7 @@ import gleeunit
 import gleeunit/should
 import simplifile
 import wisp
+import wisp/testing
 
 pub fn main() {
   gleeunit.main()
@@ -104,9 +105,9 @@ pub fn html_response_test() {
   |> should.equal(200)
   response.headers
   |> should.equal([#("content-type", "text/html")])
-  response.body
-  |> wisp.body_to_string_builder
-  |> should.equal(body)
+  response
+  |> testing.string_body
+  |> should.equal("Hello, world!")
 }
 
 pub fn html_body_test() {
@@ -118,9 +119,9 @@ pub fn html_body_test() {
   |> should.equal(405)
   response.headers
   |> should.equal([#("allow", "GET"), #("content-type", "text/html")])
-  response.body
-  |> wisp.body_to_string_builder
-  |> should.equal(body)
+  response
+  |> testing.string_body
+  |> should.equal("Hello, world!")
 }
 
 pub fn random_string_test() {
@@ -140,13 +141,13 @@ pub fn random_string_test() {
 }
 
 pub fn set_get_secret_key_base_test() {
-  let request = wisp.test_request(<<>>)
+  let request = testing.get("/", [])
   let valid = wisp.random_string(64)
   let too_short = wisp.random_string(63)
 
   request
   |> wisp.get_secret_key_base
-  |> should.equal(string.repeat("-", 64))
+  |> should.equal(testing.default_secret_key_base)
 
   request
   |> wisp.set_secret_key_base(valid)
@@ -159,7 +160,7 @@ pub fn set_get_secret_key_base_test() {
 }
 
 pub fn set_get_max_body_size_test() {
-  let request = wisp.test_request(<<>>)
+  let request = testing.get("/", [])
 
   request
   |> wisp.get_max_body_size
@@ -172,9 +173,7 @@ pub fn set_get_max_body_size_test() {
 }
 
 pub fn set_get_max_files_size_test() {
-  let request =
-    request.new()
-    |> request.set_body(wisp.test_connection(<<>>))
+  let request = testing.get("/", [])
 
   request
   |> wisp.get_max_files_size
@@ -187,9 +186,7 @@ pub fn set_get_max_files_size_test() {
 }
 
 pub fn set_get_read_chunk_size_test() {
-  let request =
-    request.new()
-    |> request.set_body(wisp.test_connection(<<>>))
+  let request = testing.get("/", [])
 
   request
   |> wisp.get_read_chunk_size
@@ -301,7 +298,7 @@ pub fn require_error_test() {
 
 pub fn require_string_body_test() {
   {
-    let request = wisp.test_request(<<"Hello, Joe!":utf8>>)
+    let request = testing.post("/", [], "Hello, Joe!")
     use body <- wisp.require_string_body(request)
     body
     |> should.equal("Hello, Joe!")
@@ -312,7 +309,7 @@ pub fn require_string_body_test() {
 
 pub fn require_string_body_invalid_test() {
   {
-    let request = wisp.test_request(<<254>>)
+    let request = testing.request(http.Post, "/", [], <<254>>)
     use _ <- wisp.require_string_body(request)
     panic as "should be unreachable"
   }
@@ -338,7 +335,7 @@ pub fn rescue_crashes_ok_test() {
 
 pub fn serve_static_test() {
   let request =
-    wisp.test_request(<<>>)
+    testing.get("/", [])
     |> request.set_path("/stuff/README.md")
   let response = {
     use <- wisp.serve_static(request, under: "/stuff", from: "./")
@@ -354,7 +351,7 @@ pub fn serve_static_test() {
 
 pub fn serve_static_under_has_no_trailing_slash_test() {
   let request =
-    wisp.test_request(<<>>)
+    testing.get("/", [])
     |> request.set_path("/stuff/README.md")
   let response = {
     use <- wisp.serve_static(request, under: "stuff", from: "./")
@@ -370,7 +367,7 @@ pub fn serve_static_under_has_no_trailing_slash_test() {
 
 pub fn serve_static_from_has_no_trailing_slash_test() {
   let request =
-    wisp.test_request(<<>>)
+    testing.get("/", [])
     |> request.set_path("/stuff/README.md")
   let response = {
     use <- wisp.serve_static(request, under: "stuff", from: ".")
@@ -386,7 +383,7 @@ pub fn serve_static_from_has_no_trailing_slash_test() {
 
 pub fn serve_static_not_found_test() {
   let request =
-    wisp.test_request(<<>>)
+    testing.get("/", [])
     |> request.set_path("/stuff/credit_card_details.txt")
   {
     use <- wisp.serve_static(request, under: "/stuff", from: "./")
@@ -397,7 +394,7 @@ pub fn serve_static_not_found_test() {
 
 pub fn serve_static_go_up_test() {
   let request =
-    wisp.test_request(<<>>)
+    testing.get("/", [])
     |> request.set_path("/../README.md")
   {
     use <- wisp.serve_static(request, under: "/stuff", from: "./src/")
@@ -408,7 +405,7 @@ pub fn serve_static_go_up_test() {
 
 pub fn temporary_file_test() {
   // Create tmp files for a first request
-  let request1 = wisp.test_request(<<>>)
+  let request1 = testing.get("/", [])
   let assert Ok(request1_file1) = wisp.new_temporary_file(request1)
   let assert Ok(request1_file2) = wisp.new_temporary_file(request1)
 
@@ -419,7 +416,7 @@ pub fn temporary_file_test() {
   let assert Ok(_) = simplifile.read(request1_file2)
 
   // Create tmp files for a second request
-  let request2 = wisp.test_request(<<>>)
+  let request2 = testing.get("/", [])
   let assert Ok(request2_file1) = wisp.new_temporary_file(request2)
   let assert Ok(request2_file2) = wisp.new_temporary_file(request2)
 
@@ -449,8 +446,7 @@ pub fn temporary_file_test() {
 }
 
 pub fn urlencoded_form_test() {
-  <<"one=1&two=2":utf8>>
-  |> wisp.test_request
+  testing.post("/", [], "one=1&two=2")
   |> request.set_header("content-type", "application/x-www-form-urlencoded")
   |> form_handler(fn(form) {
     form
@@ -460,8 +456,7 @@ pub fn urlencoded_form_test() {
 }
 
 pub fn urlencoded_too_big_form_test() {
-  <<"12":utf8>>
-  |> wisp.test_request
+  testing.post("/", [], "12")
   |> request.set_header("content-type", "application/x-www-form-urlencoded")
   |> wisp.set_max_body_size(1)
   |> form_handler(fn(_) { panic as "should be unreachable" })
@@ -469,8 +464,7 @@ pub fn urlencoded_too_big_form_test() {
 }
 
 pub fn multipart_form_test() {
-  <<
-    "--theboundary\r
+  "--theboundary\r
 Content-Disposition: form-data; name=\"one\"\r
 \r
 1\r
@@ -479,9 +473,8 @@ Content-Disposition: form-data; name=\"two\"\r
 \r
 2\r
 --theboundary--\r
-":utf8,
-  >>
-  |> wisp.test_request
+"
+  |> testing.post("/", [], _)
   |> request.set_header(
     "content-type",
     "multipart/form-data; boundary=theboundary",
@@ -494,15 +487,13 @@ Content-Disposition: form-data; name=\"two\"\r
 }
 
 pub fn multipart_form_too_big_test() {
-  <<
-    "--theboundary\r
+  "--theboundary\r
 Content-Disposition: form-data; name=\"one\"\r
 \r
 1\r
 --theboundary--\r
-":utf8,
-  >>
-  |> wisp.test_request
+"
+  |> testing.post("/", [], _)
   |> wisp.set_max_body_size(1)
   |> request.set_header(
     "content-type",
@@ -513,23 +504,21 @@ Content-Disposition: form-data; name=\"one\"\r
 }
 
 pub fn multipart_form_no_boundary_test() {
-  <<
-    "--theboundary\r
+  "--theboundary\r
 Content-Disposition: form-data; name=\"one\"\r
 \r
 1\r
 --theboundary--\r
-":utf8,
-  >>
-  |> wisp.test_request
+"
+  |> testing.post("/", [], _)
   |> request.set_header("content-type", "multipart/form-data")
   |> form_handler(fn(_) { panic as "should be unreachable" })
   |> should.equal(Response(400, [], wisp.Empty))
 }
 
 pub fn multipart_form_invalid_format_test() {
-  <<"--theboundary\r\n--theboundary--\r\n":utf8>>
-  |> wisp.test_request
+  "--theboundary\r\n--theboundary--\r\n"
+  |> testing.post("/", [], _)
   |> request.set_header(
     "content-type",
     "multipart/form-data; boundary=theboundary",
@@ -539,8 +528,8 @@ pub fn multipart_form_invalid_format_test() {
 }
 
 pub fn form_unknown_content_type_test() {
-  <<"one=1&two=2":utf8>>
-  |> wisp.test_request
+  "one=1&two=2"
+  |> testing.post("/", [], _)
   |> request.set_header("content-type", "text/form")
   |> form_handler(fn(_) { panic as "should be unreachable" })
   |> should.equal(Response(
@@ -551,8 +540,7 @@ pub fn form_unknown_content_type_test() {
 }
 
 pub fn multipart_form_with_files_test() {
-  <<
-    "--theboundary\r
+  "--theboundary\r
 Content-Disposition: form-data; name=\"one\"\r
 \r
 1\r
@@ -561,9 +549,8 @@ Content-Disposition: form-data; name=\"two\"; filename=\"file.txt\"\r
 \r
 file contents\r
 --theboundary--\r
-":utf8,
-  >>
-  |> wisp.test_request
+"
+  |> testing.post("/", [], _)
   |> request.set_header(
     "content-type",
     "multipart/form-data; boundary=theboundary",
@@ -578,8 +565,7 @@ file contents\r
 
 pub fn multipart_form_files_too_big_test() {
   let test = fn(limit, callback) {
-    <<
-      "--theboundary\r
+    "--theboundary\r
 Content-Disposition: form-data; name=\"two\"; filename=\"file.txt\"\r
 \r
 12\r
@@ -592,9 +578,8 @@ Content-Disposition: form-data; name=\"two\"; filename=\"another.txt\"\r
 \r
 34\r
 --theboundary--\r
-":utf8,
-    >>
-    |> wisp.test_request
+"
+    |> testing.post("/", [], _)
     |> wisp.set_max_files_size(limit)
     |> request.set_header(
       "content-type",
@@ -628,7 +613,7 @@ pub fn handle_head_test() {
     |> wisp.html_response(201)
   }
 
-  wisp.test_request(<<>>)
+  testing.get("/", [])
   |> request.set_method(http.Get)
   |> handler(Error(Nil))
   |> should.equal(Response(
@@ -637,20 +622,19 @@ pub fn handle_head_test() {
     wisp.Text(string_builder.from_string("Hello!")),
   ))
 
-  wisp.test_request(<<>>)
+  testing.get("/", [])
   |> request.set_method(http.Head)
   |> handler(Ok("HEAD"))
   |> should.equal(Response(201, [#("content-type", "text/html")], wisp.Empty))
 
-  wisp.test_request(<<>>)
+  testing.get("/", [])
   |> request.set_method(http.Post)
   |> handler(Error(Nil))
   |> should.equal(Response(405, [#("allow", "GET")], wisp.Empty))
 }
 
 pub fn multipart_form_fields_are_sorted_test() {
-  <<
-    "--theboundary\r
+  "--theboundary\r
 Content-Disposition: form-data; name=\"xx\"\r
 \r
 XX\r
@@ -675,9 +659,8 @@ Content-Disposition: form-data; name=\"bb\"; filename=\"file.txt\"\r
 \r
 BB\r
 --theboundary--\r
-":utf8,
-  >>
-  |> wisp.test_request
+"
+  |> testing.post("/", [], _)
   |> request.set_header(
     "content-type",
     "multipart/form-data; boundary=theboundary",
@@ -698,8 +681,8 @@ BB\r
 }
 
 pub fn urlencoded_form_fields_are_sorted_test() {
-  <<"xx=XX&zz=ZZ&yy=YY&cc=CC&aa=AA&bb=BB":utf8>>
-  |> wisp.test_request
+  "xx=XX&zz=ZZ&yy=YY&cc=CC&aa=AA&bb=BB"
+  |> testing.post("/", [], _)
   |> request.set_header("content-type", "application/x-www-form-urlencoded")
   |> form_handler(fn(form) {
     // Fields are sorted by name.
@@ -716,7 +699,7 @@ pub fn urlencoded_form_fields_are_sorted_test() {
 }
 
 pub fn message_signing_test() {
-  let request = wisp.test_request(<<>>)
+  let request = testing.get("/", [])
   let request1 = wisp.set_secret_key_base(request, wisp.random_string(64))
   let request2 = wisp.set_secret_key_base(request, wisp.random_string(64))
 
