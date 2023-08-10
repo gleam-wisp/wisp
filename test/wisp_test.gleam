@@ -3,6 +3,7 @@ import gleam/http/request
 import gleam/http/response.{Response}
 import gleam/list
 import gleam/string
+import gleam/crypto
 import gleam/string_builder
 import gleam/erlang
 import gleam/set
@@ -712,4 +713,19 @@ pub fn urlencoded_form_fields_are_sorted_test() {
     ] = form.values
   })
   |> should.equal(wisp.ok())
+}
+
+pub fn message_signing_test() {
+  let request = wisp.test_request(<<>>)
+  let request1 = wisp.set_secret_key_base(request, wisp.random_string(64))
+  let request2 = wisp.set_secret_key_base(request, wisp.random_string(64))
+
+  let signed1 = wisp.sign_message(request1, <<"a":utf8>>, crypto.Sha512)
+  let signed2 = wisp.sign_message(request2, <<"b":utf8>>, crypto.Sha512)
+
+  let assert Ok(<<"a":utf8>>) = wisp.verify_signed_message(request1, signed1)
+  let assert Ok(<<"b":utf8>>) = wisp.verify_signed_message(request2, signed2)
+
+  let assert Error(Nil) = wisp.verify_signed_message(request1, signed2)
+  let assert Error(Nil) = wisp.verify_signed_message(request2, signed1)
 }
