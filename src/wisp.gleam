@@ -653,6 +653,19 @@ fn read_body_loop(
 /// A middleware which extracts form data from the body of a request that is
 /// encoded as either `application/x-www-form-urlencoded` or
 /// `multipart/form-data`.
+/// 
+/// Extracted fields are sorted into alphabetical order by key, so if you wish
+/// to use pattern matching the order can be relied upon.
+/// 
+/// ```gleam
+/// fn handle_request(request: Request) -> Response {
+///   use form <- wisp.require_form(request)
+///   case form.values {
+///     [#("password", pass), #("username", username)] -> // ...
+///     _ -> // ...
+///   }
+/// }
+/// ```
 ///
 /// The `set_max_body_size`, `set_max_files_size`, and `set_read_chunk_size` can
 /// be used to configure the reading of the request body.
@@ -673,14 +686,6 @@ fn read_body_loop(
 /// If the body cannot be parsed successfully then an empty response with status
 /// code 400: Bad request will be returned to the client.
 /// 
-/// # Examples
-/// 
-/// ```gleam
-/// fn handle_request(request: Request) -> Response {
-///   use form <- wisp.require_form(request)
-///   // ...
-/// }
-/// ```
 pub fn require_form(
   request: Request,
   next: fn(FormData) -> Response,

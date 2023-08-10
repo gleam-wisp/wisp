@@ -608,3 +608,70 @@ pub fn handle_head_test() {
   |> handler(Error(Nil))
   |> should.equal(Response(405, [#("allow", "GET")], wisp.Empty))
 }
+
+pub fn multipart_form_fields_are_sorted_test() {
+  <<
+    "--theboundary\r
+Content-Disposition: form-data; name=\"xx\"\r
+\r
+XX\r
+--theboundary\r
+Content-Disposition: form-data; name=\"zz\"\r
+\r
+ZZ\r
+--theboundary\r
+Content-Disposition: form-data; name=\"yy\"\r
+\r
+YY\r
+--theboundary\r
+Content-Disposition: form-data; name=\"cc\"; filename=\"file.txt\"\r
+\r
+CC\r
+--theboundary\r
+Content-Disposition: form-data; name=\"aa\"; filename=\"file.txt\"\r
+\r
+AA\r
+--theboundary\r
+Content-Disposition: form-data; name=\"bb\"; filename=\"file.txt\"\r
+\r
+BB\r
+--theboundary--\r
+":utf8,
+  >>
+  |> wisp.test_request
+  |> request.set_header(
+    "content-type",
+    "multipart/form-data; boundary=theboundary",
+  )
+  |> form_handler(fn(form) {
+    // Fields are sorted by name.
+    let assert [#("xx", "XX"), #("yy", "YY"), #("zz", "ZZ")] = form.values
+    let assert [
+      #("aa", wisp.UploadedFile("file.txt", path_a)),
+      #("bb", wisp.UploadedFile("file.txt", path_b)),
+      #("cc", wisp.UploadedFile("file.txt", path_c)),
+    ] = form.files
+    let assert Ok("AA") = simplifile.read(path_a)
+    let assert Ok("BB") = simplifile.read(path_b)
+    let assert Ok("CC") = simplifile.read(path_c)
+  })
+  |> should.equal(wisp.ok())
+}
+
+pub fn urlencoded_form_fields_are_sorted_test() {
+  <<"xx=XX&zz=ZZ&yy=YY&cc=CC&aa=AA&bb=BB":utf8>>
+  |> wisp.test_request
+  |> request.set_header("content-type", "application/x-www-form-urlencoded")
+  |> form_handler(fn(form) {
+    // Fields are sorted by name.
+    let assert [
+      #("aa", "AA"),
+      #("bb", "BB"),
+      #("cc", "CC"),
+      #("xx", "XX"),
+      #("yy", "YY"),
+      #("zz", "ZZ"),
+    ] = form.values
+  })
+  |> should.equal(wisp.ok())
+}
