@@ -29,8 +29,10 @@ import wisp/internal/logger
 ///
 /// ```gleam
 /// pub fn main() {
+///   let secret_key_base = "..."
 ///   let assert Ok(_) =
-///     wisp.mist_service(handle_request)
+///     handle_request
+///     |> wisp.mist_service(secret_key_base)
 ///     |> mist.new
 ///     |> mist.port(8000)
 ///     |> mist.start_http
@@ -39,9 +41,10 @@ import wisp/internal/logger
 /// ```
 pub fn mist_service(
   handler: fn(Request) -> Response,
+  secret_key_base: String,
 ) -> fn(HttpRequest(mist.Connection)) -> HttpResponse(mist.ResponseData) {
   fn(request: HttpRequest(_)) {
-    let connection = make_connection(mist_body_reader(request))
+    let connection = make_connection(mist_body_reader(request), secret_key_base)
     let request = request.set_body(request, connection)
     let response =
       request
@@ -384,15 +387,15 @@ pub fn internal_server_error() -> Response {
 pub opaque type Connection {
   Connection(
     reader: Reader,
-    // TODO: document these. Cannot be here as this is opaque.
     max_body_size: Int,
     max_files_size: Int,
     read_chunk_size: Int,
+    secret_key_base: String,
     temporary_directory: String,
   )
 }
 
-fn make_connection(body_reader: Reader) -> Connection {
+fn make_connection(body_reader: Reader, secret_key_base: String) -> Connection {
   // TODO: replace `/tmp` with appropriate for the OS
   let prefix = "/tmp/gleam-wisp/"
   let temporary_directory = join_path(prefix, random_slug())
@@ -402,6 +405,7 @@ fn make_connection(body_reader: Reader) -> Connection {
     max_files_size: 32_000_000,
     read_chunk_size: 1_000_000,
     temporary_directory: temporary_directory,
+    secret_key_base: secret_key_base,
   )
 }
 
@@ -462,6 +466,31 @@ pub fn set_max_body_size(request: Request, size: Int) -> Request {
 /// 
 pub fn get_max_body_size(request: Request) -> Int {
   request.body.max_body_size
+}
+
+/// Set the secret key base used to sign cookies and other sensitive data.
+/// 
+/// This key must be at least 64 bytes long and should be kept secret. Anyone
+/// with this secret will be able to manipulate signed cookies and other sensitive
+/// data.
+///
+/// # Panics
+/// 
+/// This function will panic if the key is less than 64 bytes long.
+///
+pub fn set_secret_key_base(request: Request, key: String) -> Request {
+  case string.byte_size(key) < 64 {
+    True -> panic as "Secret key base must be at least 64 bytes long"
+    False ->
+      Connection(..request.body, secret_key_base: key)
+      |> request.set_body(request, _)
+  }
+}
+
+/// Get the secret key base used to sign cookies and other sensitive data.
+/// 
+pub fn get_secret_key_base(request: Request) -> String {
+  request.body.secret_key_base
 }
 
 /// Set the maximum permitted size of all files uploaded by a request, in bytes.
@@ -1395,9 +1424,16 @@ pub fn log_debug(message: String) -> Nil {
 // Cryptography
 //
 
-fn random_slug() -> String {
-  crypto.strong_random_bytes(16)
+/// Generate a random string of the given length.
+///
+pub fn random_string(length: Int) -> String {
+  crypto.strong_random_bytes(length)
   |> base.url_encode64(False)
+  |> string.slice(0, length)
+}
+
+fn random_slug() -> String {
+  random_string(16)
 }
 
 //
@@ -1408,9 +1444,11 @@ fn random_slug() -> String {
 // TODO: document
 // TODO: chunk the body
 pub fn test_connection(body: BitString) -> Connection {
-  make_connection(fn(_size) {
-    Ok(Chunk(body, fn(_size) { Ok(ReadingFinished) }))
-  })
+  let secret_key_base = string.repeat("-", 64)
+  make_connection(
+    fn(_size) { Ok(Chunk(body, fn(_size) { Ok(ReadingFinished) })) },
+    secret_key_base,
+  )
 }
 
 // TODO: better API
