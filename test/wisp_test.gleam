@@ -84,6 +84,15 @@ pub fn method_not_allowed_test() {
   |> should.equal(Response(405, [#("allow", "DELETE, GET, PATCH")], wisp.Empty))
 }
 
+pub fn unsupported_media_type_test() {
+  wisp.unsupported_media_type(accept: ["application/json", "text/plain"])
+  |> should.equal(Response(
+    415,
+    [#("accept", "application/json, text/plain")],
+    wisp.Empty,
+  ))
+}
+
 pub fn html_response_test() {
   let body = string_builder.from_string("Hello, world!")
   let response = wisp.html_response(body, 200)
@@ -495,7 +504,11 @@ pub fn form_unknown_content_type_test() {
   |> wisp.test_request
   |> request.set_header("content-type", "text/form")
   |> form_handler(fn(_) { panic as "should be unreachable" })
-  |> should.equal(Response(415, [], wisp.Empty))
+  |> should.equal(Response(
+    415,
+    [#("accept", "application/x-www-form-urlencoded, multipart/form-data")],
+    wisp.Empty,
+  ))
 }
 
 pub fn multipart_form_with_files_test() {

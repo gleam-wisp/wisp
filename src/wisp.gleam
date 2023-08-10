@@ -342,18 +342,21 @@ pub fn entity_too_large() -> Response {
   HttpResponse(413, [], Empty)
 }
 
-// TODO: test
 /// Create an empty response with status code 415: Unsupported media type.
+///
+/// The `allow` header will be set to a comma separated list of the permitted
+/// content-types.
 ///
 /// # Examples
 ///
 /// ```gleam
-/// unsupported_media_type()
-/// // -> Response(415, [], Empty)
+/// unsupported_media_type(accept: ["application/json", "text/plain"])
+/// // -> Response(415, [#("allow", "application/json, text/plain")], Empty)
 /// ```
 ///
-pub fn unsupported_media_type() -> Response {
-  HttpResponse(415, [], Empty)
+pub fn unsupported_media_type(accept acceptable: List(String)) -> Response {
+  let acceptable = string.join(acceptable, ", ")
+  HttpResponse(415, [#("accept", acceptable)], Empty)
 }
 
 /// Create an empty response with status code 500: Internal server error.
@@ -691,7 +694,10 @@ pub fn require_form(
 
     Ok("multipart/form-data") -> bad_request()
 
-    _ -> unsupported_media_type()
+    _ ->
+      unsupported_media_type([
+        "application/x-www-form-urlencoded", "multipart/form-data",
+      ])
   }
 }
 
