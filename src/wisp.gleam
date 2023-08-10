@@ -1222,6 +1222,38 @@ pub fn serve_static(
   }
 }
 
+/// A middleware function that converts `HEAD` requests to `GET` requests,
+/// handles the request, and then discards the response body. This is useful so
+/// that your application can handle `HEAD` requests without having to implement
+/// handlers for them.
+///
+/// The `x-original-method` header is set to `"HEAD"` for requests that were
+/// originally `HEAD` requests.
+///
+/// # Examples
+///
+/// ```gleam
+/// fn handle_request(req: Request) -> Response {
+///   use req <- wisp.handle_head_via_get(req)
+///   // ...
+/// }
+/// ```
+///
+pub fn handle_head_via_get(
+  req: Request,
+  next handler: fn(Request) -> Response,
+) -> Response {
+  case req.method {
+    http.Head ->
+      req
+      |> request.set_method(http.Get)
+      |> request.prepend_header("x-original-method", "HEAD")
+      |> handler
+      |> response.set_body(Empty)
+    _ -> handler(req)
+  }
+}
+
 //
 // File uploads
 //
