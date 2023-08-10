@@ -647,15 +647,6 @@ fn read_body_loop(
   }
 }
 
-// TODO: test - urlencoded
-// TODO: test - urlencoded body invalid
-// TODO: test - multipart
-// TODO: test - multipart no boundary
-// TODO: test - multipart body invalid
-// TODO: test - files
-// TODO: test - body too big
-// TODO: test - files too big
-// TODO: test - unknown content type
 /// A middleware which extracts form data from the body of a request that is
 /// encoded as either `application/x-www-form-urlencoded` or
 /// `multipart/form-data`.
@@ -697,6 +688,8 @@ pub fn require_form(
 
     Ok("multipart/form-data; boundary=" <> boundary) ->
       require_multipart_form(request, boundary, next)
+
+    Ok("multipart/form-data") -> bad_request()
 
     _ -> unsupported_media_type()
   }
@@ -821,19 +814,27 @@ fn multipart_body(
   data: t,
 ) -> Result(#(Option(BufferedReader), Int, t), Response) {
   use #(chunk, reader) <- result.try(read_chunk(reader, chunk_size))
+  let size_read = bit_string.byte_size(chunk)
   use output <- result.try(parse(chunk))
 
   case output {
-    http.MultipartBody(chunk, done, remaining) -> {
-      let used = bit_string.byte_size(chunk) - bit_string.byte_size(remaining)
-      use quotas <- result.try(decrement_quota(quota, used))
+    http.MultipartBody(parsed, done, remaining) -> {
+      // Decrement the quota by the number of bytes consumed.
+      let used = size_read - bit_string.byte_size(remaining) - 2
+      let used = case done {
+        // If this is the last chunk, we need to account for the boundary.
+        True -> used - 4 - string.byte_size(boundary)
+        False -> used
+      }
+      use quota <- result.try(decrement_quota(quota, used))
+
       let reader = BufferedReader(reader, remaining)
       let reader = case done {
         True -> option.None
         False -> option.Some(reader)
       }
-      use value <- result.map(append(data, chunk))
-      #(reader, quotas, value)
+      use value <- result.map(append(data, parsed))
+      #(reader, quota, value)
     }
 
     http.MoreRequiredForBody(chunk, parse) -> {
