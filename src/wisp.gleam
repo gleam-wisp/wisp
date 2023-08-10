@@ -1,6 +1,6 @@
 import exception
 import gleam/string_builder.{StringBuilder}
-import gleam/bit_builder.{BitBuilder}
+import gleam/bit_builder
 import gleam/bit_string
 import gleam/erlang
 import gleam/base
@@ -621,9 +621,7 @@ pub fn method_override(request: HttpRequest(a)) -> HttpRequest(a) {
 // TODO: don't always return entity to large. Other errors are possible, such as
 // network errors.
 // TODO: document
-// TODO: note you probably want a `require_` function
 // TODO: note it'll hang if you call it twice
-// TODO: note it respects the max body size
 /// A middleware function which reads the entire body of the request as a string.
 /// 
 /// If the body is larger than the `max_body_size` limit then an empty response
@@ -645,14 +643,19 @@ pub fn require_string_body(
   request: Request,
   next: fn(String) -> Response,
 ) -> Response {
-  case read_entire_body(request) {
+  case read_body_to_bitstring(request) {
     Ok(body) -> require(bit_string.to_string(body), next)
     Error(_) -> entity_too_large()
   }
 }
 
-// Should we make this public?
-fn read_entire_body(request: Request) -> Result(BitString, Nil) {
+// TODO: don't always return entity to large. Other errors are possible, such as
+// network errors.
+// TODO: document
+// TODO: note you probably want a `require_` function
+// TODO: note it'll hang if you call it twice
+// TODO: note it respects the max body size
+pub fn read_body_to_bitstring(request: Request) -> Result(BitString, Nil) {
   let connection = request.body
   read_body_loop(
     connection.reader,
@@ -1478,44 +1481,12 @@ fn random_slug() -> String {
 // TODO: test
 // TODO: document
 // TODO: chunk the body
-pub fn test_connection(body: BitString) -> Connection {
-  let secret_key_base = string.repeat("-", 64)
+pub fn create_canned_connection(
+  body: BitString,
+  secret_key_base: String,
+) -> Connection {
   make_connection(
     fn(_size) { Ok(Chunk(body, fn(_size) { Ok(ReadingFinished) })) },
     secret_key_base,
   )
-}
-
-// TODO: better API
-// TODO: test
-// TODO: document
-pub fn test_request(body: BitString) -> Request {
-  request.new()
-  |> request.set_body(test_connection(body))
-}
-
-// TODO: test
-// TODO: document
-pub fn body_to_string_builder(body: Body) -> StringBuilder {
-  case body {
-    Empty -> string_builder.new()
-    Text(text) -> text
-    File(path) -> {
-      let assert Ok(contents) = simplifile.read(path)
-      string_builder.from_string(contents)
-    }
-  }
-}
-
-// TODO: test
-// TODO: document
-pub fn body_to_bit_builder(body: Body) -> BitBuilder {
-  case body {
-    Empty -> bit_builder.new()
-    Text(text) -> bit_builder.from_string_builder(text)
-    File(path) -> {
-      let assert Ok(contents) = simplifile.read_bits(path)
-      bit_builder.from_bit_string(contents)
-    }
-  }
 }
