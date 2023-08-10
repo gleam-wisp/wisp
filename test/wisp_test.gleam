@@ -576,3 +576,35 @@ Content-Disposition: form-data; name=\"two\"; filename=\"another.txt\"\r
   test(4, fn(_) { Nil })
   |> should.equal(Response(200, [], wisp.Empty))
 }
+
+pub fn handle_head_via_get_test() {
+  let handler = fn(request, header) {
+    use request <- wisp.handle_head_via_get(request)
+    use <- wisp.require_method(request, http.Get)
+
+    list.key_find(request.headers, "x-original-method")
+    |> should.equal(header)
+
+    string_builder.from_string("Hello!")
+    |> wisp.html_response(201)
+  }
+
+  wisp.test_request(<<>>)
+  |> request.set_method(http.Get)
+  |> handler(Error(Nil))
+  |> should.equal(Response(
+    201,
+    [#("content-type", "text/html")],
+    wisp.Text(string_builder.from_string("Hello!")),
+  ))
+
+  wisp.test_request(<<>>)
+  |> request.set_method(http.Head)
+  |> handler(Ok("HEAD"))
+  |> should.equal(Response(201, [#("content-type", "text/html")], wisp.Empty))
+
+  wisp.test_request(<<>>)
+  |> request.set_method(http.Post)
+  |> handler(Error(Nil))
+  |> should.equal(Response(405, [#("allow", "GET")], wisp.Empty))
+}
