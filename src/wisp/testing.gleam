@@ -79,7 +79,6 @@ pub fn patch(path: String, headers: List(http.Header), body: String) -> Request 
   request(http.Patch, path, headers, <<body:utf8>>)
 }
 
-// TODO: test
 // TODO: document
 pub fn string_body(response: Response) -> String {
   case response.body {
@@ -92,7 +91,6 @@ pub fn string_body(response: Response) -> String {
   }
 }
 
-// TODO: test
 // TODO: document
 pub fn bit_string_body(response: Response) -> BitString {
   case response.body {
