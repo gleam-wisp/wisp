@@ -1234,12 +1234,12 @@ pub fn serve_static(
 ///
 /// ```gleam
 /// fn handle_request(req: Request) -> Response {
-///   use req <- wisp.handle_head_via_get(req)
+///   use req <- wisp.handle_head(req)
 ///   // ...
 /// }
 /// ```
 ///
-pub fn handle_head_via_get(
+pub fn handle_head(
   req: Request,
   next handler: fn(Request) -> Response,
 ) -> Response {
