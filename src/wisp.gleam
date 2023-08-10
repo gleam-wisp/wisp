@@ -1432,6 +1432,38 @@ pub fn random_string(length: Int) -> String {
   |> string.slice(0, length)
 }
 
+/// Sign a message which can later be verified using the `verify_signed_message`
+/// function to detect if the message has been tampered with.
+/// 
+/// Signed messages are not encrypted and can be read by anyone. They are not
+/// suitable for storing sensitive information.
+/// 
+/// This function uses the secret key base from the request. If the secret
+/// changes then the signature will no longer be verifiable.
+/// 
+pub fn sign_message(
+  request: Request,
+  message: BitString,
+  algorithm: crypto.HashAlgorithm,
+) -> String {
+  crypto.sign_message(message, <<request.body.secret_key_base:utf8>>, algorithm)
+}
+
+/// Verify a signed message which was signed using the `sign_message` function.
+/// 
+/// Returns the content of the message if the signature is valid, otherwise
+/// returns an error.
+/// 
+/// This function uses the secret key base from the request. If the secret
+/// changes then the signature will no longer be verifiable.
+/// 
+pub fn verify_signed_message(
+  request: Request,
+  message: String,
+) -> Result(BitString, Nil) {
+  crypto.verify_signed_message(message, <<request.body.secret_key_base:utf8>>)
+}
+
 fn random_slug() -> String {
   random_string(16)
 }
