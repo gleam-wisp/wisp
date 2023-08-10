@@ -2,7 +2,10 @@ import gleam/http
 import gleam/http/request
 import gleam/http/response.{Response}
 import gleam/list
+import gleam/string
 import gleam/string_builder
+import gleam/erlang
+import gleam/set
 import gleeunit
 import gleeunit/should
 import simplifile
@@ -117,6 +120,41 @@ pub fn html_body_test() {
   response.body
   |> wisp.body_to_string_builder
   |> should.equal(body)
+}
+
+pub fn random_string_test() {
+  let count = 10_000
+  let new = fn(_) {
+    let random = wisp.random_string(64)
+    string.length(random)
+    |> should.equal(64)
+    random
+  }
+
+  list.repeat(Nil, count)
+  |> list.map(new)
+  |> set.from_list
+  |> set.size
+  |> should.equal(count)
+}
+
+pub fn set_get_secret_key_base_test() {
+  let request = wisp.test_request(<<>>)
+  let valid = wisp.random_string(64)
+  let too_short = wisp.random_string(63)
+
+  request
+  |> wisp.get_secret_key_base
+  |> should.equal(string.repeat("-", 64))
+
+  request
+  |> wisp.set_secret_key_base(valid)
+  |> wisp.get_secret_key_base
+  |> should.equal(valid)
+
+  // Panics if the key is too short
+  erlang.rescue(fn() { wisp.set_secret_key_base(request, too_short) })
+  |> should.be_error
 }
 
 pub fn set_get_max_body_size_test() {
