@@ -20,6 +20,8 @@ The project has this structure:
    └── app_test.gleam
 ```
 
+In your project `app` would be replaced by the name of your application.
+
 ### `app` module
 
 The entrypoint to the application. It performs initialisation and starts the
