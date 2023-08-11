@@ -694,3 +694,17 @@ pub fn message_signing_test() {
   let assert Error(Nil) = wisp.verify_signed_message(request1, signed2)
   let assert Error(Nil) = wisp.verify_signed_message(request2, signed1)
 }
+
+pub fn create_canned_connection_test() {
+  let secret = wisp.random_string(64)
+  let connection = wisp.create_canned_connection(<<"Hello!":utf8>>, secret)
+  let request = request.set_body(request.new(), connection)
+
+  request
+  |> wisp.get_secret_key_base
+  |> should.equal(secret)
+
+  request
+  |> wisp.read_body_to_bitstring
+  |> should.equal(Ok(<<"Hello!":utf8>>))
+}

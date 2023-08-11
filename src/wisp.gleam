@@ -1123,7 +1123,6 @@ pub fn rescue_crashes(handler: fn() -> Response) -> Response {
   case erlang.rescue(handler) {
     Ok(response) -> response
     Error(error) -> {
-      // TODO: log the error
       log_error(string.inspect(error))
       internal_server_error()
     }
@@ -1155,7 +1154,6 @@ pub fn log_request(req: Request, handler: fn() -> Response) -> Response {
     req.path,
   ]
   |> string.concat
-  // TODO: use the logger
   |> log_info
   response
 }
@@ -1456,9 +1454,12 @@ fn random_slug() -> String {
 // Testing
 //
 
-// TODO: test
-// TODO: document
 // TODO: chunk the body
+/// Create a connection which will return the given body when read.
+/// 
+/// This function is intended for use in tests, though you probably want the
+/// `wisp/testing` module instead.
+/// 
 pub fn create_canned_connection(
   body: BitString,
   secret_key_base: String,
