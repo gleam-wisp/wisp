@@ -1,3 +1,4 @@
+import exception
 import gleam/string_builder.{StringBuilder}
 import gleam/bit_builder.{BitBuilder}
 import gleam/bit_string
@@ -46,13 +47,15 @@ pub fn mist_service(
   fn(request: HttpRequest(_)) {
     let connection = make_connection(mist_body_reader(request), secret_key_base)
     let request = request.set_body(request, connection)
+
+    use <- exception.defer(fn() {
+      let assert Ok(_) = delete_temporary_files(request)
+    })
+
     let response =
       request
       |> handler
       |> mist_response
-
-    // TODO: use some FFI to ensure this always happens, even if there is a crash
-    let assert Ok(_) = delete_temporary_files(request)
 
     response
   }

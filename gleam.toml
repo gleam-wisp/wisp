@@ -15,6 +15,7 @@ gleam_http = "~> 3.5"
 mist = "~> 0.13"
 simplifile = "~> 0.1"
 gleam_crypto = "~> 0.4"
+exception = "~> 1.0"
 
 [dev-dependencies]
 gleeunit = "~> 0.10"
