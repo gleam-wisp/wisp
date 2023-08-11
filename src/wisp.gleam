@@ -620,8 +620,13 @@ pub fn method_override(request: HttpRequest(a)) -> HttpRequest(a) {
 
 // TODO: don't always return entity to large. Other errors are possible, such as
 // network errors.
-// TODO: note it'll hang if you call it twice
 /// A middleware function which reads the entire body of the request as a string.
+///
+/// This function does not cache the body in any way, so if you call this
+/// function (or any other body reading function) more than once it may hang or
+/// return an incorrect value, depending on the underlying web server. It is the
+/// responsibility of the caller to cache the body if it is needed multiple
+/// times.
 /// 
 /// If the body is larger than the `max_body_size` limit then an empty response
 /// with status code 413: Entity too large will be returned to the client.
@@ -650,10 +655,53 @@ pub fn require_string_body(
 
 // TODO: don't always return entity to large. Other errors are possible, such as
 // network errors.
-// TODO: document
-// TODO: note you probably want a `require_` function
-// TODO: note it'll hang if you call it twice
-// TODO: note it respects the max body size
+/// A middleware function which reads the entire body of the request as a bit
+/// string.
+///
+/// This function does not cache the body in any way, so if you call this
+/// function (or any other body reading function) more than once it may hang or
+/// return an incorrect value, depending on the underlying web server. It is the
+/// responsibility of the caller to cache the body if it is needed multiple
+/// times.
+/// 
+/// If the body is larger than the `max_body_size` limit then an empty response
+/// with status code 413: Entity too large will be returned to the client.
+/// 
+/// # Examples
+///
+/// ```gleam
+/// fn handle_request(request: Request) -> Response {
+///   use body <- wisp.require_string_body(request)
+///   // ...
+/// }
+/// ```
+///
+pub fn require_bit_string_body(
+  request: Request,
+  next: fn(BitString) -> Response,
+) -> Response {
+  case read_body_to_bitstring(request) {
+    Ok(body) -> next(body)
+    Error(_) -> entity_too_large()
+  }
+}
+
+// TODO: don't always return entity to large. Other errors are possible, such as
+// network errors.
+/// Read the entire body of the request as a bit string.
+/// 
+/// You may instead wish to use the `require_bit_string_body` or the
+/// `require_string_body` middleware functions instead.
+/// 
+/// This function does not cache the body in any way, so if you call this
+/// function (or any other body reading function) more than once it may hang or
+/// return an incorrect value, depending on the underlying web server. It is the
+/// responsibility of the caller to cache the body if it is needed multiple
+/// times.
+/// 
+/// If the body is larger than the `max_body_size` limit then an empty response
+/// with status code 413: Entity too large will be returned to the client.
+/// 
 pub fn read_body_to_bitstring(request: Request) -> Result(BitString, Nil) {
   let connection = request.body
   read_body_loop(
