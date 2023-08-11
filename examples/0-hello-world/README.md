@@ -1,24 +1,40 @@
-# app
-
-[![Package Version](https://img.shields.io/hexpm/v/app)](https://hex.pm/packages/app)
-[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/app/)
-
-A Gleam project
-
-## Quick start
+# Wisp Example: Hello, world!
 
 ```sh
-gleam run   # Run the project
+gleam run   # Run the server
 gleam test  # Run the tests
-gleam shell # Run an Erlang shell
 ```
 
-## Installation
+This example shows a minimal Wisp application, it does nothing but respond with
+a greeting to any request.
 
-If available on Hex this package can be added to your Gleam project:
+The project has this structure:
 
-```sh
-gleam add app
+```
+├─ src
+│  ├─ app
+│  │  ├─ router.gleam
+│  │  └─ web.gleam
+│  └─ app.gleam
+└─ test
+   └── app_test.gleam
 ```
 
-and its documentation can be found at <https://hexdocs.pm/app>.
+### `app` module
+
+The entrypoint to the application. It performs initialisation and starts the
+web server.
+
+### `app/web` module
+
+This module contains the application's middleware stack and any custom types,
+middleware, and other functions that are used by the request handlers.
+
+### `app/router` module
+
+This module contains the application's request handlers. Or "handler" in this
+case, as there's only one!
+
+### `app_test` module
+
+The tests for the application.

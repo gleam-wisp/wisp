@@ -1,14 +1,14 @@
 import gleeunit
 import gleeunit/should
 import wisp/testing
-import app
+import app/router
 
 pub fn main() {
   gleeunit.main()
 }
 
 pub fn hello_world_test() {
-  let response = app.handle_request(testing.get("/", []))
+  let response = router.handle_request(testing.get("/", []))
 
   response.status
   |> should.equal(200)
