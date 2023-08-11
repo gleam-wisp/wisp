@@ -50,3 +50,11 @@ pub fn handle_request(request: Request) -> Response {
 }
 ```
 
+# Documentation
+
+The Wisp examples are a good place to start. They cover various scenarios and
+include comments and tests.
+
+- [Hello, World!](https://github.com/lpil/wisp/tree/main/examples/0-hello-world)
+
+API documentation is available on [HexDocs](https://hexdocs.pm/wisp/).
