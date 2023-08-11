@@ -1,13 +1,13 @@
 name = "wisp"
-version = "0.1.0"
-description = "A Gleam project"
+version = "0.2.0"
+gleam = ">= 0.30.0"
+description = "A fun and practical web framework for Gleam"
+licences = ["Apache-2.0"]
 
-# Fill out these fields if you intend to generate HTML documentation or publish
-# your project to the Hex package manager.
-#
-# licences = ["Apache-2.0"]
-# repository = { type = "github", user = "username", repo = "project" }
-# links = [{ title = "Website", href = "https://gleam.run" }]
+repository = { type = "github", user = "lpil", repo = "wisp" }
+links = [
+  { title = "Sponsor", href = "https://github.com/sponsors/lpil" },
+]
 
 [dependencies]
 gleam_stdlib = "~> 0.29"
