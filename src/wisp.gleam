@@ -620,7 +620,6 @@ pub fn method_override(request: HttpRequest(a)) -> HttpRequest(a) {
 
 // TODO: don't always return entity to large. Other errors are possible, such as
 // network errors.
-// TODO: document
 // TODO: note it'll hang if you call it twice
 /// A middleware function which reads the entire body of the request as a string.
 /// 
@@ -644,7 +643,7 @@ pub fn require_string_body(
   next: fn(String) -> Response,
 ) -> Response {
   case read_body_to_bitstring(request) {
-    Ok(body) -> require(bit_string.to_string(body), next)
+    Ok(body) -> or_400(bit_string.to_string(body), next)
     Error(_) -> entity_too_large()
   }
 }
@@ -746,7 +745,7 @@ fn require_urlencoded_form(
   next: fn(FormData) -> Response,
 ) -> Response {
   use body <- require_string_body(request)
-  use pairs <- require(uri.parse_query(body))
+  use pairs <- or_400(uri.parse_query(body))
   let pairs = sort_keys(pairs)
   next(FormData(values: pairs, files: []))
 }
@@ -960,28 +959,7 @@ fn sort_keys(pairs: List(#(String, t))) -> List(#(String, t)) {
   list.sort(pairs, fn(a, b) { string.compare(a.0, b.0) })
 }
 
-// TODO: determine is this a good API. Perhaps the response should be
-// parameterised?
-/// A middleware function which returns an empty response with the status code
-/// 400: Bad request if the result is an error.
-/// 
-/// This function is similar to the `try` function of the `gleam/result` module,
-/// except returning a HTTP response rather than the error when the result is
-/// not OK.
-/// 
-/// # Example
-/// 
-/// ```gleam
-/// fn handle_request(request: Request) -> Response {
-///   use value <- wisp.request(result_returning_function())
-///   // ...
-/// }
-/// ```
-/// 
-pub fn require(
-  result: Result(value, error),
-  next: fn(value) -> Response,
-) -> Response {
+fn or_400(result: Result(value, error), next: fn(value) -> Response) -> Response {
   case result {
     Ok(value) -> next(value)
     Error(_) -> bad_request()
