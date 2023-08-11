@@ -278,24 +278,6 @@ pub fn require_method_invalid_test() {
   |> should.equal(wisp.method_not_allowed([http.Get]))
 }
 
-pub fn require_ok_test() {
-  {
-    use x <- wisp.require(Ok(1))
-    x
-    |> should.equal(1)
-    wisp.accepted()
-  }
-  |> should.equal(wisp.accepted())
-}
-
-pub fn require_error_test() {
-  {
-    use _ <- wisp.require(Error(1))
-    panic as "should be unreachable"
-  }
-  |> should.equal(wisp.bad_request())
-}
-
 pub fn require_string_body_test() {
   {
     let request = testing.post("/", [], "Hello, Joe!")
