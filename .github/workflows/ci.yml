@@ -23,3 +23,6 @@ jobs:
 
       - run: gleam test
         working-directory: examples/0-hello-world
+
+      - run: gleam test
+        working-directory: examples/1-routing
