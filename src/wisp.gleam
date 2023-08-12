@@ -202,6 +202,22 @@ pub fn html_body(response: Response, html: StringBuilder) -> Response {
   |> response.set_header("content-type", "text/html")
 }
 
+// TODO: test
+// TODO: document
+pub fn escape_html(content: String) -> String {
+  do_escape_html("", content)
+}
+
+fn do_escape_html(escaped: String, content: String) -> String {
+  case string.pop_grapheme(content) {
+    Ok(#("<", xs)) -> do_escape_html(escaped <> "&lt;", xs)
+    Ok(#(">", xs)) -> do_escape_html(escaped <> "&gt;", xs)
+    Ok(#("&", xs)) -> do_escape_html(escaped <> "&amp;", xs)
+    Ok(#(x, xs)) -> do_escape_html(escaped <> x, xs)
+    Error(_) -> escaped <> content
+  }
+}
+
 /// Create an empty response with status code 405: Method Not Allowed. Use this
 /// when a request does not have an appropriate method to be handled.
 ///

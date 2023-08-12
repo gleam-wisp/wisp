@@ -708,3 +708,9 @@ pub fn create_canned_connection_test() {
   |> wisp.read_body_to_bitstring
   |> should.equal(Ok(<<"Hello!":utf8>>))
 }
+
+pub fn escape_html_test() {
+  "<script>alert('&');</script>"
+  |> wisp.escape_html
+  |> should.equal("&lt;script&gt;alert('&amp;');&lt;/script&gt;")
+}
