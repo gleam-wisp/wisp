@@ -202,8 +202,18 @@ pub fn html_body(response: Response, html: StringBuilder) -> Response {
   |> response.set_header("content-type", "text/html")
 }
 
-// TODO: test
-// TODO: document
+/// Escape a string so that it can be safely included in a HTML document.
+///
+/// Any content provided by the user should be escaped before being included in
+/// a HTML document to prevent cross-site scripting attacks.
+///
+/// # Examples
+///
+/// ```gleam
+/// escape_html("<h1>Hello, Joe!</h1>")
+/// // -> "&lt;h1&gt;Hello, Joe!&lt;/h1&gt;"
+/// ```
+/// 
 pub fn escape_html(content: String) -> String {
   do_escape_html("", content)
 }
