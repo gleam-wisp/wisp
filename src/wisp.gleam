@@ -211,13 +211,13 @@ pub fn html_body(response: Response, html: StringBuilder) -> Response {
 /// # Examples
 ///
 /// ```gleam
-/// method_not_allowed([Get, Post])
+/// method_not_allowed(allowed: [Get, Post])
 /// // -> Response(405, [#("allow", "GET, POST")], Empty)
 /// ```
 ///
-pub fn method_not_allowed(permitted: List(Method)) -> Response {
+pub fn method_not_allowed(allowed methods: List(Method)) -> Response {
   let allowed =
-    permitted
+    methods
     |> list.map(http.method_to_string)
     |> list.sort(string.compare)
     |> string.join(", ")
@@ -563,7 +563,7 @@ pub fn require_method(
 ) -> Response {
   case request.method == method {
     True -> next()
-    False -> method_not_allowed([method])
+    False -> method_not_allowed(allowed: [method])
   }
 }
 
