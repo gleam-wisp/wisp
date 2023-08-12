@@ -33,14 +33,14 @@ import wisp/internal/logger
 ///   let secret_key_base = "..."
 ///   let assert Ok(_) =
 ///     handle_request
-///     |> wisp.mist_service(secret_key_base)
+///     |> wisp.mist_handler(secret_key_base)
 ///     |> mist.new
 ///     |> mist.port(8000)
 ///     |> mist.start_http
 ///   process.sleep_forever()
 /// }
 /// ```
-pub fn mist_service(
+pub fn mist_handler(
   handler: fn(Request) -> Response,
   secret_key_base: String,
 ) -> fn(HttpRequest(mist.Connection)) -> HttpResponse(mist.ResponseData) {
@@ -1324,7 +1324,7 @@ pub fn handle_head(
 
 /// Create a new temporary directory for the given request.
 ///
-/// If you are using the `mist_service` function or another compliant web server
+/// If you are using the `mist_handler` function or another compliant web server
 /// adapter then this file will be deleted for you when the request is complete.
 /// Otherwise you will need to call the `delete_temporary_files` function
 /// yourself.
@@ -1341,7 +1341,7 @@ pub fn new_temporary_file(
 
 /// Delete any temporary files created for the given request.
 ///
-/// If you are using the `mist_service` function or another compliant web server
+/// If you are using the `mist_handler` function or another compliant web server
 /// adapter then this file will be deleted for you when the request is complete.
 /// Otherwise you will need to call this function yourself.
 ///
