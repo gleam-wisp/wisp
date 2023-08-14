@@ -107,6 +107,36 @@ pub fn post_test() {
   |> should.equal(Ok(<<"wubwub":utf8>>))
 }
 
+pub fn post_form_test() {
+  let request =
+    testing.post_form(
+      "/wibble/woo",
+      [#("content-type", "application/json"), #("accept", "application/json")],
+      [#("one", "two"), #("three", "four!?")],
+    )
+
+  request.method
+  |> should.equal(http.Post)
+  request.headers
+  |> should.equal([
+    #("content-type", "application/x-www-form-urlencoded"),
+    #("accept", "application/json"),
+  ])
+  request.scheme
+  |> should.equal(http.Https)
+  request.host
+  |> should.equal("localhost")
+  request.port
+  |> should.equal(None)
+  request.path
+  |> should.equal("/wibble/woo")
+  request.query
+  |> should.equal(None)
+  request
+  |> wisp.read_body_to_bitstring
+  |> should.equal(Ok(<<"one=two&three=four!%3F":utf8>>))
+}
+
 pub fn patch_test() {
   let request =
     testing.patch(
@@ -132,6 +162,36 @@ pub fn patch_test() {
   request
   |> wisp.read_body_to_bitstring
   |> should.equal(Ok(<<"wubwub":utf8>>))
+}
+
+pub fn patch_form_test() {
+  let request =
+    testing.patch_form(
+      "/wibble/woo",
+      [#("content-type", "application/json"), #("accept", "application/json")],
+      [#("one", "two"), #("three", "four!?")],
+    )
+
+  request.method
+  |> should.equal(http.Patch)
+  request.headers
+  |> should.equal([
+    #("content-type", "application/x-www-form-urlencoded"),
+    #("accept", "application/json"),
+  ])
+  request.scheme
+  |> should.equal(http.Https)
+  request.host
+  |> should.equal("localhost")
+  request.port
+  |> should.equal(None)
+  request.path
+  |> should.equal("/wibble/woo")
+  request.query
+  |> should.equal(None)
+  request
+  |> wisp.read_body_to_bitstring
+  |> should.equal(Ok(<<"one=two&three=four!%3F":utf8>>))
 }
 
 pub fn options_test() {
@@ -230,6 +290,36 @@ pub fn delete_test() {
   |> should.equal(Ok(<<"wubwub":utf8>>))
 }
 
+pub fn delete_form_test() {
+  let request =
+    testing.delete_form(
+      "/wibble/woo",
+      [#("content-type", "application/json"), #("accept", "application/json")],
+      [#("one", "two"), #("three", "four!?")],
+    )
+
+  request.method
+  |> should.equal(http.Delete)
+  request.headers
+  |> should.equal([
+    #("content-type", "application/x-www-form-urlencoded"),
+    #("accept", "application/json"),
+  ])
+  request.scheme
+  |> should.equal(http.Https)
+  request.host
+  |> should.equal("localhost")
+  request.port
+  |> should.equal(None)
+  request.path
+  |> should.equal("/wibble/woo")
+  request.query
+  |> should.equal(None)
+  request
+  |> wisp.read_body_to_bitstring
+  |> should.equal(Ok(<<"one=two&three=four!%3F":utf8>>))
+}
+
 pub fn put_test() {
   let request =
     testing.put(
@@ -255,6 +345,36 @@ pub fn put_test() {
   request
   |> wisp.read_body_to_bitstring
   |> should.equal(Ok(<<"wubwub":utf8>>))
+}
+
+pub fn put_form_test() {
+  let request =
+    testing.put_form(
+      "/wibble/woo",
+      [#("content-type", "application/json"), #("accept", "application/json")],
+      [#("one", "two"), #("three", "four!?")],
+    )
+
+  request.method
+  |> should.equal(http.Put)
+  request.headers
+  |> should.equal([
+    #("content-type", "application/x-www-form-urlencoded"),
+    #("accept", "application/json"),
+  ])
+  request.scheme
+  |> should.equal(http.Https)
+  request.host
+  |> should.equal("localhost")
+  request.port
+  |> should.equal(None)
+  request.path
+  |> should.equal("/wibble/woo")
+  request.query
+  |> should.equal(None)
+  request
+  |> wisp.read_body_to_bitstring
+  |> should.equal(Ok(<<"one=two&three=four!%3F":utf8>>))
 }
 
 pub fn string_body_empty_test() {

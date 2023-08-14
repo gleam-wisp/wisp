@@ -1,6 +1,7 @@
 import wisp.{Empty, File, Request, Response, Text}
 import gleam/string_builder
 import gleam/bit_builder
+import gleam/uri
 import gleam/http/request
 import gleam/http
 import gleam/option.{None}
@@ -57,6 +58,21 @@ pub fn post(path: String, headers: List(http.Header), body: String) -> Request {
 
 /// Create a test HTTP request that can be used to test your request handler.
 /// 
+/// The body parameters are encoded as form data and the `content-type` header
+/// is set to `application/x-www-form-urlencoded`.
+/// 
+pub fn post_form(
+  path: String,
+  headers: List(http.Header),
+  data: List(#(String, String)),
+) -> Request {
+  let body = uri.query_to_string(data)
+  request(http.Post, path, headers, <<body:utf8>>)
+  |> request.set_header("content-type", "application/x-www-form-urlencoded")
+}
+
+/// Create a test HTTP request that can be used to test your request handler.
+/// 
 pub fn head(path: String, headers: List(http.Header)) -> Request {
   request(http.Head, path, headers, <<>>)
 }
@@ -69,8 +85,38 @@ pub fn put(path: String, headers: List(http.Header), body: String) -> Request {
 
 /// Create a test HTTP request that can be used to test your request handler.
 /// 
+/// The body parameters are encoded as form data and the `content-type` header
+/// is set to `application/x-www-form-urlencoded`.
+/// 
+pub fn put_form(
+  path: String,
+  headers: List(http.Header),
+  data: List(#(String, String)),
+) -> Request {
+  let body = uri.query_to_string(data)
+  request(http.Put, path, headers, <<body:utf8>>)
+  |> request.set_header("content-type", "application/x-www-form-urlencoded")
+}
+
+/// Create a test HTTP request that can be used to test your request handler.
+/// 
 pub fn delete(path: String, headers: List(http.Header), body: String) -> Request {
   request(http.Delete, path, headers, <<body:utf8>>)
+}
+
+/// Create a test HTTP request that can be used to test your request handler.
+/// 
+/// The body parameters are encoded as form data and the `content-type` header
+/// is set to `application/x-www-form-urlencoded`.
+/// 
+pub fn delete_form(
+  path: String,
+  headers: List(http.Header),
+  data: List(#(String, String)),
+) -> Request {
+  let body = uri.query_to_string(data)
+  request(http.Delete, path, headers, <<body:utf8>>)
+  |> request.set_header("content-type", "application/x-www-form-urlencoded")
 }
 
 /// Create a test HTTP request that can be used to test your request handler.
@@ -95,6 +141,20 @@ pub fn options(path: String, headers: List(http.Header)) -> Request {
 /// 
 pub fn patch(path: String, headers: List(http.Header), body: String) -> Request {
   request(http.Patch, path, headers, <<body:utf8>>)
+}
+
+/// Create a test HTTP request that can be used to test your request handler.
+/// 
+/// The body parameters are encoded as form data and the `content-type` header is set to `application/x-www-form-urlencoded`.
+/// 
+pub fn patch_form(
+  path: String,
+  headers: List(http.Header),
+  data: List(#(String, String)),
+) -> Request {
+  let body = uri.query_to_string(data)
+  request(http.Patch, path, headers, <<body:utf8>>)
+  |> request.set_header("content-type", "application/x-www-form-urlencoded")
 }
 
 /// Read the body of a response as a string.
