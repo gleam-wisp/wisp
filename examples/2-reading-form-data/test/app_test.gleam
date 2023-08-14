@@ -2,7 +2,6 @@ import gleeunit
 import gleeunit/should
 import gleam/string
 import wisp/testing
-import gleam/http/request
 import app/router
 
 pub fn main() {
@@ -37,9 +36,10 @@ pub fn submit_wrong_content_type_test() {
 }
 
 pub fn submit_missing_parameters_test() {
+  // The `METHOD_form` functions are used to create a request with a
+  // `x-www-form-urlencoded` body, with the appropriate `content-type` header.
   let response =
-    testing.post("/", [], "")
-    |> request.set_header("content-type", "application/x-www-form-urlencoded")
+    testing.post_form("/", [], [])
     |> router.handle_request()
 
   response.status
@@ -48,8 +48,7 @@ pub fn submit_missing_parameters_test() {
 
 pub fn submit_successful_test() {
   let response =
-    testing.post("/", [], "title=Captain&name=Caveman")
-    |> request.set_header("content-type", "application/x-www-form-urlencoded")
+    testing.post_form("/", [], [#("title", "Captain"), #("name", "Caveman")])
     |> router.handle_request()
 
   response.status
