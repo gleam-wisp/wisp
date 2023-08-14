@@ -26,3 +26,6 @@ jobs:
 
       - run: gleam test
         working-directory: examples/1-routing
+
+      - run: gleam test
+        working-directory: examples/2-reading-form-data
