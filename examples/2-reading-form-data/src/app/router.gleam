@@ -1,9 +1,9 @@
-import wisp.{Request, Response}
-import gleam/string_builder
-import gleam/http.{Get, Post}
-import gleam/result
-import gleam/list
 import app/web
+import gleam/http.{Get, Post}
+import gleam/list
+import gleam/result
+import gleam/string_builder
+import wisp.{Request, Response}
 
 pub fn handle_request(req: Request) -> Response {
   use req <- web.middleware(req)
@@ -40,7 +40,7 @@ pub fn handle_form_submission(req: Request) -> Response {
   // This middleware parses a `wisp.FormData` from the request body.
   // It returns an error response if the body is not valid form data, or
   // if the content-type is not `application/x-www-form-urlencoded` or
-  // `multipart/form-data`.
+  // `multipart/form-data`, or if the body is too large.
   use formdata <- wisp.require_form(req)
 
   // The list and result module are used here to extract the values from the
