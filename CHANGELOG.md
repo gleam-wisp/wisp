@@ -2,8 +2,8 @@
 
 ## v0.4.0 - Unreleased
 
-- The `wisp` module gains the `json_body`, `require_json` and `require_content_type`
-  functions.
+- The `wisp` module gains the `unprocessable_entity`, `json_body`,
+  `require_json` and `require_content_type` functions.
 - The `wisp/testing` module gains the `post_json`, `put_json`, `patch_json`, and
   `delete_json` functions.
 - The request construction functions in the `wisp/testing` module now support

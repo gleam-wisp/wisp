@@ -414,6 +414,19 @@ pub fn unsupported_media_type(accept acceptable: List(String)) -> Response {
   HttpResponse(415, [#("accept", acceptable)], Empty)
 }
 
+/// Create an empty response with status code 422: Unprocessable entity.
+///
+/// # Examples
+///
+/// ```gleam
+/// unprocessable_entity()
+/// // -> Response(422, [], Empty)
+/// ```
+///
+pub fn unprocessable_entity() -> Response {
+  HttpResponse(422, [], Empty)
+}
+
 /// Create an empty response with status code 500: Internal server error.
 ///
 /// # Examples
