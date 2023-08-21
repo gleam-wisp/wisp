@@ -204,6 +204,27 @@ pub fn html_body(response: Response, html: StringBuilder) -> Response {
   |> response.set_header("content-type", "text/html")
 }
 
+// TODO: terst
+/// Set the body of a response to a given JSON document, and set the
+/// `content-type` header to `text/json`.
+/// 
+/// The body is expected to be valid JSON, though this is not validated.
+/// 
+/// # Examples
+/// 
+/// ```gleam
+/// let body = string_builder.from_string("{\"name\": \"Joe\"}")
+/// response(201)
+/// |> json_body(body)
+/// // -> Response(201, [#("content-type", "application/json")], Text(body))
+/// ```
+/// 
+pub fn json_body(response: Response, json: StringBuilder) -> Response {
+  response
+  |> response.set_body(Text(json))
+  |> response.set_header("content-type", "application/json")
+}
+
 /// Escape a string so that it can be safely included in a HTML document.
 ///
 /// Any content provided by the user should be escaped before being included in
