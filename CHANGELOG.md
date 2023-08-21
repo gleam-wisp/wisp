@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.3.0 - Unreleased
+## v0.3.0 - 2023-08-21
 
 - The `mist_service` function has been renamed to `mist_handler`.
 - The `method_not_allowed` function gains the `allowed` label for its argument.

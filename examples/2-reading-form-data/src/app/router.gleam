@@ -23,10 +23,10 @@ pub fn show_form() -> Response {
   let html =
     string_builder.from_string(
       "<form method='post'>
-        <label for='name'>Title:
+        <label>Title:
           <input type='text' name='title'>
         </label>
-        <label for='name'>Name:
+        <label>Name:
           <input type='text' name='name'>
         </label>
         <input type='submit' value='Submit'>
