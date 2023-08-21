@@ -1,12 +1,13 @@
-import wisp.{Empty, File, Request, Response, Text}
-import gleam/string_builder
-import gleam/string
 import gleam/bit_builder
-import gleam/uri
-import gleam/http/request
 import gleam/http
+import gleam/http/request
+import gleam/json.{Json}
 import gleam/option.{None, Some}
+import gleam/string
+import gleam/string_builder
+import gleam/uri
 import simplifile
+import wisp.{Empty, File, Request, Response, Text}
 
 /// The default secret key base used for test requests.
 /// This should never be used outside of tests.
@@ -76,6 +77,21 @@ pub fn post_form(
   |> request.set_header("content-type", "application/x-www-form-urlencoded")
 }
 
+// TODO: test
+/// Create a test HTTP request that can be used to test your request handler.
+/// 
+/// The `content-type` header is set to `application/json`.
+/// 
+pub fn post_json(
+  path: String,
+  headers: List(http.Header),
+  data: Json,
+) -> Request {
+  let body = json.to_string(data)
+  request(http.Post, path, headers, <<body:utf8>>)
+  |> request.set_header("content-type", "application/json")
+}
+
 /// Create a test HTTP request that can be used to test your request handler.
 /// 
 pub fn head(path: String, headers: List(http.Header)) -> Request {
@@ -105,6 +121,16 @@ pub fn put_form(
 
 /// Create a test HTTP request that can be used to test your request handler.
 /// 
+/// The `content-type` header is set to `application/json`.
+/// 
+pub fn put_json(path: String, headers: List(http.Header), data: Json) -> Request {
+  let body = json.to_string(data)
+  request(http.Put, path, headers, <<body:utf8>>)
+  |> request.set_header("content-type", "application/json")
+}
+
+/// Create a test HTTP request that can be used to test your request handler.
+/// 
 pub fn delete(path: String, headers: List(http.Header), body: String) -> Request {
   request(http.Delete, path, headers, <<body:utf8>>)
 }
@@ -122,6 +148,20 @@ pub fn delete_form(
   let body = uri.query_to_string(data)
   request(http.Delete, path, headers, <<body:utf8>>)
   |> request.set_header("content-type", "application/x-www-form-urlencoded")
+}
+
+/// Create a test HTTP request that can be used to test your request handler.
+/// 
+/// The `content-type` header is set to `application/json`.
+/// 
+pub fn delete_json(
+  path: String,
+  headers: List(http.Header),
+  data: Json,
+) -> Request {
+  let body = json.to_string(data)
+  request(http.Delete, path, headers, <<body:utf8>>)
+  |> request.set_header("content-type", "application/json")
 }
 
 /// Create a test HTTP request that can be used to test your request handler.
@@ -160,6 +200,20 @@ pub fn patch_form(
   let body = uri.query_to_string(data)
   request(http.Patch, path, headers, <<body:utf8>>)
   |> request.set_header("content-type", "application/x-www-form-urlencoded")
+}
+
+/// Create a test HTTP request that can be used to test your request handler.
+/// 
+/// The `content-type` header is set to `application/json`.
+/// 
+pub fn patch_json(
+  path: String,
+  headers: List(http.Header),
+  data: Json,
+) -> Request {
+  let body = json.to_string(data)
+  request(http.Patch, path, headers, <<body:utf8>>)
+  |> request.set_header("content-type", "application/json")
 }
 
 /// Read the body of a response as a string.

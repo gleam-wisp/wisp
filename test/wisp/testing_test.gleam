@@ -1,5 +1,6 @@
 import gleam/http
 import gleam/http/response
+import gleam/json
 import gleam/option.{None, Some}
 import gleam/string_builder
 import gleeunit/should
@@ -137,6 +138,33 @@ pub fn post_form_test() {
   |> should.equal(Ok(<<"one=two&three=four!%3F":utf8>>))
 }
 
+pub fn post_json_test() {
+  let json =
+    json.object([
+      #("one", json.string("two")),
+      #("three", json.string("four!?")),
+    ])
+  let request = testing.post_json("/wibble/woo", [], json)
+
+  request.method
+  |> should.equal(http.Post)
+  request.headers
+  |> should.equal([#("content-type", "application/json")])
+  request.scheme
+  |> should.equal(http.Https)
+  request.host
+  |> should.equal("localhost")
+  request.port
+  |> should.equal(None)
+  request.path
+  |> should.equal("/wibble/woo")
+  request.query
+  |> should.equal(None)
+  request
+  |> wisp.read_body_to_bitstring
+  |> should.equal(Ok(<<json.to_string(json):utf8>>))
+}
+
 pub fn patch_test() {
   let request =
     testing.patch(
@@ -192,6 +220,33 @@ pub fn patch_form_test() {
   request
   |> wisp.read_body_to_bitstring
   |> should.equal(Ok(<<"one=two&three=four!%3F":utf8>>))
+}
+
+pub fn patch_json_test() {
+  let json =
+    json.object([
+      #("one", json.string("two")),
+      #("three", json.string("four!?")),
+    ])
+  let request = testing.patch_json("/wibble/woo", [], json)
+
+  request.method
+  |> should.equal(http.Patch)
+  request.headers
+  |> should.equal([#("content-type", "application/json")])
+  request.scheme
+  |> should.equal(http.Https)
+  request.host
+  |> should.equal("localhost")
+  request.port
+  |> should.equal(None)
+  request.path
+  |> should.equal("/wibble/woo")
+  request.query
+  |> should.equal(None)
+  request
+  |> wisp.read_body_to_bitstring
+  |> should.equal(Ok(<<json.to_string(json):utf8>>))
 }
 
 pub fn options_test() {
@@ -320,6 +375,33 @@ pub fn delete_form_test() {
   |> should.equal(Ok(<<"one=two&three=four!%3F":utf8>>))
 }
 
+pub fn delete_json_test() {
+  let json =
+    json.object([
+      #("one", json.string("two")),
+      #("three", json.string("four!?!")),
+    ])
+  let request = testing.delete_json("/wibble/woo", [], json)
+
+  request.method
+  |> should.equal(http.Delete)
+  request.headers
+  |> should.equal([#("content-type", "application/json")])
+  request.scheme
+  |> should.equal(http.Https)
+  request.host
+  |> should.equal("localhost")
+  request.port
+  |> should.equal(None)
+  request.path
+  |> should.equal("/wibble/woo")
+  request.query
+  |> should.equal(None)
+  request
+  |> wisp.read_body_to_bitstring
+  |> should.equal(Ok(<<json.to_string(json):utf8>>))
+}
+
 pub fn put_test() {
   let request =
     testing.put(
@@ -375,6 +457,33 @@ pub fn put_form_test() {
   request
   |> wisp.read_body_to_bitstring
   |> should.equal(Ok(<<"one=two&three=four!%3F":utf8>>))
+}
+
+pub fn put_json_test() {
+  let json =
+    json.object([
+      #("one", json.string("two")),
+      #("three", json.string("four!?!")),
+    ])
+  let request = testing.put_json("/wibble/woo", [], json)
+
+  request.method
+  |> should.equal(http.Put)
+  request.headers
+  |> should.equal([#("content-type", "application/json")])
+  request.scheme
+  |> should.equal(http.Https)
+  request.host
+  |> should.equal("localhost")
+  request.port
+  |> should.equal(None)
+  request.path
+  |> should.equal("/wibble/woo")
+  request.query
+  |> should.equal(None)
+  request
+  |> wisp.read_body_to_bitstring
+  |> should.equal(Ok(<<json.to_string(json):utf8>>))
 }
 
 pub fn string_body_empty_test() {
