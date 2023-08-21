@@ -1,22 +1,24 @@
 import exception
-import gleam/string_builder.{StringBuilder}
+import gleam/base
 import gleam/bit_builder
 import gleam/bit_string
-import gleam/erlang
-import gleam/base
 import gleam/bool
 import gleam/crypto
+import gleam/dynamic.{Dynamic}
+import gleam/erlang
 import gleam/http.{Method}
 import gleam/http/request.{Request as HttpRequest}
 import gleam/http/response.{Response as HttpResponse}
+import gleam/int
+import gleam/json
 import gleam/list
+import gleam/option.{Option}
 import gleam/result
 import gleam/string
-import gleam/option.{Option}
+import gleam/string_builder.{StringBuilder}
 import gleam/uri
-import gleam/int
-import simplifile
 import mist
+import simplifile
 import wisp/internal/logger
 
 //
@@ -644,7 +646,7 @@ pub fn method_override(request: HttpRequest(a)) -> HttpRequest(a) {
   |> result.unwrap(request)
 }
 
-// TODO: don't always return entity to large. Other errors are possible, such as
+// TODO: don't always return entity too large. Other errors are possible, such as
 // network errors.
 /// A middleware function which reads the entire body of the request as a string.
 ///
@@ -679,7 +681,7 @@ pub fn require_string_body(
   }
 }
 
-// TODO: don't always return entity to large. Other errors are possible, such as
+// TODO: don't always return entity too large. Other errors are possible, such as
 // network errors.
 /// A middleware function which reads the entire body of the request as a bit
 /// string.
@@ -812,6 +814,60 @@ pub fn require_form(
         "application/x-www-form-urlencoded", "multipart/form-data",
       ])
   }
+}
+
+/// This middleware function ensures that the request has a value for the
+/// `content-type` header, returning an empty response with status code 415:
+/// Unsupported media type if the header is not the expected value
+///
+/// # Examples
+/// 
+/// ```gleam
+/// fn handle_request(request: Request) -> Response {
+///   use <- wisp.require_content_type(request, "application/json")
+///   // ...
+/// }
+/// ```
+///
+pub fn require_content_type(
+  request: Request,
+  expected: String,
+  next: fn() -> Response,
+) -> Response {
+  case list.key_find(request.headers, "content-type") {
+    Ok(content_type) if content_type == expected -> next()
+    _ -> unsupported_media_type([expected])
+  }
+}
+
+/// A middleware which extracts JSON from the body of a request.
+/// 
+/// ```gleam
+/// fn handle_request(request: Request) -> Response {
+///   use json <- wisp.require_json(request)
+///   // decode and use JSON here...
+/// }
+/// ```
+///
+/// The `set_max_body_size` and `set_read_chunk_size` can be used to configure
+/// the reading of the request body.
+///
+/// If the request does not have the `content-type` set to `application/json` an
+/// empty response with status code 415: Unsupported media type will be returned
+/// to the client.
+///
+/// If the request body is larger than the `max_body_size` or `max_files_size`
+/// limits then an empty response with status code 413: Entity too large will be
+/// returned to the client.
+///
+/// If the body cannot be parsed successfully then an empty response with status
+/// code 400: Bad request will be returned to the client.
+/// 
+pub fn require_json(request: Request, next: fn(Dynamic) -> Response) -> Response {
+  use <- require_content_type(request, "application/json")
+  use body <- require_string_body(request)
+  use json <- or_400(json.decode(body, Ok))
+  next(json)
 }
 
 fn require_urlencoded_form(
