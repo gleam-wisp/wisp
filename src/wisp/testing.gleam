@@ -1,10 +1,11 @@
 import wisp.{Empty, File, Request, Response, Text}
 import gleam/string_builder
+import gleam/string
 import gleam/bit_builder
 import gleam/uri
 import gleam/http/request
 import gleam/http
-import gleam/option.{None}
+import gleam/option.{None, Some}
 import simplifile
 
 /// The default secret key base used for test requests.
@@ -28,6 +29,10 @@ pub fn request(
   headers: List(http.Header),
   body: BitString,
 ) -> Request {
+  let #(path, query) = case string.split(path, "?") {
+    [path, query] -> #(path, Some(query))
+    _ -> #(path, None)
+  }
   request.Request(
     method: method,
     headers: headers,
@@ -36,7 +41,7 @@ pub fn request(
     host: "localhost",
     port: None,
     path: path,
-    query: None,
+    query: query,
   )
   |> request.set_body(wisp.create_canned_connection(
     body,

@@ -1,6 +1,6 @@
 import gleam/http
 import gleam/http/response
-import gleam/option.{None}
+import gleam/option.{None, Some}
 import gleam/string_builder
 import gleeunit/should
 import wisp
@@ -417,4 +417,32 @@ pub fn bit_string_body_text_test() {
   |> response.set_body(wisp.Text(string_builder.from_string("Hello, Joe!")))
   |> testing.bit_string_body
   |> should.equal(<<"Hello, Joe!":utf8>>)
+}
+
+pub fn request_query_string_test() {
+  let request =
+    testing.request(
+      http.Patch,
+      "/wibble/woo?one=two&three=four",
+      [#("content-type", "application/json")],
+      <<"wubwub":utf8>>,
+    )
+
+  request.method
+  |> should.equal(http.Patch)
+  request.headers
+  |> should.equal([#("content-type", "application/json")])
+  request.scheme
+  |> should.equal(http.Https)
+  request.host
+  |> should.equal("localhost")
+  request.port
+  |> should.equal(None)
+  request.path
+  |> should.equal("/wibble/woo")
+  request.query
+  |> should.equal(Some("one=two&three=four"))
+  request
+  |> wisp.read_body_to_bitstring
+  |> should.equal(Ok(<<"wubwub":utf8>>))
 }
