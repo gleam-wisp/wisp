@@ -109,6 +109,11 @@ pub fn unsupported_media_type_test() {
   ))
 }
 
+pub fn unprocessable_entity_test() {
+  wisp.unprocessable_entity()
+  |> should.equal(Response(422, [], wisp.Empty))
+}
+
 pub fn html_response_test() {
   let body = string_builder.from_string("Hello, world!")
   let response = wisp.html_response(body, 200)
