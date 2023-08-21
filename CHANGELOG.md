@@ -2,6 +2,8 @@
 
 ## v0.4.0 - Unreleased
 
+- The `wisp` module gains the `require_json` and `require_content_type`
+  middleware functions.
 - The request construction functions in the `wisp/testing` module now support
   query strings. e.g. `get("/users?limit=10", [])`.
 
