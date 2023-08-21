@@ -58,5 +58,6 @@ include comments and tests.
 - [Hello, World!](https://github.com/lpil/wisp/tree/main/examples/0-hello-world)
 - [Routing](https://github.com/lpil/wisp/tree/main/examples/1-routing)
 - [Reading form data](https://github.com/lpil/wisp/tree/main/examples/2-reading-form-data)
+- [Working with JSON](https://github.com/lpil/wisp/tree/main/examples/3-working-with-json)
 
 API documentation is available on [HexDocs](https://hexdocs.pm/wisp/).
