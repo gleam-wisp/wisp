@@ -1,12 +1,14 @@
+import gleam/crypto
+import gleam/dynamic.{Dynamic}
+import gleam/erlang
 import gleam/http
 import gleam/http/request
 import gleam/http/response.{Response}
+import gleam/map
 import gleam/list
-import gleam/string
-import gleam/crypto
-import gleam/string_builder
-import gleam/erlang
 import gleam/set
+import gleam/string
+import gleam/string_builder
 import gleeunit
 import gleeunit/should
 import simplifile
@@ -23,6 +25,15 @@ fn form_handler(
 ) -> wisp.Response {
   use form <- wisp.require_form(request)
   callback(form)
+  wisp.ok()
+}
+
+fn json_handler(
+  request: wisp.Request,
+  callback: fn(Dynamic) -> anything,
+) -> wisp.Response {
+  use json <- wisp.require_json(request)
+  callback(json)
   wisp.ok()
 }
 
@@ -425,6 +436,71 @@ pub fn temporary_file_test() {
   // They no longer exist
   let assert Error(simplifile.Enoent) = simplifile.read(request2_file1)
   let assert Error(simplifile.Enoent) = simplifile.read(request2_file2)
+}
+
+pub fn require_content_type_test() {
+  {
+    let request = testing.get("/", [#("content-type", "text/plain")])
+    use <- wisp.require_content_type(request, "text/plain")
+    wisp.ok()
+  }
+  |> should.equal(wisp.ok())
+}
+
+pub fn require_content_type_missing_test() {
+  {
+    let request = testing.get("/", [])
+    use <- wisp.require_content_type(request, "text/plain")
+    wisp.ok()
+  }
+  |> should.equal(wisp.unsupported_media_type(["text/plain"]))
+}
+
+pub fn require_content_type_invalid_test() {
+  {
+    let request = testing.get("/", [#("content-type", "text/plain")])
+    use <- wisp.require_content_type(request, "text/html")
+    panic as "should be unreachable"
+  }
+  |> should.equal(wisp.unsupported_media_type(["text/html"]))
+}
+
+pub fn json_test() {
+  testing.post("/", [], "{\"one\":1,\"two\":2}")
+  |> request.set_header("content-type", "application/json")
+  |> json_handler(fn(json) {
+    json
+    |> should.equal(dynamic.from(map.from_list([#("one", 1), #("two", 2)])))
+  })
+  |> should.equal(wisp.ok())
+}
+
+pub fn json_wrong_content_type_test() {
+  testing.post("/", [], "{\"one\":1,\"two\":2}")
+  |> request.set_header("content-type", "text/plain")
+  |> json_handler(fn(_) { panic as "should be unreachable" })
+  |> should.equal(wisp.unsupported_media_type(["application/json"]))
+}
+
+pub fn json_no_content_type_test() {
+  testing.post("/", [], "{\"one\":1,\"two\":2}")
+  |> json_handler(fn(_) { panic as "should be unreachable" })
+  |> should.equal(wisp.unsupported_media_type(["application/json"]))
+}
+
+pub fn json_too_big_test() {
+  testing.post("/", [], "{\"one\":1,\"two\":2}")
+  |> wisp.set_max_body_size(1)
+  |> request.set_header("content-type", "application/json")
+  |> json_handler(fn(_) { panic as "should be unreachable" })
+  |> should.equal(Response(413, [], wisp.Empty))
+}
+
+pub fn json_syntax_error_test() {
+  testing.post("/", [], "{\"one\":1,\"two\":2")
+  |> request.set_header("content-type", "application/json")
+  |> json_handler(fn(_) { panic as "should be unreachable" })
+  |> should.equal(Response(400, [], wisp.Empty))
 }
 
 pub fn urlencoded_form_test() {
