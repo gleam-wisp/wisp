@@ -1,4 +1,4 @@
-# Wisp Example: Routing
+# Wisp Example: Working with JSON
 
 ```sh
 gleam run   # Run the server
