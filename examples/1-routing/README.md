@@ -23,6 +23,6 @@ request handler functions depending on where the request should go.
 Tests have been added for each of the routes. The `wisp/testing` module is used
 to create different requests to test the application with.
 
-### Other modules
+### Other files
 
-No changes have been made to the other modules.
+No changes have been made to the other files.

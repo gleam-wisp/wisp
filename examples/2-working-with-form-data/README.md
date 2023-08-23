@@ -12,7 +12,7 @@ concepts from the [routing example][routing] so read those first. The additions
 are detailed here and commented in the code.
 
 [hello]: https://github.com/lpil/wisp/tree/main/examples/0-hello-world
-[routing]: https://github.com/lpil/wisp/tree/main/examples/0-routing
+[routing]: https://github.com/lpil/wisp/tree/main/examples/1-routing
 
 ### `app/router` module
 
@@ -24,6 +24,6 @@ request body and make use of values from it.
 Tests have been added that send requests with form data bodies and check that
 the expected response is returned.
 
-### Other modules
+### Other files
 
-No changes have been made to the other modules.
+No changes have been made to the other files.

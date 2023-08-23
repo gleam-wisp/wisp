@@ -1,0 +1,11 @@
+name = "app"
+version = "1.0.0"
+description = "A Wisp example"
+
+[dependencies]
+gleam_stdlib = "~> 0.30"
+wisp = { path = "../.." }
+gsv = "~> 0.1"
+
+[dev-dependencies]
+gleeunit = "~> 0.10"
