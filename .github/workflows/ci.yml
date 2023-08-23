@@ -29,3 +29,9 @@ jobs:
 
       - run: gleam test
         working-directory: examples/2-working-with-form-data
+
+      - run: gleam test
+        working-directory: examples/3-working-with-json
+
+      - run: gleam test
+        working-directory: examples/4-working-with-other-formats
