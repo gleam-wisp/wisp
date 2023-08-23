@@ -252,3 +252,7 @@ pub fn bit_string_body(response: Response) -> BitString {
     }
   }
 }
+
+// TODO: test
+// TODO: document
+pub const set_header = request.set_header

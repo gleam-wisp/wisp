@@ -204,7 +204,7 @@ pub fn html_body(response: Response, html: StringBuilder) -> Response {
   |> response.set_header("content-type", "text/html")
 }
 
-// TODO: terst
+// TODO: test
 /// Set the body of a response to a given JSON document, and set the
 /// `content-type` header to `text/json`.
 /// 
@@ -223,6 +223,53 @@ pub fn json_body(response: Response, json: StringBuilder) -> Response {
   response
   |> response.set_body(Text(json))
   |> response.set_header("content-type", "application/json")
+}
+
+// TODO: test
+/// Set the body of a response to a given string builder.
+///
+/// You likely want to also set the request `content-type` header to an
+/// appropriate value for the format of the content.
+///
+/// # Examples
+/// 
+/// ```gleam
+/// let body = string_builder.from_string("Hello, Joe!")
+/// response(201)
+/// |> string_builder_body(body)
+/// // -> Response(201, [#("content-type", "application/json")], Text(body))
+/// ```
+/// 
+pub fn string_builder_body(
+  response: Response,
+  content: StringBuilder,
+) -> Response {
+  response
+  |> response.set_body(Text(content))
+}
+
+// TODO: test
+/// Set the body of a response to a given string builder.
+///
+/// You likely want to also set the request `content-type` header to an
+/// appropriate value for the format of the content.
+///
+/// # Examples
+/// 
+/// ```gleam
+/// let body = 
+/// response(201)
+/// |> string_builder_body("Hello, Joe!")
+/// // -> Response(
+/// //   201,
+/// //   [#("content-type", "application/json")],
+/// //   Text(string_builder.from_string("Hello, Joe"))
+/// // )
+/// ```
+/// 
+pub fn string_body(response: Response, content: String) -> Response {
+  response
+  |> response.set_body(Text(string_builder.from_string(content)))
 }
 
 /// Escape a string so that it can be safely included in a HTML document.
@@ -642,6 +689,20 @@ pub fn require_method(
 /// ```
 ///
 pub const path_segments = request.path_segments
+
+// TODO: re-export once Gleam has a syntax for that
+// TODO: test
+/// Set a given header to a given value, replacing any existing value.
+/// 
+/// # Examples
+///
+/// ```gleam
+/// > wisp.ok()
+/// > |> wisp.set_header("content-type", "application/json")
+/// Request(200, [#("content-type", "application/json")], Empty)
+/// ```
+///
+pub const set_header = response.set_header
 
 /// This function overrides an incoming POST request with a method given in
 /// the request's `_method` query paramerter. This is useful as web browsers

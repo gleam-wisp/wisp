@@ -28,4 +28,4 @@ jobs:
         working-directory: examples/1-routing
 
       - run: gleam test
-        working-directory: examples/2-reading-form-data
+        working-directory: examples/2-working-with-form-data
