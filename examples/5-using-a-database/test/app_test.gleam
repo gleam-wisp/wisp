@@ -98,7 +98,7 @@ pub fn read_person_test() {
   let response = router.handle_request(request, ctx)
 
   response.status
-  |> should.equal(201)
+  |> should.equal(200)
 
   response
   |> testing.string_body

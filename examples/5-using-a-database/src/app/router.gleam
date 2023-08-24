@@ -5,6 +5,12 @@ import wisp.{Request, Response}
 pub fn handle_request(req: Request, ctx: Context) -> Response {
   use req <- web.middleware(req)
 
+  // A new `app/web/people` module now contains the handlers and other functions
+  // relating to the People feature of the application.
+  //
+  // The router module now only deals with routing, and dispatches to the
+  // feature modules for handling requests.
+  // 
   case wisp.path_segments(req) {
     ["people"] -> people.all(req, ctx)
     ["people", id] -> people.one(req, ctx, id)

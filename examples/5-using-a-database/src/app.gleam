@@ -11,15 +11,19 @@ pub fn main() {
   wisp.configure_logger()
   let secret_key_base = wisp.random_string(64)
 
-  // TODO: document
+  // A database creation is created here, when the program starts.
+  // This connection is used by all requests.
   use db <- tiny_database.with_connection(data_directory)
 
-  // TODO: document
+  // A context is constructed to hold the database connection.
   let context = web.Context(db: db)
 
-  // TODO: document
+  // The handle_request function is partially applied with the context to make
+  // the request handler function that only takes a request.
+  let handler = router.handle_request(_, context)
+
   let assert Ok(_) =
-    router.handle_request(_, context)
+    handler
     |> wisp.mist_handler(secret_key_base)
     |> mist.new
     |> mist.port(8000)
