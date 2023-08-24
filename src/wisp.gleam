@@ -204,7 +204,6 @@ pub fn html_body(response: Response, html: StringBuilder) -> Response {
   |> response.set_header("content-type", "text/html")
 }
 
-// TODO: test
 /// Set the body of a response to a given JSON document, and set the
 /// `content-type` header to `text/json`.
 /// 
@@ -225,7 +224,6 @@ pub fn json_body(response: Response, json: StringBuilder) -> Response {
   |> response.set_header("content-type", "application/json")
 }
 
-// TODO: test
 /// Set the body of a response to a given string builder.
 ///
 /// You likely want to also set the request `content-type` header to an
@@ -237,7 +235,7 @@ pub fn json_body(response: Response, json: StringBuilder) -> Response {
 /// let body = string_builder.from_string("Hello, Joe!")
 /// response(201)
 /// |> string_builder_body(body)
-/// // -> Response(201, [#("content-type", "application/json")], Text(body))
+/// // -> Response(201, [], Text(body))
 /// ```
 /// 
 pub fn string_builder_body(
@@ -248,7 +246,6 @@ pub fn string_builder_body(
   |> response.set_body(Text(content))
 }
 
-// TODO: test
 /// Set the body of a response to a given string builder.
 ///
 /// You likely want to also set the request `content-type` header to an
@@ -262,7 +259,7 @@ pub fn string_builder_body(
 /// |> string_builder_body("Hello, Joe!")
 /// // -> Response(
 /// //   201,
-/// //   [#("content-type", "application/json")],
+/// //   [],
 /// //   Text(string_builder.from_string("Hello, Joe"))
 /// // )
 /// ```
@@ -691,7 +688,6 @@ pub fn require_method(
 pub const path_segments = request.path_segments
 
 // TODO: re-export once Gleam has a syntax for that
-// TODO: test
 /// Set a given header to a given value, replacing any existing value.
 /// 
 /// # Examples
