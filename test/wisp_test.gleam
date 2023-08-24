@@ -114,6 +114,18 @@ pub fn unprocessable_entity_test() {
   |> should.equal(Response(422, [], wisp.Empty))
 }
 
+pub fn json_response_test() {
+  let body = string_builder.from_string("{\"one\":1,\"two\":2}")
+  let response = wisp.json_response(body, 201)
+  response.status
+  |> should.equal(201)
+  response.headers
+  |> should.equal([#("content-type", "application/json")])
+  response
+  |> testing.string_body
+  |> should.equal("{\"one\":1,\"two\":2}")
+}
+
 pub fn html_response_test() {
   let body = string_builder.from_string("Hello, world!")
   let response = wisp.html_response(body, 200)

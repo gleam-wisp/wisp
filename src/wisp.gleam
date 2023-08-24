@@ -184,8 +184,6 @@ pub fn html_response(html: StringBuilder, status: Int) -> Response {
   HttpResponse(status, [#("content-type", "text/html")], Text(html))
 }
 
-// TODO: document
-// TODO: test
 /// Create a JSON response.
 /// 
 /// The body is expected to be valid JSON, though this is not validated.
