@@ -1,0 +1,13 @@
+name = "tiny_database"
+version = "1.0.0"
+description = "A silly little database to be used in the examples"
+licences = ["Apache-2.0"]
+
+[dependencies]
+gleam_stdlib = "~> 0.30"
+simplifile = "~> 0.1"
+ids = "~> 0.8"
+gleam_json = "~> 0.6"
+
+[dev-dependencies]
+gleeunit = "~> 0.10"
