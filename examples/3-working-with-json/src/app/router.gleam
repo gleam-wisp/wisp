@@ -52,15 +52,10 @@ pub fn handle_request(req: Request) -> Response {
   // An appropriate response is returned depending on whether the JSON could be
   // successfully handled or not.
   case result {
-    Ok(json) -> {
-      wisp.created()
-      |> wisp.json_body(json)
-    }
+    Ok(json) -> wisp.json_response(json, 201)
 
     // In a real application we would probably want to return some JSON error
     // object, but for this example we'll just return an empty response.
-    Error(_errors) -> {
-      wisp.unprocessable_entity()
-    }
+    Error(_) -> wisp.unprocessable_entity()
   }
 }
