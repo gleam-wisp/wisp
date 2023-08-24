@@ -555,3 +555,29 @@ pub fn request_query_string_test() {
   |> wisp.read_body_to_bitstring
   |> should.equal(Ok(<<"wubwub":utf8>>))
 }
+
+pub fn set_header_test() {
+  let request = testing.get("/", [])
+
+  request.headers
+  |> should.equal([])
+
+  // Set new headers
+  let request =
+    request
+    |> testing.set_header("content-type", "application/json")
+    |> testing.set_header("accept", "application/json")
+  request.headers
+  |> should.equal([
+    #("content-type", "application/json"),
+    #("accept", "application/json"),
+  ])
+
+  // Replace the header
+  let request = testing.set_header(request, "content-type", "text/plain")
+  request.headers
+  |> should.equal([
+    #("content-type", "text/plain"),
+    #("accept", "application/json"),
+  ])
+}
