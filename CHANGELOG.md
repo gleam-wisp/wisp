@@ -2,10 +2,11 @@
 
 ## v0.4.0 - Unreleased
 
-- The `wisp` module gains the `unprocessable_entity`, `json_body`,
-  `require_json` and `require_content_type` functions.
-- The `wisp/testing` module gains the `post_json`, `put_json`, `patch_json`, and
-  `delete_json` functions.
+- The `wisp` module gains the `set_header`, `string_builder_body`,
+  `string_body`, `json_body`, `unprocessable_entity`, `require_json` and
+  `require_content_type` functions.
+- The `wisp/testing` module gains the `post_json`, `put_json`, `patch_json`,
+  `delete_json`, and `set_header` functions.
 - The request construction functions in the `wisp/testing` module now support
   query strings. e.g. `get("/users?limit=10", [])`.
 
