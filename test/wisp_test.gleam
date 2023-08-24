@@ -795,3 +795,45 @@ pub fn escape_html_test() {
   |> wisp.escape_html
   |> should.equal("&lt;script&gt;alert('&amp;');&lt;/script&gt;")
 }
+
+pub fn set_header_test() {
+  wisp.ok()
+  |> wisp.set_header("accept", "application/json")
+  |> wisp.set_header("accept", "text/plain")
+  |> wisp.set_header("content-type", "text/html")
+  |> should.equal(Response(
+    200,
+    [#("accept", "text/plain"), #("content-type", "text/html")],
+    wisp.Empty,
+  ))
+}
+
+pub fn string_body_test() {
+  wisp.ok()
+  |> wisp.string_body("Hello, world!")
+  |> should.equal(Response(
+    200,
+    [],
+    wisp.Text(string_builder.from_string("Hello, world!")),
+  ))
+}
+
+pub fn string_builder_body_test() {
+  wisp.ok()
+  |> wisp.string_builder_body(string_builder.from_string("Hello, world!"))
+  |> should.equal(Response(
+    200,
+    [],
+    wisp.Text(string_builder.from_string("Hello, world!")),
+  ))
+}
+
+pub fn json_body_test() {
+  wisp.ok()
+  |> wisp.json_body(string_builder.from_string("{\"one\":1,\"two\":2}"))
+  |> should.equal(Response(
+    200,
+    [#("content-type", "application/json")],
+    wisp.Text(string_builder.from_string("{\"one\":1,\"two\":2}")),
+  ))
+}
