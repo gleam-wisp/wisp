@@ -39,12 +39,10 @@ The `handle_request` function has been updated to handle multiple routes:
 This module has been created to hold all the functions for working with the
 "people" resource, including their request handlers.
 
-### `app/test/setup` module
-
-This module has been created with a `with_context` function to create a new
-`Context` object for use in tests.
-
 ### `app_test` module
+
+The `with_context` function has been added to create a `Context` record with a
+database connection, and to setup the database.
 
 The tests have been updated to verify that the application saves and retrieves
 the data correctly.

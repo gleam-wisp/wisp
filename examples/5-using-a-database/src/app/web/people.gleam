@@ -95,7 +95,7 @@ fn decode_person(json: Dynamic) -> Result(Person, Nil) {
 }
 
 // TODO: document
-fn save_to_database(
+pub fn save_to_database(
   db: tiny_database.Connection,
   person: Person,
 ) -> Result(String, Nil) {
@@ -108,7 +108,7 @@ fn save_to_database(
 }
 
 // TODO: document
-fn read_from_database(
+pub fn read_from_database(
   db: tiny_database.Connection,
   id: String,
 ) -> Result(Person, Nil) {
