@@ -1,10 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- The `wisp` module gains the `json_response` function.
+
 ## v0.4.0 - 2023-08-24
 
-- The `wisp` module gains the `json_response`, `set_header`,
-  `string_builder_body`, `string_body`, `json_body`, `unprocessable_entity`,
-  `require_json` and `require_content_type` functions.
+- The `wisp` module gains the `set_header`, `string_builder_body`,
+  `string_body`, `json_body`, `unprocessable_entity`, `require_json` and
+  `require_content_type` functions.
 - The `wisp/testing` module gains the `post_json`, `put_json`, `patch_json`,
   `delete_json`, and `set_header` functions.
 - The request construction functions in the `wisp/testing` module now support
