@@ -28,8 +28,8 @@ pub fn submit_wrong_content_type_test() {
 pub fn submit_missing_parameters_test() {
   let json = json.object([#("name", json.string("Joe"))])
 
-  // The `METHOD_json` functions are used to create a request with a
-  // `x-www-form-urlencoded` body, with the appropriate `content-type` header.
+  // The `METHOD_json` functions are used to create a request with a JSON body,
+  // with the appropriate `content-type` header.
   let response =
     testing.post_json("/", [], json)
     |> router.handle_request()

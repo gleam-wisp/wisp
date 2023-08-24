@@ -5,14 +5,14 @@ import wisp
 import app/router
 import app/web
 
-pub const data_dir = "tmp/data"
+pub const data_directory = "tmp/data"
 
 pub fn main() {
   wisp.configure_logger()
   let secret_key_base = wisp.random_string(64)
 
   // TODO: document
-  use db <- tiny_database.with_connection(data_dir)
+  use db <- tiny_database.with_connection(data_directory)
 
   // TODO: document
   let context = web.Context(db: db)

@@ -43,6 +43,7 @@ pub fn insert(
   connection: Connection,
   values: Map(String, String),
 ) -> Result(String, Nil) {
+  let assert Ok(_) = simplifile.create_directory_all(connection.root)
   let id = nanoid.generate()
   let values =
     values
