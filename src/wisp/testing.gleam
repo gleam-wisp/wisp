@@ -253,6 +253,15 @@ pub fn bit_string_body(response: Response) -> BitString {
   }
 }
 
-// TODO: test
-// TODO: document
+/// Set a header on a request.
+/// 
+/// # Examples
+/// 
+/// ```gleam
+/// let request =
+///   test.request(test.Get, "/", [], <<>>)
+///   |> test.set_header("content-type", "application/json")
+/// request.headers
+/// // => [#("content-type", "application/json")]
+/// ```
 pub const set_header = request.set_header
