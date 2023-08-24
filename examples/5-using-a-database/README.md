@@ -1,4 +1,4 @@
-# Wisp Example: Working with JSON
+# Wisp Example: Using A Database
 
 ```sh
 gleam run   # Run the server
