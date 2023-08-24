@@ -11,9 +11,8 @@ pub fn handle_request(req: Request) -> Response {
   use req <- web.middleware(req)
   use <- wisp.require_method(req, Post)
 
-  // We want to accept only CSV content, so we use this middleware is used to
-  // check the correct content type header is set, and return an error response
-  // if not.
+  // We want to accept only CSV content, so we use this middleware to check the
+  // correct content type header is set, and return an error response if not.
   use <- wisp.require_content_type(req, "text/csv")
 
   // This middleware reads the body of the request and returns it as a string,
@@ -55,7 +54,7 @@ pub fn handle_request(req: Request) -> Response {
       |> wisp.string_body(csv)
     }
 
-    Error(_errors) -> {
+    Error(_error) -> {
       wisp.unprocessable_entity()
     }
   }
