@@ -184,6 +184,25 @@ pub fn html_response(html: StringBuilder, status: Int) -> Response {
   HttpResponse(status, [#("content-type", "text/html")], Text(html))
 }
 
+// TODO: document
+// TODO: test
+/// Create a JSON response.
+/// 
+/// The body is expected to be valid JSON, though this is not validated.
+/// The `content-type` header will be set to `application/json`.
+/// 
+/// # Examples
+/// 
+/// ```gleam
+/// let body = string_builder.from_string("{\"name\": \"Joe\"}")
+/// html_response(body, 200)
+/// // -> Response(200, [#("content-type", "application/json")], Text(body))
+/// ```
+/// 
+pub fn json_response(html: StringBuilder, status: Int) -> Response {
+  HttpResponse(status, [#("content-type", "application/json")], Text(html))
+}
+
 /// Set the body of a response to a given HTML document, and set the
 /// `content-type` header to `text/html`.
 /// 
