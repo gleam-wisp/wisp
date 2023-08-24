@@ -60,5 +60,6 @@ include comments and tests.
 - [Working with form data](https://github.com/lpil/wisp/tree/main/examples/2-working-with-form-data)
 - [Working with JSON](https://github.com/lpil/wisp/tree/main/examples/3-working-with-json)
 - [Working with other formats](https://github.com/lpil/wisp/tree/main/examples/4-working-with-other-formats)
+- [Using a database](https://github.com/lpil/wisp/tree/main/examples/5-using-a-database)
 
 API documentation is available on [HexDocs](https://hexdocs.pm/wisp/).
