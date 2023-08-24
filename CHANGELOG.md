@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.4.0 - Unreleased
+## v0.4.0 - 2023-08-24
 
 - The `wisp` module gains the `set_header`, `string_builder_body`,
   `string_body`, `json_body`, `unprocessable_entity`, `require_json` and

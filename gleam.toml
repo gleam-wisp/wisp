@@ -1,5 +1,5 @@
 name = "wisp"
-version = "0.3.0"
+version = "0.4.0"
 gleam = ">= 0.30.0"
 description = "A fun and practical web framework for Gleam"
 licences = ["Apache-2.0"]
