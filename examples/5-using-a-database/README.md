@@ -29,15 +29,13 @@ to the handler function in a `Context` record.
 
 ### `app/router` module
 
-The `handle_request` function has been updated to handle multiple routes:
-- `GET /people` returns a list of all the entities in the database.
-- `POST /people` reads JSON data from the request body and saves it in the database.
-- `GET /people/:id` returns the entity with the given id.
+The `handle_request` function has been updated to route requests to functions in
+the new `app/web/people` module.
 
 ### `app/web/people` module
 
 This module has been created to hold all the functions for working with the
-"people" resource, including their request handlers.
+"people" feature, including their request handlers.
 
 ### `app_test` module
 
