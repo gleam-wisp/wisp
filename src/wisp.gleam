@@ -738,6 +738,7 @@ pub const set_header = response.set_header
 ///   let request = wisp.method_override(request)
 ///   // The method has now been overridden if appropriate
 /// }
+/// ```
 ///
 pub fn method_override(request: HttpRequest(a)) -> HttpRequest(a) {
   use <- bool.guard(when: request.method != http.Post, return: request)
