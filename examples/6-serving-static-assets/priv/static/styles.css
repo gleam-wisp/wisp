@@ -1,0 +1,9 @@
+html {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 50px solid #ffaff3;
+  height: 100vh;
+  box-sizing: border-box;
+  font-size: 40px;
+}
