@@ -1442,6 +1442,18 @@ fn join_path(a: String, b: String) -> String {
 /// }
 /// ```
 ///
+/// Typically you static assets may be kept in your project in a directory
+/// called `priv`. The `priv_directory` function can be used to get a path to
+/// this directory.
+///
+/// ```gleam
+/// fn handle_request(req: Request) -> Response {
+///   let assert Ok(priv) = priv_directory("my_application")
+///   use <- wisp.serve_static(req, under: "/static", from: priv)
+///   // ...
+/// }
+/// ```
+///
 pub fn serve_static(
   req: Request,
   under prefix: String,
@@ -1544,6 +1556,21 @@ pub fn delete_temporary_files(
     other -> other
   }
 }
+
+// TODO: re-export when Gleam has a syntax for this
+/// Returns the path of a package's `priv` directory, where extra non-Gleam
+/// or Erlang files are typically kept.
+///
+/// Returns an error if no package was found with the given name.
+///
+/// # Example
+///
+/// ```gleam
+/// > erlang.priv_directory("my_app")
+/// // -> Ok("/some/location/my_app/priv")
+/// ```
+/// 
+pub const priv_directory = erlang.priv_directory
 
 //
 // Logging

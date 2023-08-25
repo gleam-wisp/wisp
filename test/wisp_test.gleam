@@ -849,3 +849,16 @@ pub fn json_body_test() {
     wisp.Text(string_builder.from_string("{\"one\":1,\"two\":2}")),
   ))
 }
+
+pub fn priv_directory_test() {
+  let assert Error(Nil) = wisp.priv_directory("unknown_application")
+
+  let assert Ok(dir) = wisp.priv_directory("wisp")
+  let assert True = string.ends_with(dir, "/wisp/priv")
+
+  let assert Ok(dir) = wisp.priv_directory("gleam_erlang")
+  let assert True = string.ends_with(dir, "/gleam_erlang/priv")
+
+  let assert Ok(dir) = wisp.priv_directory("gleam_stdlib")
+  let assert True = string.ends_with(dir, "/gleam_stdlib/priv")
+}
