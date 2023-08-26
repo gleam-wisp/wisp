@@ -62,5 +62,6 @@ include comments and tests.
 - [Working with other formats](https://github.com/lpil/wisp/tree/main/examples/4-working-with-other-formats)
 - [Using a database](https://github.com/lpil/wisp/tree/main/examples/5-using-a-database)
 - [Serving static assets](https://github.com/lpil/wisp/tree/main/examples/6-serving-static-assets)
+- [Logging](https://github.com/lpil/wisp/tree/main/examples/7-logging)
 
 API documentation is available on [HexDocs](https://hexdocs.pm/wisp/).
