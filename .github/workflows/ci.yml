@@ -35,3 +35,12 @@ jobs:
 
       - run: gleam test
         working-directory: examples/4-working-with-other-formats
+
+      - run: gleam test
+        working-directory: examples/5-using-a-database
+
+      - run: gleam test
+        working-directory: examples/6-serving-static-assets
+
+      - run: gleam test
+        working-directory: examples/7-logging
