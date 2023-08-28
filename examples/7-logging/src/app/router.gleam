@@ -1,5 +1,4 @@
 import wisp.{Request, Response}
-import gleam/http.{Get, Post}
 import app/web
 
 // Wisp has functions for logging messages using the BEAM logger.
