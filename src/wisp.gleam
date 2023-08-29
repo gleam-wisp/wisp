@@ -7,6 +7,7 @@ import gleam/crypto
 import gleam/dynamic.{Dynamic}
 import gleam/erlang
 import gleam/http.{Method}
+import gleam/http/cookie
 import gleam/http/request.{Request as HttpRequest}
 import gleam/http/response.{Response as HttpResponse}
 import gleam/int
@@ -1715,6 +1716,97 @@ pub fn verify_signed_message(
 fn random_slug() -> String {
   random_string(16)
 }
+
+//
+// Cookies
+//
+
+/// Set a cookie on the response. After `max_age` seconds the cookie will be
+/// expired by the client.
+///
+/// The value is not escaped in any way, so if you wish to use non-alphanumeric
+/// characters then you should escape them yourself, perhaps using the
+/// `encode64` from the `gleam/base` module. Be sure not to use base64 padding
+/// as the `=` character is not allowed unescaped in cookies.
+///
+/// Cookies are set using `gleam_http`'s default attributes for HTTPS. If you
+/// wish for more control over the cookie attributes then you may want to use
+/// the `gleam/http/cookie` module from the `gleam_http` package instead of this
+/// function.
+///
+/// Cookies are not signed or encrypted and can be read or tampered with by
+/// anyone. If you wish to prevent cookies from being tampered with, such as to
+/// store the user's session id, then you should sign the cookie value using the
+/// `sign_message` function.
+///
+/// # Examples
+///
+/// Setting a raw cookie:
+///
+/// ```gleam
+/// wisp.ok()
+/// |> wisp.set_cookie("id", "123", 60 * 60)
+/// ```
+/// 
+/// Setting a base64 encoded cookie:
+/// 
+/// ```gleam
+/// let value = base.encode64("Hello, Joe!", padding: False)
+/// wisp.ok()
+/// |> wisp.set_cookie("id", value, 60 * 60)
+/// ```
+/// 
+/// Setting a signed cookie:
+/// 
+/// ```gleam
+/// let value = wisp.sign_message(request, <<"123">>, crypto.Sha512)
+/// wisp.ok()
+/// |> wisp.set_cookie("id", value, 60 * 60)
+/// ```
+///
+pub fn set_cookie(
+  response: Response,
+  name name: String,
+  value value: String,
+  max_age max_age: Int,
+) -> Response {
+  let attributes =
+    cookie.Attributes(
+      ..cookie.defaults(http.Https),
+      max_age: option.Some(max_age),
+    )
+  response
+  |> response.set_cookie(name, value, attributes)
+}
+
+/// Get a cookie from the request.
+///
+/// If you wish to get multiple cookies you may want to use the `get_cookies`
+/// function to avoid parsing the cookie headers multiple times.
+///
+/// ```gleam
+/// wisp.get_cookie(request, "group")
+/// // -> Ok("A")
+/// ```
+///
+pub fn get_cookie(request: Request, name: String) -> Result(String, Nil) {
+  request
+  |> request.get_cookies
+  |> list.key_find(name)
+}
+
+/// Get all the cookies for a request.
+///
+/// Any malformed cookies will be ignored, as specified in RFC6265.
+///
+/// # Examples
+///
+/// ```gleam
+/// wisp.get_cookies(request)
+/// // -> [#("accepted", "1"), #("group", "A")]
+/// ```
+///
+pub const get_cookies = request.get_cookies
 
 //
 // Testing
