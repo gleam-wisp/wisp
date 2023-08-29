@@ -862,3 +862,74 @@ pub fn priv_directory_test() {
   let assert Ok(dir) = wisp.priv_directory("gleam_stdlib")
   let assert True = string.ends_with(dir, "/gleam_stdlib/priv")
 }
+
+pub fn set_cookie_test() {
+  let request =
+    wisp.ok()
+    |> wisp.set_cookie("id", "123", 60 * 60 * 24 * 365)
+    |> wisp.set_cookie("flash", "hi-there", 60)
+
+  request.headers
+  |> should.equal([
+    #(
+      "set-cookie",
+      "flash=hi-there; Max-Age=60; Path=/; Secure; HttpOnly; SameSite=Lax",
+    ),
+    #(
+      "set-cookie",
+      "id=123; Max-Age=31536000; Path=/; Secure; HttpOnly; SameSite=Lax",
+    ),
+  ])
+}
+
+pub fn get_cookie_test() {
+  let request =
+    testing.get(
+      "/",
+      [
+        #("cookie", "id=123; flash=hi-there; other=456"),
+        #("cookie", "wibble=789"),
+      ],
+    )
+
+  request
+  |> wisp.get_cookie("id")
+  |> should.equal(Ok("123"))
+
+  request
+  |> wisp.get_cookie("flash")
+  |> should.equal(Ok("hi-there"))
+
+  request
+  |> wisp.get_cookie("other")
+  |> should.equal(Ok("456"))
+
+  request
+  |> wisp.get_cookie("wibble")
+  |> should.equal(Ok("789"))
+
+  request
+  |> wisp.get_cookie("unknown")
+  |> should.equal(Error(Nil))
+}
+
+pub fn get_cookies_test() {
+  let request =
+    testing.get(
+      "/",
+      [
+        #("cookie", "id=123; flash=hi-there; other=456"),
+        #("cookie", "wibble=789; id=456"),
+      ],
+    )
+
+  request
+  |> wisp.get_cookies
+  |> should.equal([
+    #("id", "123"),
+    #("flash", "hi-there"),
+    #("other", "456"),
+    #("wibble", "789"),
+    #("id", "456"),
+  ])
+}

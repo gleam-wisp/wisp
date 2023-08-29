@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- The `wisp` module gains the `json_response` and `priv_directory` functions.
+- The `wisp` module gains the `set_cookie`, `get_cookie`, `get_cookies`,
+  `json_response` and `priv_directory` functions.
 
 ## v0.4.0 - 2023-08-24
 
