@@ -1,4 +1,4 @@
-# Wisp Example: Reading form data
+# Wisp Example: Working with form data
 
 ```sh
 gleam run   # Run the server
