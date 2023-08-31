@@ -1802,25 +1802,12 @@ pub fn get_cookie(
     |> request.get_cookies
     |> list.key_find(name),
   )
-  case security {
+  use value <- result.try(case security {
     PlainText -> base.decode64(value)
     Signed -> verify_signed_message(request, value)
-  }
-  |> result.try(bit_string.to_string)
+  })
+  bit_string.to_string(value)
 }
-
-/// Get all the cookies for a request.
-///
-/// Any malformed cookies will be ignored, as specified in RFC6265.
-///
-/// # Examples
-///
-/// ```gleam
-/// wisp.get_cookies(request)
-/// // -> [#("accepted", "1"), #("group", "A")]
-/// ```
-///
-pub const get_cookies = request.get_cookies
 
 //
 // Testing

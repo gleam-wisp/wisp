@@ -581,3 +581,26 @@ pub fn set_header_test() {
     #("accept", "application/json"),
   ])
 }
+
+pub fn set_cookie_plain_text_test() {
+  let req =
+    testing.get("/", [])
+    |> testing.set_cookie("abc", "1234", wisp.PlainText)
+    |> testing.set_cookie("def", "5678", wisp.PlainText)
+  req.headers
+  |> should.equal([#("cookie", "abc=MTIzNA; def=NTY3OA")])
+}
+
+pub fn set_cookie_signed_test() {
+  let req =
+    testing.get("/", [])
+    |> testing.set_cookie("abc", "1234", wisp.Signed)
+    |> testing.set_cookie("def", "5678", wisp.Signed)
+  req.headers
+  |> should.equal([
+    #(
+      "cookie",
+      "abc=SFM1MTI.MTIzNA.QWGuB_lZLssnh71rC6R5_WOr8MDr8dxE3C_2JvLRAAC4ad4SnmQk0Fl_6_RrtmzdH2O3WaNPExkJsuwBixtWIA; def=SFM1MTI.NTY3OA.R3HRe5woa1qwxvjRUC5ggQVd3hTqGCXIk_4ybU35SXPtGvLrFpHBXWGIjyG5QeuEk9j3jnWIL3ct18olJiSCMw",
+    ),
+  ])
+}

@@ -968,24 +968,3 @@ pub fn cookie_sign_roundtrip_test() {
   out
   |> should.equal(message)
 }
-
-pub fn get_cookies_test() {
-  let request =
-    testing.get(
-      "/",
-      [
-        #("cookie", "id=123; flash=hi-there; other=456"),
-        #("cookie", "wibble=789; id=456"),
-      ],
-    )
-
-  request
-  |> wisp.get_cookies
-  |> should.equal([
-    #("id", "123"),
-    #("flash", "hi-there"),
-    #("other", "456"),
-    #("wibble", "789"),
-    #("id", "456"),
-  ])
-}
