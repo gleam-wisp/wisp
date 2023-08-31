@@ -20,7 +20,7 @@ pub fn handle_request(req: Request) -> Response {
 }
 
 pub fn home(req: Request) -> Response {
-  case get_name_from_signed_cookie(req) {
+  case wisp.get_cookie(req, cookie_name) {
     Ok(name) -> {
       [
         "<h1>Hello, " <> wisp.escape_html(name) <> "!</h1>",
@@ -35,13 +35,6 @@ pub fn home(req: Request) -> Response {
       wisp.redirect("/session")
     }
   }
-}
-
-pub fn get_name_from_signed_cookie(req: Request) -> Result(String, Nil) {
-  req
-  |> wisp.get_cookie(cookie_name)
-  |> result.try(wisp.verify_signed_message(req, _))
-  |> result.try(bit_string.to_string)
 }
 
 pub fn session(req: Request) -> Response {
@@ -67,27 +60,20 @@ pub fn new_session() -> Response {
 }
 
 pub fn destroy_session(req: Request) -> Response {
-  let response = wisp.redirect("/session")
+  let resp = wisp.redirect("/session")
   case wisp.get_cookie(req, cookie_name) {
-    Ok(value) -> wisp.set_cookie(response, cookie_name, value, max_age: 0)
-    Error(_) -> response
+    Ok(value) -> wisp.set_cookie(resp, req, cookie_name, value, wisp.Signed, 0)
+    Error(_) -> resp
   }
 }
 
 pub fn create_session(req: Request) -> Response {
   use formdata <- wisp.require_form(req)
 
-  let result = {
-    use name <- result.try(list.key_find(formdata.values, "name"))
-    let bytes = bit_string.from_string(name)
-    let signed = wisp.sign_message(req, bytes, crypto.Sha512)
-    Ok(signed)
-  }
-
-  case result {
-    Ok(signed) -> {
+  case list.key_find(formdata.values, "name") {
+    Ok(name) -> {
       wisp.redirect("/")
-      |> wisp.set_cookie(cookie_name, signed, max_age: 60 * 60 * 24)
+      |> wisp.set_cookie(req, cookie_name, name, wisp.Signed, 60 * 60 * 24)
     }
     Error(_) -> {
       wisp.redirect("/session")

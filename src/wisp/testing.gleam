@@ -1,4 +1,6 @@
+import gleam/base
 import gleam/bit_builder
+import gleam/crypto
 import gleam/http
 import gleam/http/request
 import gleam/json.{Json}
@@ -77,7 +79,6 @@ pub fn post_form(
   |> request.set_header("content-type", "application/x-www-form-urlencoded")
 }
 
-// TODO: test
 /// Create a test HTTP request that can be used to test your request handler.
 /// 
 /// The `content-type` header is set to `application/json`.
@@ -265,3 +266,18 @@ pub fn bit_string_body(response: Response) -> BitString {
 /// // => [#("content-type", "application/json")]
 /// ```
 pub const set_header = request.set_header
+
+// TODO: test
+// TODO: implement
+pub fn set_cookie(
+  req: Request,
+  name: String,
+  value: String,
+  security: wisp.Security,
+) -> Request {
+  let value = case security {
+    wisp.PlainText -> base.encode64(<<value:utf8>>, False)
+    wisp.Signed -> wisp.sign_message(req, <<value:utf8>>, crypto.Sha512)
+  }
+  request.set_cookie(req, name, value)
+}

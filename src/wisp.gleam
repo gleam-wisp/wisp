@@ -1724,50 +1724,39 @@ fn random_slug() -> String {
 /// Set a cookie on the response. After `max_age` seconds the cookie will be
 /// expired by the client.
 ///
-/// The value is not escaped in any way, so if you wish to use non-alphanumeric
-/// characters then you should escape them yourself, perhaps using the
-/// `encode64` from the `gleam/base` module. Be sure not to use base64 padding
-/// as the `=` character is not allowed unescaped in cookies.
+/// This function will sign the value if the `security` parameter is set to
+/// `Signed`, making it so the cookie cannot be tampered with by the client.
+///
+/// Values are base64 encoded so they can contain any characters you want, even
+/// if they would not be permitted directly in a cookie.
 ///
 /// Cookies are set using `gleam_http`'s default attributes for HTTPS. If you
 /// wish for more control over the cookie attributes then you may want to use
 /// the `gleam/http/cookie` module from the `gleam_http` package instead of this
-/// function.
-///
-/// Cookies are not signed or encrypted and can be read or tampered with by
-/// anyone. If you wish to prevent cookies from being tampered with, such as to
-/// store the user's session id, then you should sign the cookie value using the
-/// `sign_message` function.
+/// function. Be sure to sign and escape the cookie value as needed.
 ///
 /// # Examples
 ///
-/// Setting a raw cookie:
+/// Setting a plain text cookie that the client can read and modify:
 ///
 /// ```gleam
 /// wisp.ok()
-/// |> wisp.set_cookie("id", "123", 60 * 60)
+/// |> wisp.set_cookie("id", "123", wisp.PlainText, 60 * 60)
 /// ```
 /// 
-/// Setting a base64 encoded cookie:
+/// Setting a signed cookie that the client can read but not modify:
 /// 
 /// ```gleam
-/// let value = base.encode64("Hello, Joe!", padding: False)
 /// wisp.ok()
-/// |> wisp.set_cookie("id", value, 60 * 60)
-/// ```
-/// 
-/// Setting a signed cookie:
-/// 
-/// ```gleam
-/// let value = wisp.sign_message(request, <<"123">>, crypto.Sha512)
-/// wisp.ok()
-/// |> wisp.set_cookie("id", value, 60 * 60)
+/// |> wisp.set_cookie("id", value, wisp.Signed, 60 * 60)
 /// ```
 ///
 pub fn set_cookie(
-  response: Response,
+  response response: Response,
+  request request: Request,
   name name: String,
   value value: String,
+  security security: Security,
   max_age max_age: Int,
 ) -> Response {
   let attributes =
@@ -1775,8 +1764,22 @@ pub fn set_cookie(
       ..cookie.defaults(http.Https),
       max_age: option.Some(max_age),
     )
+  let value = case security {
+    PlainText -> base.encode64(<<value:utf8>>, False)
+    Signed -> sign_message(request, <<value:utf8>>, crypto.Sha512)
+  }
   response
   |> response.set_cookie(name, value, attributes)
+}
+
+pub type Security {
+  /// The value is store as plain text without any additional security.
+  /// The client will be able to read and modify the value, and create new values.
+  PlainText
+  /// The value is signed to prevent modification.
+  /// The client will be able to read the value but not modify it, or create new
+  /// values.
+  Signed
 }
 
 /// Get a cookie from the request.
@@ -1790,9 +1793,16 @@ pub fn set_cookie(
 /// ```
 ///
 pub fn get_cookie(request: Request, name: String) -> Result(String, Nil) {
-  request
-  |> request.get_cookies
-  |> list.key_find(name)
+  use value <- result.try(
+    request
+    |> request.get_cookies
+    |> list.key_find(name),
+  )
+  case value {
+    "SFM1MTI." <> _ -> verify_signed_message(request, value)
+    _ -> base.decode64(value)
+  }
+  |> result.try(bit_string.to_string)
 }
 
 /// Get all the cookies for a request.
