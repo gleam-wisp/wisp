@@ -1,9 +1,6 @@
 import app/web
 import gleam/http.{Delete, Get, Post}
 import gleam/list
-import gleam/result
-import gleam/crypto
-import gleam/bit_string
 import gleam/string_builder
 import wisp.{Request, Response}
 
@@ -20,7 +17,7 @@ pub fn handle_request(req: Request) -> Response {
 }
 
 pub fn home(req: Request) -> Response {
-  case wisp.get_cookie(req, cookie_name) {
+  case wisp.get_cookie(req, cookie_name, wisp.Signed) {
     Ok(name) -> {
       [
         "<h1>Hello, " <> wisp.escape_html(name) <> "!</h1>",
@@ -61,7 +58,7 @@ pub fn new_session() -> Response {
 
 pub fn destroy_session(req: Request) -> Response {
   let resp = wisp.redirect("/session")
-  case wisp.get_cookie(req, cookie_name) {
+  case wisp.get_cookie(req, cookie_name, wisp.Signed) {
     Ok(value) -> wisp.set_cookie(resp, req, cookie_name, value, wisp.Signed, 0)
     Error(_) -> resp
   }

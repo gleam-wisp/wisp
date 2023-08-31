@@ -911,11 +911,11 @@ pub fn get_cookie_test() {
       "/",
       [
         // Plain text
-        #("cookie", "id=MTIz"),
+        #("cookie", "plain=MTIz"),
         // Signed
         #(
           "cookie",
-          "flash=SFM1MTI.aGktdGhlcmU.uWUWvrAleKQ2jsWcU97HzGgPqtLjjUgl4oe40-RPJ5qRRcE_soXPacgmaHTLxK3xZbOJ5DOTIRMI0szD4Re7wA",
+          "signed=SFM1MTI.aGktdGhlcmU.uWUWvrAleKQ2jsWcU97HzGgPqtLjjUgl4oe40-RPJ5qRRcE_soXPacgmaHTLxK3xZbOJ5DOTIRMI0szD4Re7wA",
         ),
         // Signed but tampered with
         #(
@@ -926,19 +926,31 @@ pub fn get_cookie_test() {
     )
 
   request
-  |> wisp.get_cookie("id")
+  |> wisp.get_cookie("plain", wisp.PlainText)
   |> should.equal(Ok("123"))
-
   request
-  |> wisp.get_cookie("flash")
-  |> should.equal(Ok("hi-there"))
-
-  request
-  |> wisp.get_cookie("signed-and-tampered-with")
+  |> wisp.get_cookie("plain", wisp.Signed)
   |> should.equal(Error(Nil))
 
   request
-  |> wisp.get_cookie("unknown")
+  |> wisp.get_cookie("signed", wisp.PlainText)
+  |> should.equal(Error(Nil))
+  request
+  |> wisp.get_cookie("signed", wisp.Signed)
+  |> should.equal(Ok("hi-there"))
+
+  request
+  |> wisp.get_cookie("signed-and-tampered-with", wisp.PlainText)
+  |> should.equal(Error(Nil))
+  request
+  |> wisp.get_cookie("signed-and-tampered-with", wisp.Signed)
+  |> should.equal(Error(Nil))
+
+  request
+  |> wisp.get_cookie("unknown", wisp.PlainText)
+  |> should.equal(Error(Nil))
+  request
+  |> wisp.get_cookie("unknown", wisp.Signed)
   |> should.equal(Error(Nil))
 }
 
@@ -952,7 +964,7 @@ pub fn cookie_sign_roundtrip_test() {
   let req = testing.get("/", [])
   let signed = wisp.sign_message(req, <<message:utf8>>, crypto.Sha512)
   let req = testing.get("/", [#("cookie", "message=" <> signed)])
-  let assert Ok(out) = wisp.get_cookie(req, "message")
+  let assert Ok(out) = wisp.get_cookie(req, "message", wisp.Signed)
   out
   |> should.equal(message)
 }

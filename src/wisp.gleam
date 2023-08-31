@@ -1784,23 +1784,27 @@ pub type Security {
 
 /// Get a cookie from the request.
 ///
-/// If you wish to get multiple cookies you may want to use the `get_cookies`
-/// function to avoid parsing the cookie headers multiple times.
+/// If a cookie is missing, found to be malformed, or the signature is invalid
+/// for a signed cookie, then `Error(Nil)` is returned.
 ///
 /// ```gleam
 /// wisp.get_cookie(request, "group")
 /// // -> Ok("A")
 /// ```
 ///
-pub fn get_cookie(request: Request, name: String) -> Result(String, Nil) {
+pub fn get_cookie(
+  request: Request,
+  name: String,
+  security: Security,
+) -> Result(String, Nil) {
   use value <- result.try(
     request
     |> request.get_cookies
     |> list.key_find(name),
   )
-  case value {
-    "SFM1MTI." <> _ -> verify_signed_message(request, value)
-    _ -> base.decode64(value)
+  case security {
+    PlainText -> base.decode64(value)
+    Signed -> verify_signed_message(request, value)
   }
   |> result.try(bit_string.to_string)
 }
