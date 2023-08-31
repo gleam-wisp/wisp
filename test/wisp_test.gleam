@@ -1,11 +1,13 @@
+import gleam/base
 import gleam/crypto
 import gleam/dynamic.{Dynamic}
 import gleam/erlang
 import gleam/http
 import gleam/http/request
 import gleam/http/response.{Response}
-import gleam/map
+import gleam/int
 import gleam/list
+import gleam/map
 import gleam/set
 import gleam/string
 import gleam/string_builder
@@ -863,21 +865,42 @@ pub fn priv_directory_test() {
   let assert True = string.ends_with(dir, "/gleam_stdlib/priv")
 }
 
-pub fn set_cookie_test() {
-  let request =
+pub fn set_cookie_plain_test() {
+  let req = testing.get("/", [])
+  let response =
     wisp.ok()
-    |> wisp.set_cookie("id", "123", 60 * 60 * 24 * 365)
-    |> wisp.set_cookie("flash", "hi-there", 60)
+    |> wisp.set_cookie(req, "id", "123", wisp.PlainText, 60 * 60 * 24 * 365)
+    |> wisp.set_cookie(req, "flash", "hi-there", wisp.PlainText, 60)
 
-  request.headers
+  response.headers
   |> should.equal([
     #(
       "set-cookie",
-      "flash=hi-there; Max-Age=60; Path=/; Secure; HttpOnly; SameSite=Lax",
+      "flash=aGktdGhlcmU; Max-Age=60; Path=/; Secure; HttpOnly; SameSite=Lax",
     ),
     #(
       "set-cookie",
-      "id=123; Max-Age=31536000; Path=/; Secure; HttpOnly; SameSite=Lax",
+      "id=MTIz; Max-Age=31536000; Path=/; Secure; HttpOnly; SameSite=Lax",
+    ),
+  ])
+}
+
+pub fn set_cookie_signed_test() {
+  let req = testing.get("/", [])
+  let response =
+    wisp.ok()
+    |> wisp.set_cookie(req, "id", "123", wisp.Signed, 60 * 60 * 24 * 365)
+    |> wisp.set_cookie(req, "flash", "hi-there", wisp.Signed, 60)
+
+  response.headers
+  |> should.equal([
+    #(
+      "set-cookie",
+      "flash=SFM1MTI.aGktdGhlcmU.uWUWvrAleKQ2jsWcU97HzGgPqtLjjUgl4oe40-RPJ5qRRcE_soXPacgmaHTLxK3xZbOJ5DOTIRMI0szD4Re7wA; Max-Age=60; Path=/; Secure; HttpOnly; SameSite=Lax",
+    ),
+    #(
+      "set-cookie",
+      "id=SFM1MTI.MTIz.LT5VxVwopQ7VhZ3OzF6Pgy3sfIIQaiUH5anHXNRt6o3taBMfCNBQskZ-EIkodchsPGSu_AJrAHjMfYPV7D5ogg; Max-Age=31536000; Path=/; Secure; HttpOnly; SameSite=Lax",
     ),
   ])
 }
@@ -887,8 +910,18 @@ pub fn get_cookie_test() {
     testing.get(
       "/",
       [
-        #("cookie", "id=123; flash=hi-there; other=456"),
-        #("cookie", "wibble=789"),
+        // Plain text
+        #("cookie", "id=MTIz"),
+        // Signed
+        #(
+          "cookie",
+          "flash=SFM1MTI.aGktdGhlcmU.uWUWvrAleKQ2jsWcU97HzGgPqtLjjUgl4oe40-RPJ5qRRcE_soXPacgmaHTLxK3xZbOJ5DOTIRMI0szD4Re7wA",
+        ),
+        // Signed but tampered with
+        #(
+          "cookie",
+          "signed-and-tampered-with=SFM1MTI.aGktdGhlcmU.uWUWvrAleKQ2jsWcU97HzGgPqtLjjUgl4oe40-RPJ5qRRcE_soXPacgmaHTLxK3xZbOJ5DOTIRMI0szD4Re7wAA",
+        ),
       ],
     )
 
@@ -901,16 +934,27 @@ pub fn get_cookie_test() {
   |> should.equal(Ok("hi-there"))
 
   request
-  |> wisp.get_cookie("other")
-  |> should.equal(Ok("456"))
-
-  request
-  |> wisp.get_cookie("wibble")
-  |> should.equal(Ok("789"))
+  |> wisp.get_cookie("signed-and-tampered-with")
+  |> should.equal(Error(Nil))
 
   request
   |> wisp.get_cookie("unknown")
   |> should.equal(Error(Nil))
+}
+
+// Let's roundtrip signing and verification a bunch of times to have confidence
+// it works, and that we detect any regressions.
+pub fn cookie_sign_roundtrip_test() {
+  use _ <- list.each(list.repeat(1, 10_000))
+  let message =
+    <<int.to_string(int.random(0, 1_000_000_000_000_000)):utf8>>
+    |> base.encode64(True)
+  let req = testing.get("/", [])
+  let signed = wisp.sign_message(req, <<message:utf8>>, crypto.Sha512)
+  let req = testing.get("/", [#("cookie", "message=" <> signed)])
+  let assert Ok(out) = wisp.get_cookie(req, "message")
+  out
+  |> should.equal(message)
 }
 
 pub fn get_cookies_test() {

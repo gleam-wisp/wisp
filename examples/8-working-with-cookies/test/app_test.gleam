@@ -1,63 +1,64 @@
+import app/router
+import gleam/crypto
+import gleam/list
+import gleam/string
 import gleeunit
 import gleeunit/should
-import gleam/string
+import wisp
 import wisp/testing
-import app/router
 
 pub fn main() {
   gleeunit.main()
 }
 
-pub fn view_form_test() {
+pub fn home_not_logged_in_test() {
   let response = router.handle_request(testing.get("/", []))
 
   response.status
-  |> should.equal(200)
+  |> should.equal(303)
 
   response.headers
-  |> should.equal([#("content-type", "text/html")])
+  |> should.equal([#("location", "/session")])
+}
+
+pub fn home_logged_in_test() {
+  let response =
+    testing.get("/", [])
+    |> testing.set_cookie("id", "Tim", wisp.Signed)
+    |> router.handle_request
+
+  response.status
+  |> should.equal(200)
 
   response
   |> testing.string_body
-  |> string.contains("<form method='post'>")
+  |> string.contains("Hello, Tim!")
   |> should.equal(True)
 }
 
-pub fn submit_wrong_content_type_test() {
-  let response = router.handle_request(testing.post("/", [], ""))
-
-  response.status
-  |> should.equal(415)
-
-  response.headers
-  |> should.equal([
-    #("accept", "application/x-www-form-urlencoded, multipart/form-data"),
-  ])
-}
-
-pub fn submit_missing_parameters_test() {
-  // The `METHOD_form` functions are used to create a request with a
-  // `x-www-form-urlencoded` body, with the appropriate `content-type` header.
-  let response =
-    testing.post_form("/", [], [])
-    |> router.handle_request()
-
-  response.status
-  |> should.equal(400)
-}
-
-pub fn submit_successful_test() {
-  let response =
-    testing.post_form("/", [], [#("title", "Captain"), #("name", "Caveman")])
-    |> router.handle_request()
+pub fn new_session_test() {
+  let response = router.handle_request(testing.get("/session", []))
 
   response.status
   |> should.equal(200)
 
-  response.headers
-  |> should.equal([#("content-type", "text/html")])
-
   response
   |> testing.string_body
-  |> should.equal("Hi, Captain Caveman!")
+  |> string.contains("Log in")
+  |> should.equal(True)
+}
+
+pub fn create_session_test() {
+  let request = testing.post_form("/session", [], [#("name", "Tim")])
+  let response = router.handle_request(request)
+
+  response.status
+  |> should.equal(303)
+
+  let assert Ok(cookie) = list.key_find(response.headers, "set-cookie")
+
+  let signed = wisp.sign_message(request, <<"Tim":utf8>>, crypto.Sha512)
+  cookie
+  |> string.starts_with("id=" <> signed)
+  |> should.equal(True)
 }

@@ -44,3 +44,6 @@ jobs:
 
       - run: gleam test
         working-directory: examples/7-logging
+
+      - run: gleam test
+        working-directory: examples/8-working-with-cookies
