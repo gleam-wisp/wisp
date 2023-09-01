@@ -222,7 +222,7 @@ pub fn html_body(response: Response, html: StringBuilder) -> Response {
 }
 
 /// Set the body of a response to a given JSON document, and set the
-/// `content-type` header to `text/json`.
+/// `content-type` header to `application/json`.
 /// 
 /// The body is expected to be valid JSON, though this is not validated.
 /// 
