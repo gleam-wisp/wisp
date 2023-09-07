@@ -1,0 +1,42 @@
+* {
+  box-sizing: border-box;
+}
+
+body,
+html {
+  height: 100vh;
+  overflow-y: hidden;
+}
+
+body {
+  font-family: sans-serif;
+  margin: 0;
+  padding: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+
+  background-color: hsla(90, 60%, 64%, 1);
+  background-image: radial-gradient(
+      at 65% 68%,
+      hsla(87, 56%, 61%, 1) 0px,
+      transparent 50%
+    ),
+    radial-gradient(at 99% 98%, hsla(66, 44%, 75%, 1) 0px, transparent 50%),
+    radial-gradient(at 39% 18%, hsla(53, 67%, 66%, 1) 0px, transparent 50%),
+    radial-gradient(at 0% 1%, hsla(88, 76%, 80%, 1) 0px, transparent 50%),
+    radial-gradient(at 15% 73%, hsla(152, 89%, 71%, 1) 0px, transparent 50%),
+    radial-gradient(at 50% 99%, hsla(97, 48%, 79%, 1) 0px, transparent 50%),
+    radial-gradient(at 98% 0%, hsla(121, 69%, 81%, 1) 0px, transparent 50%);
+}
+
+h1 {
+  font-family: cursive, serif;
+  font-size: 8rem;
+  margin: 0;
+  padding: 0;
+  color: rgb(19, 61, 20);
+  margin: 2rem 1rem;
+}
