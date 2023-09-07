@@ -1,4 +1,4 @@
-# Wisp
+![Wisp](https://github.com/lpil/wisp/blob/main/docs/images/cover.png?raw=true)
 
 [![Package Version](https://img.shields.io/hexpm/v/wisp)](https://hex.pm/packages/wisp)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/wisp/)
