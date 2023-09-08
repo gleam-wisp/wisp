@@ -92,6 +92,7 @@ pre {
   background-color: #f5f5f5;
   box-shadow: 7px 7px #c0c0c0;
   margin: var(--gap-l) 0;
+  overflow-x: auto;
 }
 
 footer {
