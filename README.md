@@ -50,7 +50,7 @@ pub fn handle_request(request: Request) -> Response {
 }
 ```
 
-# Documentation
+# Learning Wisp
 
 The Wisp examples are a good place to start. They cover various scenarios and
 include comments and tests.

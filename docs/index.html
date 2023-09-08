@@ -1,15 +1,131 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wisp - A practical Gleam web framework</title>
+  <title>Wisp - A practical web framework for Gleam</title>
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-  <img class="hero-wordmark" src="./images/wordmark.svg" alt="Wisp">
-  <nav>
-    <a href="https://github.com/lpil/wisp">GitHub</a>
-  </nav>
+  <section class="home-hero">
+    <nav>
+      <a href="https://github.com/lpil/wisp">Source & Guides</a>
+      <a href="https://hexdocs.pm/wisp">API Docs</a>
+      <a href="https://github.com/sponsors/lpil">Sponsor</a>
+    </nav>
+    <img src="./images/wordmark.svg" alt="Wisp">
+    <p>
+      A practical web framework for Gleam
+    </p>
+  </section>
+
+  <ul class="content-width features">
+    <li>
+
+      <h2>
+        Perfectly productive
+      </h2>
+      <p>
+        Wisp is simple, type safe, and entirely free from confusing magic. Make
+        development as stress-free as possible whether you're starting a new
+        prototype or maintaining a large system.
+      </p>
+    </li>
+
+    <li>
+      <h2>
+        Flipping fast
+      </h2>
+      <p>
+        Thanks to the Mist HTTP server and the mighty multithreaded BEAM
+        runtime Wisp applications are fast, even at the 99th percentile during a
+        big burst of traffic. In benchmarks Wisp can outperform Go, NodeJS, and
+        Elixir Phoenix + Cowboy.
+      </p>
+    </li>
+
+    <li>
+      <h2>
+        Totally testable
+      </h2>
+      <p>
+        If your application matters then you're going to want to test it. A Wisp
+        web application is as easy to test as any regular Gleam function, and an
+        assortment of useful test helpers are provided to keep your tests
+        concise.
+      </p>
+    </li>
+
+    <li>
+      <h2>
+        Really reliable
+      </h2>
+      <p>
+        Scrambling to fix problems in production is stressful, so Wisp uses
+        Gleam's type safety and the BEAM's fault tolerance help prevent those
+        panicked late night phone calls from your boss.
+      </p>
+    </li>
+  </ul>
+
+  <section class="content-width">
+    <h2>OK, but what does Wisp actually give you?</h2>
+    <ul>
+      <li>Composable middleware, with lots of useful ones built-in.</li>
+      <li>Type safe routing with good old fashioned pattern matching.</li>
+      <li>Parsing of JSON, urlencoded, and multipart bodies.</li>
+      <li>Tamper-proof signed cookies, suitable for authentication.</li>
+      <li>Body size limiting and file upload streaming to disc, to prevent
+        memory exhaustion attacks.</li>
+      <li>Serving of CSS, JavaScript, or whatever other static assets you want.</li>
+      <li>Logging, both ad-hoc logging and request logging, using a middleware.</li>
+      <li>Regular Gleam programming, so you can use any Gleam package you want
+        without trouble.</li>
+    </ul>
+    <p>
+      And a recommended project structure, so you can focus on solving the
+      problems you want to solve, rather than reinventing the wheel.
+    </p>
+  </section>
+
+  <section class="content-width">
+    <h2>That sounds good! What does it look like?</h2>
+    <p>
+      Here's a JSON API request handler that saves an item in a database.
+    </p>
+    <pre><code>import my_app/people
+import my_app/web.{Context}
+import gleam/result.{try}
+import wisp.{Request, Response}
+
+pub fn handle_request(req: Request, ctx: Context) -> Response {
+  use json <- wisp.require_json(req)
+
+  let result = {
+    use params <- try(people.parse_params(json))
+    use person <- try(people.save(params, ctx.db))
+    Ok(people.to_json(person))
+  }
+
+  case result {
+    Ok(body) -> wisp.json_response(body, 201)
+    Error(_) -> wisp.bad_request()
+  }
+}
+</code></pre>
+
+    <p>
+      Want to learn more? Check out <a href="https://github.com/lpil/wisp#learning-wisp">
+        the Wisp guides</a>.
+    </p>
+  </section>
+
+  <footer>
+    🧚
+    <a href="https://github.com/gleam-lang/gleam/blob/main/CODE_OF_CONDUCT.md">Code of conduct</a>
+  </footer>
 </body>
+
 </html>
