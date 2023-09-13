@@ -267,8 +267,8 @@ pub fn bit_string_body(response: Response) -> BitString {
 /// ```
 pub const set_header = request.set_header
 
-// TODO: test
-// TODO: implement
+/// Set a cookie on the request.
+/// 
 pub fn set_cookie(
   req: Request,
   name: String,
