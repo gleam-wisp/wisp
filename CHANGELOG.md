@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.5.0 - 2023-09-13
 
 - The `wisp` module gains the `set_cookie`, `get_cookie`, `json_response` and
   `priv_directory` functions.
