@@ -198,8 +198,8 @@ pub fn html_response(html: StringBuilder, status: Int) -> Response {
 /// // -> Response(200, [#("content-type", "application/json")], Text(body))
 /// ```
 /// 
-pub fn json_response(html: StringBuilder, status: Int) -> Response {
-  HttpResponse(status, [#("content-type", "application/json")], Text(html))
+pub fn json_response(json: StringBuilder, status: Int) -> Response {
+  HttpResponse(status, [#("content-type", "application/json")], Text(json))
 }
 
 /// Set the body of a response to a given HTML document, and set the
