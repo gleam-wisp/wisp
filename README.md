@@ -66,3 +66,10 @@ include comments and tests.
 - [Working with cookies](https://github.com/lpil/wisp/tree/main/examples/8-working-with-cookies)
 
 API documentation is available on [HexDocs](https://hexdocs.pm/wisp/).
+
+# Wisp applications
+
+These open source Wisp applications may be useful examples.
+
+- [https://packages.gleam.run/](https://github.com/gleam-lang/packages): A HTML
+  serving application that uses an SQLite + LiteFS database, deployed to Fly.io.
