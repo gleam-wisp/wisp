@@ -5,6 +5,8 @@ description = "A Wisp example"
 [dependencies]
 gleam_stdlib = "~> 0.30"
 wisp = { path = "../.." }
+gleam_erlang = "~> 0.22"
+mist = "~> 0.13"
 
 [dev-dependencies]
 gleeunit = "~> 0.10"
