@@ -745,8 +745,8 @@ pub fn method_override(request: HttpRequest(a)) -> HttpRequest(a) {
   use <- bool.guard(when: request.method != http.Post, return: request)
   {
     use query <- result.try(request.get_query(request))
-    use pair <- result.try(list.key_pop(query, "_method"))
-    use method <- result.map(http.parse_method(pair.0))
+    use value <- result.try(list.key_find(query, "_method"))
+    use method <- result.map(http.parse_method(value))
 
     case method {
       http.Put | http.Patch | http.Delete -> request.set_method(request, method)
@@ -1558,7 +1558,6 @@ pub fn delete_temporary_files(
   }
 }
 
-// TODO: re-export when Gleam has a syntax for this
 /// Returns the path of a package's `priv` directory, where extra non-Gleam
 /// or Erlang files are typically kept.
 ///
