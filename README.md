@@ -64,6 +64,7 @@ include comments and tests.
 - [Serving static assets](https://github.com/lpil/wisp/tree/main/examples/6-serving-static-assets)
 - [Logging](https://github.com/lpil/wisp/tree/main/examples/7-logging)
 - [Working with cookies](https://github.com/lpil/wisp/tree/main/examples/8-working-with-cookies)
+- [Configuring default responses](https://github.com/lpil/wisp/tree/main/examples/9-configuring-default-responses)
 
 API documentation is available on [HexDocs](https://hexdocs.pm/wisp/).
 

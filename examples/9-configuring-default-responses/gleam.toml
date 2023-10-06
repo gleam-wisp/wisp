@@ -1,0 +1,12 @@
+name = "app"
+version = "1.0.0"
+description = "A Wisp example"
+
+[dependencies]
+gleam_stdlib = "~> 0.30"
+wisp = { path = "../.." }
+mist = "~> 0.13"
+gleam_erlang = "~> 0.22"
+
+[dev-dependencies]
+gleeunit = "~> 0.10"
