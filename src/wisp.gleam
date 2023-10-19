@@ -911,7 +911,8 @@ pub fn require_form(
   next: fn(FormData) -> Response,
 ) -> Response {
   case list.key_find(request.headers, "content-type") {
-    Ok("application/x-www-form-urlencoded") ->
+    Ok("application/x-www-form-urlencoded")
+    | Ok("application/x-www-form-urlencoded;" <> _) ->
       require_urlencoded_form(request, next)
 
     Ok("multipart/form-data; boundary=" <> boundary) ->

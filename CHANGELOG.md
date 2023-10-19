@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- The `wisp.require_form` now handles `application/x-www-form-urlencoded`
+  content types with a charset.
+
 ## v0.5.0 - 2023-09-13
 
 - The `wisp` module gains the `set_cookie`, `get_cookie`, `json_response` and

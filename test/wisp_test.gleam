@@ -532,6 +532,19 @@ pub fn urlencoded_form_test() {
   |> should.equal(wisp.ok())
 }
 
+pub fn urlencoded_form_with_charset_test() {
+  testing.post("/", [], "one=1&two=2")
+  |> request.set_header(
+    "content-type",
+    "application/x-www-form-urlencoded; charset=UTF-8",
+  )
+  |> form_handler(fn(form) {
+    form
+    |> should.equal(wisp.FormData([#("one", "1"), #("two", "2")], []))
+  })
+  |> should.equal(wisp.ok())
+}
+
 pub fn urlencoded_too_big_form_test() {
   testing.post("/", [], "12")
   |> request.set_header("content-type", "application/x-www-form-urlencoded")
