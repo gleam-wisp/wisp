@@ -718,6 +718,18 @@ pub const path_segments = request.path_segments
 ///
 pub const set_header = response.set_header
 
+/// Parse the query parameters of a request into a list of key-value pairs. The
+/// `key_find` function in the `gleam/list` stdlib module may be useful for
+/// finding values in the list.
+///
+/// Query parameter names do not have to be unique and so may appear multiple
+/// times in the list.
+///
+pub fn get_query(request: Request) -> List(#(String, String)) {
+  request.get_query(request)
+  |> result.unwrap([])
+}
+
 /// This function overrides an incoming POST request with a method given in
 /// the request's `_method` query paramerter. This is useful as web browsers
 /// typically only support GET and POST requests, but our application may

@@ -981,3 +981,20 @@ pub fn cookie_sign_roundtrip_test() {
   out
   |> should.equal(message)
 }
+
+pub fn get_query_test() {
+  testing.get("/wibble?wobble=1&wubble=2&wobble=3&wabble", [])
+  |> wisp.get_query
+  |> should.equal([
+    #("wobble", "1"),
+    #("wubble", "2"),
+    #("wobble", "3"),
+    #("wabble", ""),
+  ])
+}
+
+pub fn get_query_no_query_test() {
+  testing.get("/wibble", [])
+  |> wisp.get_query
+  |> should.equal([])
+}
