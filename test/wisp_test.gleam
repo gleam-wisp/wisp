@@ -346,25 +346,49 @@ pub fn rescue_crashes_ok_test() {
 }
 
 pub fn serve_static_test() {
-  let request =
-    testing.get("/", [])
-    |> request.set_path("/stuff/README.md")
-  let response = {
+  let handler = fn(request) {
     use <- wisp.serve_static(request, under: "/stuff", from: "./")
     wisp.ok()
   }
+
+  // Get a text file
+  let response =
+    testing.get("/stuff/test/fixture.txt", [])
+    |> handler
   response.status
   |> should.equal(200)
   response.headers
-  |> should.equal([#("content-type", "text/markdown")])
+  |> should.equal([#("content-type", "text/plain")])
   response.body
-  |> should.equal(wisp.File("./README.md"))
+  |> should.equal(wisp.File("./test/fixture.txt"))
+
+  // Get a json file
+  let response =
+    testing.get("/stuff/test/fixture.json", [])
+    |> handler
+  response.status
+  |> should.equal(200)
+  response.headers
+  |> should.equal([#("content-type", "application/json")])
+  response.body
+  |> should.equal(wisp.File("./test/fixture.json"))
+
+  // Get something not handled by the static file server
+  let response =
+    testing.get("/stuff/this-does-not-exist", [])
+    |> handler
+  response.status
+  |> should.equal(200)
+  response.headers
+  |> should.equal([])
+  response.body
+  |> should.equal(wisp.Empty)
 }
 
 pub fn serve_static_under_has_no_trailing_slash_test() {
   let request =
     testing.get("/", [])
-    |> request.set_path("/stuff/README.md")
+    |> request.set_path("/stuff/test/fixture.txt")
   let response = {
     use <- wisp.serve_static(request, under: "stuff", from: "./")
     wisp.ok()
@@ -372,15 +396,15 @@ pub fn serve_static_under_has_no_trailing_slash_test() {
   response.status
   |> should.equal(200)
   response.headers
-  |> should.equal([#("content-type", "text/markdown")])
+  |> should.equal([#("content-type", "text/plain")])
   response.body
-  |> should.equal(wisp.File("./README.md"))
+  |> should.equal(wisp.File("./test/fixture.txt"))
 }
 
 pub fn serve_static_from_has_no_trailing_slash_test() {
   let request =
     testing.get("/", [])
-    |> request.set_path("/stuff/README.md")
+    |> request.set_path("/stuff/test/fixture.txt")
   let response = {
     use <- wisp.serve_static(request, under: "stuff", from: ".")
     wisp.ok()
@@ -388,9 +412,9 @@ pub fn serve_static_from_has_no_trailing_slash_test() {
   response.status
   |> should.equal(200)
   response.headers
-  |> should.equal([#("content-type", "text/markdown")])
+  |> should.equal([#("content-type", "text/plain")])
   response.body
-  |> should.equal(wisp.File("./README.md"))
+  |> should.equal(wisp.File("./test/fixture.txt"))
 }
 
 pub fn serve_static_not_found_test() {
@@ -407,7 +431,7 @@ pub fn serve_static_not_found_test() {
 pub fn serve_static_go_up_test() {
   let request =
     testing.get("/", [])
-    |> request.set_path("/../README.md")
+    |> request.set_path("/../test/fixture.txt")
   {
     use <- wisp.serve_static(request, under: "/stuff", from: "./src/")
     wisp.ok()
