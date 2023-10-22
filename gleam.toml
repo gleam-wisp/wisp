@@ -18,6 +18,7 @@ gleam_json = "~> 0.6"
 gleam_stdlib = "~> 0.29"
 mist = "~> 0.13"
 simplifile = "~> 0.1"
+marceau = "~> 1.0"
 
 [dev-dependencies]
 gleeunit = "~> 0.10"

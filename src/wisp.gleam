@@ -18,6 +18,7 @@ import gleam/result
 import gleam/string
 import gleam/string_builder.{StringBuilder}
 import gleam/uri
+import marceau
 import mist
 import simplifile
 import wisp/internal/logger
@@ -1243,120 +1244,6 @@ pub type UploadedFile {
 }
 
 //
-// MIME types
-//
-
-// TODO: move to another package
-fn extension_to_mime_type(extension: String) -> String {
-  case extension {
-    "7z" -> "application/x-7z-compressed"
-    "aac" -> "audio/aac"
-    "abw" -> "application/x-abiword"
-    "ai" -> "application/postscript"
-    "arc" -> "application/x-freearc"
-    "asice" -> "application/vnd.etsi.asic-e+zip"
-    "asics" -> "application/vnd.etsi.asic-s+zip"
-    "atom" -> "application/atom+xml"
-    "avi" -> "video/x-msvideo"
-    "avif" -> "image/avif"
-    "azw" -> "application/vnd.amazon.ebook"
-    "bin" -> "application/octet-stream"
-    "bmp" -> "image/bmp"
-    "bz" -> "application/x-bzip"
-    "bz2" -> "application/x-bzip2"
-    "cda" -> "application/x-cdf"
-    "csh" -> "application/x-csh"
-    "css" -> "text/css"
-    "csv" -> "text/csv"
-    "doc" -> "application/msword"
-    "docx" ->
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    "eot" -> "application/vnd.ms-fontobject"
-    "eps" -> "application/postscript"
-    "epub" -> "application/epub+zip"
-    "gif" -> "image/gif"
-    "gz" -> "application/gzip"
-    "heic" -> "image/heic"
-    "heif" -> "image/heif"
-    "htm" -> "text/html"
-    "html" -> "text/html"
-    "ico" -> "image/vnd.microsoft.icon"
-    "ics" -> "text/calendar"
-    "jar" -> "application/java-archive"
-    "jpeg" -> "image/jpeg"
-    "jpg" -> "image/jpeg"
-    "js" -> "text/javascript"
-    "json" -> "application/json"
-    "json-api" -> "application/vnd.api+json"
-    "json-patch" -> "application/json-patch+json"
-    "jsonld" -> "application/ld+json"
-    "jxl" -> "image/jxl"
-    "markdown" -> "text/markdown"
-    "md" -> "text/markdown"
-    "mdb" -> "application/x-msaccess"
-    "mid" -> "audio/midi"
-    "midi" -> "audio/midi"
-    "mjs" -> "text/javascript"
-    "mov" -> "video/quicktime"
-    "mp3" -> "audio/mpeg"
-    "mp4" -> "video/mp4"
-    "mpeg" -> "video/mpeg"
-    "mpg" -> "video/mpeg"
-    "mpkg" -> "application/vnd.apple.installer+xml"
-    "odp" -> "application/vnd.oasis.opendocument.presentation"
-    "ods" -> "application/vnd.oasis.opendocument.spreadsheet"
-    "odt" -> "application/vnd.oasis.opendocument.text"
-    "oga" -> "audio/ogg"
-    "ogv" -> "video/ogg"
-    "ogx" -> "application/ogg"
-    "opus" -> "audio/opus"
-    "otf" -> "font/otf"
-    "pdf" -> "application/pdf"
-    "php" -> "application/x-httpd-php"
-    "png" -> "image/png"
-    "ppt" -> "application/vnd.ms-powerpoint"
-    "pptx" ->
-      "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-    "ps" -> "application/postscript"
-    "psd" -> "image/vnd.adobe.photoshop"
-    "rar" -> "application/vnd.rar"
-    "rss" -> "application/rss+xml"
-    "rtf" -> "application/rtf"
-    "sce" -> "application/vnd.etsi.asic-e+zip"
-    "scs" -> "application/vnd.etsi.asic-s+zip"
-    "sh" -> "application/x-sh"
-    "svg" -> "image/svg+xml"
-    "svgz" -> "image/svg+xml"
-    "swf" -> "application/x-shockwave-flash"
-    "tar" -> "application/x-tar"
-    "text" -> "text/plain"
-    "tif" -> "image/tiff"
-    "tiff" -> "image/tiff"
-    "ts" -> "video/mp2t"
-    "ttf" -> "font/ttf"
-    "txt" -> "text/plain"
-    "vsd" -> "application/vnd.visio"
-    "wasm" -> "application/wasm"
-    "wav" -> "audio/wav"
-    "weba" -> "audio/webm"
-    "webm" -> "video/webm"
-    "webmanifest" -> "application/manifest+json"
-    "webp" -> "image/webp"
-    "wmv" -> "video/x-ms-wmv"
-    "woff" -> "font/woff"
-    "woff2" -> "font/woff2"
-    "xhtml" -> "application/xhtml+xml"
-    "xls" -> "application/vnd.ms-excel"
-    "xlsx" ->
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    "xml" -> "application/xml"
-    "xul" -> "application/vnd.mozilla.xul+xml"
-    "zip" -> "application/zip"
-    _ -> "application/octet-stream"
-  }
-}
-
-//
 // Middleware
 //
 
@@ -1489,7 +1376,7 @@ pub fn serve_static(
         |> string.split(on: ".")
         |> list.last
         |> result.unwrap("")
-        |> extension_to_mime_type
+        |> marceau.extension_to_mime_type
 
       case simplifile.is_file(path) {
         False -> handler()
