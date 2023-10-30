@@ -45,7 +45,7 @@ import wisp.{Request, Response}
 
 pub fn handle_request(request: Request) -> Response {
   use <- wisp.log_request
-  use <- wisp.serve_static(req, under: "/static", from: "/public")
+  use <- wisp.serve_static(request, under: "/static", from: "/public")
   wisp.ok()
 }
 ```
