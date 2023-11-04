@@ -8,7 +8,7 @@ gleam test  # Run the tests
 This example shows how to route requests to different handlers based on the
 request path and method.
 
-This example is based off of the ["routing" example][routing], so read that
+This example is based off of the ["routing" example](routing), so read that
 one first. The additions are detailed here and commented in the code.
 
 [hello]: https://github.com/lpil/wisp/tree/main/examples/1-routing
