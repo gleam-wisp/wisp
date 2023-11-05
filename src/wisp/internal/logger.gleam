@@ -1,6 +1,6 @@
-import gleam/map.{Map}
-import gleam/erlang/atom.{Atom}
-import gleam/dynamic.{Dynamic}
+import gleam/map.{type Map}
+import gleam/erlang/atom.{type Atom}
+import gleam/dynamic.{type Dynamic}
 
 pub type LogLevel {
   Emergency

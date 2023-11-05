@@ -3,7 +3,7 @@ import gleam/dynamic
 import ids/nanoid
 import gleam/json
 import gleam/list
-import gleam/map.{Map}
+import gleam/map.{type Map}
 import simplifile
 
 pub opaque type Connection {

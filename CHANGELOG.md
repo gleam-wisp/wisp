@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Updated for Gleam v0.32. All references to "bit string" have been changed to
+  "bit array" to match.
 - The `wisp` module gains the `get_query` function.
 
 ## v0.6.0 - 2023-10-19

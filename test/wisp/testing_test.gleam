@@ -507,24 +507,24 @@ pub fn string_body_text_test() {
   |> should.equal("Hello, Joe!")
 }
 
-pub fn bit_string_body_empty_test() {
+pub fn bit_array_body_empty_test() {
   wisp.ok()
   |> response.set_body(wisp.Empty)
-  |> testing.bit_string_body
+  |> testing.bit_array_body
   |> should.equal(<<>>)
 }
 
-pub fn bit_string_body_file_test() {
+pub fn bit_array_body_file_test() {
   wisp.ok()
   |> response.set_body(wisp.File("test/fixture.txt"))
-  |> testing.bit_string_body
+  |> testing.bit_array_body
   |> should.equal(<<"Hello, Joe!\n":utf8>>)
 }
 
-pub fn bit_string_body_text_test() {
+pub fn bit_array_body_text_test() {
   wisp.ok()
   |> response.set_body(wisp.Text(string_builder.from_string("Hello, Joe!")))
-  |> testing.bit_string_body
+  |> testing.bit_array_body
   |> should.equal(<<"Hello, Joe!":utf8>>)
 }
 

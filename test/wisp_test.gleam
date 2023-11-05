@@ -1,6 +1,6 @@
-import gleam/base
+import gleam/bit_array
 import gleam/crypto
-import gleam/dynamic.{Dynamic}
+import gleam/dynamic.{type Dynamic}
 import gleam/erlang
 import gleam/http
 import gleam/http/request
@@ -997,7 +997,7 @@ pub fn cookie_sign_roundtrip_test() {
   use _ <- list.each(list.repeat(1, 10_000))
   let message =
     <<int.to_string(int.random(0, 1_000_000_000_000_000)):utf8>>
-    |> base.encode64(True)
+    |> bit_array.base64_encode(True)
   let req = testing.get("/", [])
   let signed = wisp.sign_message(req, <<message:utf8>>, crypto.Sha512)
   let req = testing.get("/", [#("cookie", "message=" <> signed)])

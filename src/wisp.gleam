@@ -1,22 +1,23 @@
 import exception
-import gleam/base
-import gleam/bit_builder
-import gleam/bit_string
+import gleam/bytes_builder
+import gleam/bit_array
 import gleam/bool
 import gleam/crypto
-import gleam/dynamic.{Dynamic}
+import gleam/dynamic.{type Dynamic}
 import gleam/erlang
-import gleam/http.{Method}
+import gleam/http.{type Method}
 import gleam/http/cookie
-import gleam/http/request.{Request as HttpRequest}
-import gleam/http/response.{Response as HttpResponse}
+import gleam/http/request.{type Request as HttpRequest}
+import gleam/http/response.{
+  type Response as HttpResponse, Response as HttpResponse,
+}
 import gleam/int
 import gleam/json
 import gleam/list
-import gleam/option.{Option}
+import gleam/option.{type Option}
 import gleam/result
 import gleam/string
-import gleam/string_builder.{StringBuilder}
+import gleam/string_builder.{type StringBuilder}
 import gleam/uri
 import marceau
 import mist
@@ -88,8 +89,8 @@ fn wrap_mist_chunk(
 
 fn mist_response(response: Response) -> HttpResponse(mist.ResponseData) {
   let body = case response.body {
-    Empty -> mist.Bytes(bit_builder.new())
-    Text(text) -> mist.Bytes(bit_builder.from_string_builder(text))
+    Empty -> mist.Bytes(bytes_builder.new())
+    Text(text) -> mist.Bytes(bytes_builder.from_string_builder(text))
     File(path) -> mist_send_file(path)
   }
   response
@@ -102,7 +103,7 @@ fn mist_send_file(path: String) -> mist.ResponseData {
     Error(error) -> {
       log_error(string.inspect(error))
       // TODO: return 500
-      mist.Bytes(bit_builder.new())
+      mist.Bytes(bytes_builder.new())
     }
   }
 }
@@ -538,7 +539,7 @@ fn make_connection(body_reader: Reader, secret_key_base: String) -> Connection {
 }
 
 type BufferedReader {
-  BufferedReader(reader: Reader, buffer: BitString)
+  BufferedReader(reader: Reader, buffer: BitArray)
 }
 
 type Quotas {
@@ -571,7 +572,7 @@ type Reader =
   fn(Int) -> Result(Read, Nil)
 
 type Read {
-  Chunk(BitString, next: Reader)
+  Chunk(BitArray, next: Reader)
   ReadingFinished
 }
 
@@ -799,7 +800,7 @@ pub fn require_string_body(
   next: fn(String) -> Response,
 ) -> Response {
   case read_body_to_bitstring(request) {
-    Ok(body) -> or_400(bit_string.to_string(body), next)
+    Ok(body) -> or_400(bit_array.to_string(body), next)
     Error(_) -> entity_too_large()
   }
 }
@@ -827,9 +828,9 @@ pub fn require_string_body(
 /// }
 /// ```
 ///
-pub fn require_bit_string_body(
+pub fn require_bit_array_body(
   request: Request,
-  next: fn(BitString) -> Response,
+  next: fn(BitArray) -> Response,
 ) -> Response {
   case read_body_to_bitstring(request) {
     Ok(body) -> next(body)
@@ -841,7 +842,7 @@ pub fn require_bit_string_body(
 // network errors.
 /// Read the entire body of the request as a bit string.
 /// 
-/// You may instead wish to use the `require_bit_string_body` or the
+/// You may instead wish to use the `require_bit_array_body` or the
 /// `require_string_body` middleware functions instead.
 /// 
 /// This function does not cache the body in any way, so if you call this
@@ -853,7 +854,7 @@ pub fn require_bit_string_body(
 /// If the body is larger than the `max_body_size` limit then an empty response
 /// with status code 413: Entity too large will be returned to the client.
 /// 
-pub fn read_body_to_bitstring(request: Request) -> Result(BitString, Nil) {
+pub fn read_body_to_bitstring(request: Request) -> Result(BitArray, Nil) {
   let connection = request.body
   read_body_loop(
     connection.reader,
@@ -867,14 +868,14 @@ fn read_body_loop(
   reader: Reader,
   read_chunk_size: Int,
   max_body_size: Int,
-  accumulator: BitString,
-) -> Result(BitString, Nil) {
+  accumulator: BitArray,
+) -> Result(BitArray, Nil) {
   use chunk <- result.try(reader(read_chunk_size))
   case chunk {
     ReadingFinished -> Ok(accumulator)
     Chunk(chunk, next) -> {
-      let accumulator = bit_string.append(accumulator, chunk)
-      case bit_string.byte_size(accumulator) > max_body_size {
+      let accumulator = bit_array.append(accumulator, chunk)
+      case bit_array.byte_size(accumulator) > max_body_size {
         True -> Error(Nil)
         False ->
           read_body_loop(next, read_chunk_size, max_body_size, accumulator)
@@ -1057,13 +1058,13 @@ fn read_multipart(
 
     // No file name, this is a regular form value that we hold in memory.
     option.None -> {
-      let append = fn(data, chunk) { Ok(bit_string.append(data, chunk)) }
+      let append = fn(data, chunk) { Ok(bit_array.append(data, chunk)) }
       let q = quotas.body
       let result =
         multipart_body(reader, parse, boundary, read_size, q, append, <<>>)
       use #(reader, quota, value) <- result.try(result)
       let quotas = Quotas(..quotas, body: quota)
-      use value <- result.map(bit_string_to_string(value))
+      use value <- result.map(bit_array_to_string(value))
       let data = FormData(..data, values: [#(name, value), ..data.values])
       #(data, reader, quotas)
     }
@@ -1078,14 +1079,14 @@ fn read_multipart(
   }
 }
 
-fn bit_string_to_string(bits: BitString) -> Result(String, Response) {
-  bit_string.to_string(bits)
+fn bit_array_to_string(bits: BitArray) -> Result(String, Response) {
+  bit_array.to_string(bits)
   |> result.replace_error(bad_request())
 }
 
 fn multipart_file_append(
   path: String,
-  chunk: BitString,
+  chunk: BitArray,
 ) -> Result(String, Response) {
   chunk
   |> simplifile.append_bits(path)
@@ -1105,21 +1106,21 @@ fn or_500(result: Result(a, b)) -> Result(a, Response) {
 
 fn multipart_body(
   reader: BufferedReader,
-  parse: fn(BitString) -> Result(http.MultipartBody, Response),
+  parse: fn(BitArray) -> Result(http.MultipartBody, Response),
   boundary: String,
   chunk_size: Int,
   quota: Int,
-  append: fn(t, BitString) -> Result(t, Response),
+  append: fn(t, BitArray) -> Result(t, Response),
   data: t,
 ) -> Result(#(Option(BufferedReader), Int, t), Response) {
   use #(chunk, reader) <- result.try(read_chunk(reader, chunk_size))
-  let size_read = bit_string.byte_size(chunk)
+  let size_read = bit_array.byte_size(chunk)
   use output <- result.try(parse(chunk))
 
   case output {
     http.MultipartBody(parsed, done, remaining) -> {
       // Decrement the quota by the number of bytes consumed.
-      let used = size_read - bit_string.byte_size(remaining) - 2
+      let used = size_read - bit_array.byte_size(remaining) - 2
       let used = case done {
         // If this is the last chunk, we need to account for the boundary.
         True -> used - 4 - string.byte_size(boundary)
@@ -1171,7 +1172,7 @@ fn multipart_content_disposition(
 fn read_chunk(
   reader: BufferedReader,
   chunk_size: Int,
-) -> Result(#(BitString, Reader), Response) {
+) -> Result(#(BitArray, Reader), Response) {
   buffered_read(reader, chunk_size)
   |> result.replace_error(bad_request())
   |> result.try(fn(chunk) {
@@ -1184,7 +1185,7 @@ fn read_chunk(
 
 fn multipart_headers(
   reader: BufferedReader,
-  parse: fn(BitString) -> Result(http.MultipartHeaders, Response),
+  parse: fn(BitArray) -> Result(http.MultipartHeaders, Response),
   chunk_size: Int,
   quotas: Quotas,
 ) -> Result(#(List(http.Header), BufferedReader, Quotas), Response) {
@@ -1193,7 +1194,7 @@ fn multipart_headers(
 
   case headers {
     http.MultipartHeaders(headers, remaining) -> {
-      let used = bit_string.byte_size(chunk) - bit_string.byte_size(remaining)
+      let used = bit_array.byte_size(chunk) - bit_array.byte_size(remaining)
       use quotas <- result.map(decrement_body_quota(quotas, used))
       let reader = BufferedReader(reader, remaining)
       #(headers, reader, quotas)
@@ -1576,7 +1577,7 @@ pub fn log_debug(message: String) -> Nil {
 ///
 pub fn random_string(length: Int) -> String {
   crypto.strong_random_bytes(length)
-  |> base.url_encode64(False)
+  |> bit_array.base64_url_encode(False)
   |> string.slice(0, length)
 }
 
@@ -1591,7 +1592,7 @@ pub fn random_string(length: Int) -> String {
 /// 
 pub fn sign_message(
   request: Request,
-  message: BitString,
+  message: BitArray,
   algorithm: crypto.HashAlgorithm,
 ) -> String {
   crypto.sign_message(message, <<request.body.secret_key_base:utf8>>, algorithm)
@@ -1608,7 +1609,7 @@ pub fn sign_message(
 pub fn verify_signed_message(
   request: Request,
   message: String,
-) -> Result(BitString, Nil) {
+) -> Result(BitArray, Nil) {
   crypto.verify_signed_message(message, <<request.body.secret_key_base:utf8>>)
 }
 
@@ -1664,7 +1665,7 @@ pub fn set_cookie(
       max_age: option.Some(max_age),
     )
   let value = case security {
-    PlainText -> base.encode64(<<value:utf8>>, False)
+    PlainText -> bit_array.base64_encode(<<value:utf8>>, False)
     Signed -> sign_message(request, <<value:utf8>>, crypto.Sha512)
   }
   response
@@ -1702,10 +1703,10 @@ pub fn get_cookie(
     |> list.key_find(name),
   )
   use value <- result.try(case security {
-    PlainText -> base.decode64(value)
+    PlainText -> bit_array.base64_decode(value)
     Signed -> verify_signed_message(request, value)
   })
-  bit_string.to_string(value)
+  bit_array.to_string(value)
 }
 
 //
@@ -1719,7 +1720,7 @@ pub fn get_cookie(
 /// `wisp/testing` module instead.
 /// 
 pub fn create_canned_connection(
-  body: BitString,
+  body: BitArray,
   secret_key_base: String,
 ) -> Connection {
   make_connection(

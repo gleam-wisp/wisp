@@ -1,15 +1,15 @@
-import gleam/base
-import gleam/bit_builder
+import gleam/bit_array
+import gleam/bytes_builder
 import gleam/crypto
 import gleam/http
 import gleam/http/request
-import gleam/json.{Json}
+import gleam/json.{type Json}
 import gleam/option.{None, Some}
 import gleam/string
 import gleam/string_builder
 import gleam/uri
 import simplifile
-import wisp.{Empty, File, Request, Response, Text}
+import wisp.{type Request, type Response, Empty, File, Text}
 
 /// The default secret key base used for test requests.
 /// This should never be used outside of tests.
@@ -30,7 +30,7 @@ pub fn request(
   method: http.Method,
   path: String,
   headers: List(http.Header),
-  body: BitString,
+  body: BitArray,
 ) -> Request {
   let #(path, query) = case string.split(path, "?") {
     [path, query] -> #(path, Some(query))
@@ -242,11 +242,11 @@ pub fn string_body(response: Response) -> String {
 /// This function will panic if the response body is a file and the file cannot
 /// be read.
 ///
-pub fn bit_string_body(response: Response) -> BitString {
+pub fn bit_array_body(response: Response) -> BitArray {
   case response.body {
     Empty -> <<>>
     Text(builder) ->
-      bit_builder.to_bit_string(bit_builder.from_string_builder(builder))
+      bytes_builder.to_bit_array(bytes_builder.from_string_builder(builder))
     File(path) -> {
       let assert Ok(contents) = simplifile.read_bits(path)
       contents
@@ -276,7 +276,7 @@ pub fn set_cookie(
   security: wisp.Security,
 ) -> Request {
   let value = case security {
-    wisp.PlainText -> base.encode64(<<value:utf8>>, False)
+    wisp.PlainText -> bit_array.base64_encode(<<value:utf8>>, False)
     wisp.Signed -> wisp.sign_message(req, <<value:utf8>>, crypto.Sha512)
   }
   request.set_cookie(req, name, value)
