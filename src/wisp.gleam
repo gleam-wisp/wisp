@@ -8,9 +8,7 @@ import gleam/erlang
 import gleam/http.{type Method}
 import gleam/http/cookie
 import gleam/http/request.{type Request as HttpRequest}
-import gleam/http/response.{
-  type Response as HttpResponse, Response as HttpResponse,
-}
+import gleam/http/response.{type Response as HttpResponse}
 import gleam/int
 import gleam/json
 import gleam/list
