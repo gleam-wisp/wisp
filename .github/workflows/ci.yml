@@ -21,29 +21,38 @@ jobs:
       - run: gleam deps download
       - run: gleam test
 
-      - run: gleam test
+      - name: "Example: 0-hello-world"
+        run: gleam test
         working-directory: examples/0-hello-world
 
-      - run: gleam test
+      - name: "Example: 1-routing"
+        run: gleam test
         working-directory: examples/1-routing
 
-      - run: gleam test
+      - name: "Example: 2-working-with-form-data"
+        run: gleam test
         working-directory: examples/2-working-with-form-data
 
-      - run: gleam test
+      - name: "Example: 3-working-with-json"
+        run: gleam test
         working-directory: examples/3-working-with-json
 
-      - run: gleam test
+      - name: "Example: 4-working-with-other-formats"
+        run: gleam test
         working-directory: examples/4-working-with-other-formats
 
-      - run: gleam test
+      - name: "Example: 5-using-a-database"
+        run: gleam test
         working-directory: examples/5-using-a-database
 
-      - run: gleam test
+      - name: "Example: 6-serving-static-assets"
+        run: gleam test
         working-directory: examples/6-serving-static-assets
 
-      - run: gleam test
+      - name: "Example: 7-logging"
+        run: gleam test
         working-directory: examples/7-logging
 
-      - run: gleam test
+      - name: "Example: 8-working-with-cookies"
+        run: gleam test
         working-directory: examples/8-working-with-cookies
