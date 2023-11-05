@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.7.0 - 2023-11-05
 
 - Updated for Gleam v0.32. All references to "bit string" have been changed to
   "bit array" to match.
