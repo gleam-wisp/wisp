@@ -8,6 +8,8 @@ gleam_stdlib = "~> 0.30"
 wisp = { path = "../.." }
 gleam_json = "~> 0.6"
 tiny_database = { path = "../utilities/tiny_database" }
+gleam_erlang = "~> 0.23"
+mist = "~> 0.14"
 
 [dev-dependencies]
 gleeunit = "~> 0.10"
