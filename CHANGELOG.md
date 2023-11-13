@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.8.0 - 2023-11-05
+
+- Updated for simplifile v0.3.
+
 ## v0.7.0 - 2023-11-05
 
 - Updated for Gleam v0.32. All references to "bit string" have been changed to

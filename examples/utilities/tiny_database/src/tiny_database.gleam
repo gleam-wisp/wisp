@@ -51,7 +51,7 @@ pub fn insert(
     |> list.map(fn(pair) { #(pair.0, json.string(pair.1)) })
   let json = json.to_string(json.object(values))
   use _ <- result.try(
-    simplifile.write(json, file_path(connection, id))
+    simplifile.write(file_path(connection, id), json)
     |> result.nil_error,
   )
   Ok(id)

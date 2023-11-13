@@ -1088,8 +1088,7 @@ fn multipart_file_append(
   path: String,
   chunk: BitArray,
 ) -> Result(String, Response) {
-  chunk
-  |> simplifile.append_bits(path)
+  simplifile.append_bits(path, chunk)
   |> or_500
   |> result.replace(path)
 }
