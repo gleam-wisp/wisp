@@ -5,7 +5,7 @@ import gleam/list
 import gleam/result
 import gleam/string
 import gsv
-import wisp.{Request, Response}
+import wisp.{type Request, type Response}
 
 pub fn handle_request(req: Request) -> Response {
   use req <- web.middleware(req)

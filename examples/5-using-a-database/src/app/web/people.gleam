@@ -1,11 +1,11 @@
-import app/web.{Context}
-import gleam/dynamic.{Dynamic}
+import app/web.{type Context}
+import gleam/dynamic.{type Dynamic}
 import gleam/http.{Get, Post}
 import gleam/json
 import gleam/map
 import gleam/result.{try}
 import tiny_database
-import wisp.{Request, Response}
+import wisp.{type Request, type Response}
 
 // This request handler is used for requests to `/people`.
 //

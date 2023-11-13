@@ -1,9 +1,9 @@
 import app/web
-import gleam/dynamic.{Dynamic}
+import gleam/dynamic.{type Dynamic}
 import gleam/http.{Post}
 import gleam/json
 import gleam/result
-import wisp.{Request, Response}
+import wisp.{type Request, type Response}
 
 // This type is going to be parsed and decoded from the request body.
 pub type Person {

@@ -1,6 +1,6 @@
-import app/web.{Context}
+import app/web.{type Context}
 import app/web/people
-import wisp.{Request, Response}
+import wisp.{type Request, type Response}
 
 pub fn handle_request(req: Request, ctx: Context) -> Response {
   use req <- web.middleware(req)

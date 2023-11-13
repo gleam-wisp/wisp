@@ -1,6 +1,7 @@
 name = "app"
 version = "1.0.0"
 description = "A Wisp example"
+gleam = ">= 0.32.0"
 
 [dependencies]
 gleam_stdlib = "~> 0.30"

@@ -1,4 +1,4 @@
-import wisp.{Request, Response}
+import wisp.{type Request, type Response}
 import app/web
 
 // Wisp has functions for logging messages using the BEAM logger.

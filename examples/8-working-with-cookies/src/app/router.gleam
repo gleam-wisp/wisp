@@ -2,7 +2,7 @@ import app/web
 import gleam/http.{Delete, Get, Post}
 import gleam/list
 import gleam/string_builder
-import wisp.{Request, Response}
+import wisp.{type Request, type Response}
 
 const cookie_name = "id"
 

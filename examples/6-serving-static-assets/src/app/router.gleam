@@ -1,7 +1,7 @@
-import wisp.{Request, Response}
+import wisp.{type Request, type Response}
 import gleam/string_builder
-import gleam/http.{Get, Post}
-import app/web.{Context}
+import gleam/http
+import app/web.{type Context}
 
 const html = "<!DOCTYPE html>
 <html lang=\"en\">

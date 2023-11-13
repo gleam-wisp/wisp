@@ -2,6 +2,7 @@ name = "tiny_database"
 version = "1.0.0"
 description = "A silly little database to be used in the examples"
 licences = ["Apache-2.0"]
+gleam = ">= 0.32.0"
 
 [dependencies]
 gleam_stdlib = "~> 0.30"

@@ -1,4 +1,4 @@
-import wisp.{Request, Response}
+import wisp.{type Request, type Response}
 import gleam/string_builder
 import app/web
 

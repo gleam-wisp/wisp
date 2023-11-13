@@ -1,6 +1,6 @@
 import app
 import app/router
-import app/web.{Context}
+import app/web.{type Context, Context}
 import app/web/people.{Person}
 import gleam/json
 import gleeunit

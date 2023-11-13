@@ -3,7 +3,7 @@ import gleeunit/should
 import wisp/testing
 import app
 import app/router
-import app/web.{Context}
+import app/web.{type Context, Context}
 
 pub fn main() {
   gleeunit.main()
