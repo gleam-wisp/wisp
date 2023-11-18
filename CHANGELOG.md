@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Updated for simplifile v1.0.
+
 ## v0.8.0 - 2023-11-13
 
 - Updated for simplifile v0.3.
