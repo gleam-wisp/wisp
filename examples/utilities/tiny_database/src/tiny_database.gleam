@@ -35,7 +35,7 @@ pub fn truncate(connection: Connection) -> Result(Nil, Nil) {
 
 pub fn list(connection: Connection) -> Result(List(String), Nil) {
   let assert Ok(_) = simplifile.create_directory_all(connection.root)
-  simplifile.list_contents(connection.root)
+  simplifile.read_directory(connection.root)
   |> result.nil_error
 }
 
