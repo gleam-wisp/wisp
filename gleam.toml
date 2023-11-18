@@ -17,7 +17,7 @@ gleam_http = "~> 3.5"
 gleam_json = "~> 0.6"
 gleam_stdlib = "~> 0.29"
 mist = "~> 0.13"
-simplifile = "~> 0.3"
+simplifile = "~> 1.0"
 marceau = "~> 1.1"
 
 [dev-dependencies]
