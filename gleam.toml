@@ -4,7 +4,7 @@ gleam = ">= 0.32.0"
 description = "A practical web framework for Gleam"
 licences = ["Apache-2.0"]
 
-repository = { type = "github", user = "lpil", repo = "wisp" }
+repository = { type = "github", user = "gleam-wisp", repo = "wisp" }
 links = [
   { title = "Sponsor", href = "https://github.com/sponsors/lpil" },
 ]
