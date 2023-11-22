@@ -369,7 +369,7 @@ pub fn created() -> Response {
 /// # Examples
 ///
 /// ```gleam
-/// created()
+/// accepted()
 /// // -> Response(202, [], Empty)
 /// ```
 ///
