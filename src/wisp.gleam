@@ -196,7 +196,7 @@ pub fn html_response(html: StringBuilder, status: Int) -> Response {
 /// 
 /// ```gleam
 /// let body = string_builder.from_string("{\"name\": \"Joe\"}")
-/// html_response(body, 200)
+/// json_response(body, 200)
 /// // -> Response(200, [#("content-type", "application/json")], Text(body))
 /// ```
 /// 
