@@ -1,6 +1,6 @@
 name = "wisp"
-version = "0.8.0"
-gleam = ">= 0.32.0"
+version = "0.9.0"
+gleam = ">= 0.33.0"
 description = "A practical web framework for Gleam"
 licences = ["Apache-2.0"]
 
@@ -11,12 +11,12 @@ links = [
 
 [dependencies]
 exception = "~> 1.0"
-gleam_crypto = "~> 0.4"
-gleam_erlang = "~> 0.21"
+gleam_crypto = "~> 0.5"
+gleam_erlang = "~> 0.24"
 gleam_http = "~> 3.5"
-gleam_json = "~> 0.6"
-gleam_stdlib = "~> 0.29"
-mist = "~> 0.13"
+gleam_json = "~> 0.7"
+gleam_stdlib = "~> 0.34"
+mist = "~> 0.15"
 simplifile = "~> 1.0"
 marceau = "~> 1.1"
 

@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Updated for simplifile v1.0.
+- Update for gleam v0.33.
+- Update to latest dependencies.
 
 ## v0.8.0 - 2023-11-13
 
