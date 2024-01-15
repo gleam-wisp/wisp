@@ -11,4 +11,4 @@ mist = "~> 0.14"
 gleam_http = "~> 3.5"
 
 [dev-dependencies]
-gleeunit = "~> 0.10"
+gleeunit = "~> 1.0"

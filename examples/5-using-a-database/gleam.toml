@@ -12,4 +12,4 @@ gleam_erlang = "~> 0.23"
 mist = "~> 0.14"
 
 [dev-dependencies]
-gleeunit = "~> 0.10"
+gleeunit = "~> 1.0"
