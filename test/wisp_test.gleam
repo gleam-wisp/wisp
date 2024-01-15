@@ -7,7 +7,7 @@ import gleam/http/request
 import gleam/http/response.{Response}
 import gleam/int
 import gleam/list
-import gleam/map
+import gleam/dict
 import gleam/set
 import gleam/string
 import gleam/string_builder
@@ -513,7 +513,7 @@ pub fn json_test() {
   |> request.set_header("content-type", "application/json")
   |> json_handler(fn(json) {
     json
-    |> should.equal(dynamic.from(map.from_list([#("one", 1), #("two", 2)])))
+    |> should.equal(dynamic.from(dict.from_list([#("one", 1), #("two", 2)])))
   })
   |> should.equal(wisp.ok())
 }
@@ -678,7 +678,7 @@ file contents\r
 }
 
 pub fn multipart_form_files_too_big_test() {
-  let test = fn(limit, callback) {
+  let testcase = fn(limit, callback) {
     "--theboundary\r
 Content-Disposition: form-data; name=\"two\"; filename=\"file.txt\"\r
 \r
@@ -702,16 +702,16 @@ Content-Disposition: form-data; name=\"two\"; filename=\"another.txt\"\r
     |> form_handler(callback)
   }
 
-  test(1, fn(_) { panic as "should be unreachable for limit of 1" })
+  testcase(1, fn(_) { panic as "should be unreachable for limit of 1" })
   |> should.equal(Response(413, [], wisp.Empty))
 
-  test(2, fn(_) { panic as "should be unreachable for limit of 2" })
+  testcase(2, fn(_) { panic as "should be unreachable for limit of 2" })
   |> should.equal(Response(413, [], wisp.Empty))
 
-  test(3, fn(_) { panic as "should be unreachable for limit of 3" })
+  testcase(3, fn(_) { panic as "should be unreachable for limit of 3" })
   |> should.equal(Response(413, [], wisp.Empty))
 
-  test(4, fn(_) { Nil })
+  testcase(4, fn(_) { Nil })
   |> should.equal(Response(200, [], wisp.Empty))
 }
 
@@ -944,23 +944,20 @@ pub fn set_cookie_signed_test() {
 
 pub fn get_cookie_test() {
   let request =
-    testing.get(
-      "/",
-      [
-        // Plain text
-        #("cookie", "plain=MTIz"),
-        // Signed
-        #(
-          "cookie",
-          "signed=SFM1MTI.aGktdGhlcmU.uWUWvrAleKQ2jsWcU97HzGgPqtLjjUgl4oe40-RPJ5qRRcE_soXPacgmaHTLxK3xZbOJ5DOTIRMI0szD4Re7wA",
-        ),
-        // Signed but tampered with
-        #(
-          "cookie",
-          "signed-and-tampered-with=SFM1MTI.aGktdGhlcmU.uWUWvrAleKQ2jsWcU97HzGgPqtLjjUgl4oe40-RPJ5qRRcE_soXPacgmaHTLxK3xZbOJ5DOTIRMI0szD4Re7wAA",
-        ),
-      ],
-    )
+    testing.get("/", [
+      // Plain text
+      #("cookie", "plain=MTIz"),
+      // Signed
+      #(
+        "cookie",
+        "signed=SFM1MTI.aGktdGhlcmU.uWUWvrAleKQ2jsWcU97HzGgPqtLjjUgl4oe40-RPJ5qRRcE_soXPacgmaHTLxK3xZbOJ5DOTIRMI0szD4Re7wA",
+      ),
+      // Signed but tampered with
+      #(
+        "cookie",
+        "signed-and-tampered-with=SFM1MTI.aGktdGhlcmU.uWUWvrAleKQ2jsWcU97HzGgPqtLjjUgl4oe40-RPJ5qRRcE_soXPacgmaHTLxK3xZbOJ5DOTIRMI0szD4Re7wAA",
+      ),
+    ])
 
   request
   |> wisp.get_cookie("plain", wisp.PlainText)
@@ -996,7 +993,7 @@ pub fn get_cookie_test() {
 pub fn cookie_sign_roundtrip_test() {
   use _ <- list.each(list.repeat(1, 10_000))
   let message =
-    <<int.to_string(int.random(0, 1_000_000_000_000_000)):utf8>>
+    <<int.to_string(int.random(1_000_000_000_000_000)):utf8>>
     |> bit_array.base64_encode(True)
   let req = testing.get("/", [])
   let signed = wisp.sign_message(req, <<message:utf8>>, crypto.Sha512)

@@ -11,7 +11,7 @@ links = [
 
 [dependencies]
 exception = "~> 1.0"
-gleam_crypto = "~> 0.4"
+gleam_crypto = "~> 1.0"
 gleam_erlang = "~> 0.21"
 gleam_http = "~> 3.5"
 gleam_json = "~> 0.6"
