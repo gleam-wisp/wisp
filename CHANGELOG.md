@@ -1,10 +1,11 @@
 # Changelog
 
-## Unreleased
+## v0.10.0 - 2024-01-17
 
-- Relaxed version constraints for `gleam_stdlib` to permit 0.x or 1.x versions.
+- Relaxed version constraints for `gleam_stdlib` and `gleam_json` to permit 0.x
+  or 1.x versions.
 
-## v0.8.0 - 2024-01-15
+## v0.9.0 - 2024-01-15
 
 - Updated for Gleam v0.33.0.
 - Updated for simplifile v1.0.
