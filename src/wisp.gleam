@@ -1378,12 +1378,12 @@ pub fn serve_static(
         |> result.unwrap("")
         |> marceau.extension_to_mime_type
 
-      case simplifile.is_file(path) {
-        False -> handler()
-        True ->
+      case simplifile.verify_is_file(path) {
+        Ok(True) ->
           response.new(200)
           |> response.set_header("content-type", mime_type)
           |> response.set_body(File(path))
+        _ -> handler()
       }
     }
     _, _ -> handler()
