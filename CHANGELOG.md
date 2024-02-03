@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.11.0 - 2024-02-03
+
+- Updated for simplifile v1.4 and replaced the deprecated `simplifile.is_file`
+  function with `simplifile.verify_is_file`.
+
 ## v0.10.0 - 2024-01-17
 
 - Relaxed version constraints for `gleam_stdlib` and `gleam_json` to permit 0.x
