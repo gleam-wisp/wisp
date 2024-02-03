@@ -3,7 +3,7 @@
 [![Package Version](https://img.shields.io/hexpm/v/wisp)](https://hex.pm/packages/wisp)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/wisp/)
 
-Wisp is a practical Gleam web framework rapid development and easy maintenance.
+Wisp is a practical Gleam web framework for rapid development and easy maintenance.
 We worry about the hassle of web development, and you focus on writing your
 application.
 
