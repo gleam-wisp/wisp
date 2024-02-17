@@ -10,6 +10,7 @@ gleam_json = "~> 0.6"
 tiny_database = { path = "../utilities/tiny_database" }
 gleam_erlang = "~> 0.23"
 mist = "~> 0.14"
+gleam_http = "~> 3.5"
 
 [dev-dependencies]
 gleeunit = "~> 1.0"

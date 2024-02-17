@@ -9,12 +9,12 @@ pub fn main() {
   gleeunit.main()
 }
 
-fn with_context(test: fn(Context) -> t) -> t {
+fn with_context(testcase: fn(Context) -> t) -> t {
   // Create the context to use in tests
   let context = Context(static_directory: app.static_directory())
 
   // Run the test with the context
-  test(context)
+  testcase(context)
 }
 
 pub fn get_home_page_test() {

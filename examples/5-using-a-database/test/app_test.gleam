@@ -12,7 +12,7 @@ pub fn main() {
   gleeunit.main()
 }
 
-fn with_context(test: fn(Context) -> t) -> t {
+fn with_context(testcase: fn(Context) -> t) -> t {
   // Create a new database connection for this test
   use db <- tiny_database.with_connection(app.data_directory)
 
@@ -21,7 +21,7 @@ fn with_context(test: fn(Context) -> t) -> t {
   let context = Context(db: db)
 
   // Run the test with the context
-  test(context)
+  testcase(context)
 }
 
 pub fn get_unknown_test() {

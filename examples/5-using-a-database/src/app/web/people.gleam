@@ -2,7 +2,7 @@ import app/web.{type Context}
 import gleam/dynamic.{type Dynamic}
 import gleam/http.{Get, Post}
 import gleam/json
-import gleam/map
+import gleam/dict
 import gleam/result.{try}
 import tiny_database
 import wisp.{type Request, type Response}
@@ -41,12 +41,16 @@ pub fn list_people(ctx: Context) -> Response {
     use ids <- try(tiny_database.list(ctx.db))
 
     // Convert the ids into a JSON array of objects.
-    Ok(json.to_string_builder(json.object([
-      #(
-        "people",
-        json.array(ids, fn(id) { json.object([#("id", json.string(id))]) }),
+    Ok(
+      json.to_string_builder(
+        json.object([
+          #(
+            "people",
+            json.array(ids, fn(id) { json.object([#("id", json.string(id))]) }),
+          ),
+        ]),
       ),
-    ])))
+    )
   }
 
   case result {
@@ -88,11 +92,15 @@ pub fn read_person(ctx: Context, id: String) -> Response {
     use person <- try(read_from_database(ctx.db, id))
 
     // Construct a JSON payload with the person's details.
-    Ok(json.to_string_builder(json.object([
-      #("id", json.string(id)),
-      #("name", json.string(person.name)),
-      #("favourite-colour", json.string(person.favourite_colour)),
-    ])))
+    Ok(
+      json.to_string_builder(
+        json.object([
+          #("id", json.string(id)),
+          #("name", json.string(person.name)),
+          #("favourite-colour", json.string(person.favourite_colour)),
+        ]),
+      ),
+    )
   }
 
   // Return an appropriate response.
@@ -123,9 +131,9 @@ pub fn save_to_database(
   person: Person,
 ) -> Result(String, Nil) {
   // In a real application you might use a database client with some SQL here.
-  // Instead we create a simple map and save that.
+  // Instead we create a simple dict and save that.
   let data =
-    map.from_list([
+    dict.from_list([
       #("name", person.name),
       #("favourite-colour", person.favourite_colour),
     ])
@@ -138,7 +146,7 @@ pub fn read_from_database(
 ) -> Result(Person, Nil) {
   // In a real application you might use a database client with some SQL here.
   use data <- try(tiny_database.read(db, id))
-  use name <- try(map.get(data, "name"))
-  use favourite_colour <- try(map.get(data, "favourite-colour"))
+  use name <- try(dict.get(data, "name"))
+  use favourite_colour <- try(dict.get(data, "favourite-colour"))
   Ok(Person(name, favourite_colour))
 }
