@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.12.0 - 2024-02-17
+
+- The output format used by the logger has been improved.
+- Erlang SASL and supervisor logs are no longer emitted.
+
 ## v0.11.0 - 2024-02-03
 
 - Updated for simplifile v1.4 and replaced the deprecated `simplifile.is_file`

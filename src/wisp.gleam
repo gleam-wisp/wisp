@@ -2,6 +2,7 @@ import exception
 import gleam/bytes_builder
 import gleam/bit_array
 import gleam/bool
+import gleam/dict.{type Dict}
 import gleam/crypto
 import gleam/dynamic.{type Dynamic}
 import gleam/erlang
@@ -12,6 +13,7 @@ import gleam/http/response.{
   type Response as HttpResponse, Response as HttpResponse,
 }
 import gleam/int
+import gleam/erlang/atom.{type Atom}
 import gleam/json
 import gleam/list
 import gleam/option.{type Option}
@@ -19,10 +21,10 @@ import gleam/result
 import gleam/string
 import gleam/string_builder.{type StringBuilder}
 import gleam/uri
+import logging
 import marceau
 import mist
 import simplifile
-import wisp/internal/logger
 
 //
 // Running the server
@@ -1260,13 +1262,36 @@ pub type UploadedFile {
 /// ```
 ///
 pub fn rescue_crashes(handler: fn() -> Response) -> Response {
-  case erlang.rescue(handler) {
+  case exception.rescue(handler) {
     Ok(response) -> response
     Error(error) -> {
-      log_error(string.inspect(error))
+      let #(kind, detail) = case error {
+        exception.Errored(detail) -> #(Errored, detail)
+        exception.Thrown(detail) -> #(Thrown, detail)
+        exception.Exited(detail) -> #(Exited, detail)
+      }
+      case dynamic.dict(atom.from_dynamic, Ok)(detail) {
+        Ok(details) -> {
+          let c = atom.create_from_string("class")
+          log_error_dict(dict.insert(details, c, dynamic.from(kind)))
+          Nil
+        }
+        Error(_) -> log_error(string.inspect(error))
+      }
       internal_server_error()
     }
   }
+}
+
+type DoNotLeak
+
+@external(erlang, "logger", "error")
+fn log_error_dict(o: Dict(Atom, Dynamic)) -> DoNotLeak
+
+type ErrorKind {
+  Errored
+  Thrown
+  Exited
 }
 
 // TODO: test, somehow.
@@ -1485,7 +1510,7 @@ pub const priv_directory = erlang.priv_directory
 /// In future this function may be extended to change the output format.
 /// 
 pub fn configure_logger() -> Nil {
-  logger.configure_logger()
+  logging.configure()
 }
 
 /// Log a message to the Erlang logger with the level of `emergency`.
@@ -1495,7 +1520,7 @@ pub fn configure_logger() -> Nil {
 /// [1]: https://www.erlang.org/doc/man/logger
 /// 
 pub fn log_emergency(message: String) -> Nil {
-  logger.log(logger.Emergency, message)
+  logging.log(logging.Emergency, message)
 }
 
 /// Log a message to the Erlang logger with the level of `alert`.
@@ -1505,7 +1530,7 @@ pub fn log_emergency(message: String) -> Nil {
 /// [1]: https://www.erlang.org/doc/man/logger
 /// 
 pub fn log_alert(message: String) -> Nil {
-  logger.log(logger.Alert, message)
+  logging.log(logging.Alert, message)
 }
 
 /// Log a message to the Erlang logger with the level of `critical`.
@@ -1515,7 +1540,7 @@ pub fn log_alert(message: String) -> Nil {
 /// [1]: https://www.erlang.org/doc/man/logger
 /// 
 pub fn log_critical(message: String) -> Nil {
-  logger.log(logger.Critical, message)
+  logging.log(logging.Critical, message)
 }
 
 /// Log a message to the Erlang logger with the level of `error`.
@@ -1525,7 +1550,7 @@ pub fn log_critical(message: String) -> Nil {
 /// [1]: https://www.erlang.org/doc/man/logger
 /// 
 pub fn log_error(message: String) -> Nil {
-  logger.log(logger.Error, message)
+  logging.log(logging.Error, message)
 }
 
 /// Log a message to the Erlang logger with the level of `warning`.
@@ -1535,7 +1560,7 @@ pub fn log_error(message: String) -> Nil {
 /// [1]: https://www.erlang.org/doc/man/logger
 /// 
 pub fn log_warning(message: String) -> Nil {
-  logger.log(logger.Warning, message)
+  logging.log(logging.Warning, message)
 }
 
 /// Log a message to the Erlang logger with the level of `notice`.
@@ -1545,7 +1570,7 @@ pub fn log_warning(message: String) -> Nil {
 /// [1]: https://www.erlang.org/doc/man/logger
 /// 
 pub fn log_notice(message: String) -> Nil {
-  logger.log(logger.Notice, message)
+  logging.log(logging.Notice, message)
 }
 
 /// Log a message to the Erlang logger with the level of `info`.
@@ -1555,7 +1580,7 @@ pub fn log_notice(message: String) -> Nil {
 /// [1]: https://www.erlang.org/doc/man/logger
 /// 
 pub fn log_info(message: String) -> Nil {
-  logger.log(logger.Info, message)
+  logging.log(logging.Info, message)
 }
 
 /// Log a message to the Erlang logger with the level of `debug`.
@@ -1565,7 +1590,7 @@ pub fn log_info(message: String) -> Nil {
 /// [1]: https://www.erlang.org/doc/man/logger
 /// 
 pub fn log_debug(message: String) -> Nil {
-  logger.log(logger.Debug, message)
+  logging.log(logging.Debug, message)
 }
 
 //

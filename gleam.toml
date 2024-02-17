@@ -10,7 +10,7 @@ links = [
 ]
 
 [dependencies]
-exception = "~> 1.0"
+exception = "~> 2.0"
 gleam_crypto = "~> 1.0"
 gleam_erlang = "~> 0.21"
 gleam_http = "~> 3.5"
@@ -19,6 +19,7 @@ gleam_stdlib = "~> 0.29 or ~> 1.0"
 mist = "~> 0.13"
 simplifile = "~> 1.4"
 marceau = "~> 1.1"
+logging = "~> 1.0"
 
 [dev-dependencies]
 gleeunit = "~> 1.0"
