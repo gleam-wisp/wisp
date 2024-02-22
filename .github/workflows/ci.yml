@@ -21,38 +21,46 @@ jobs:
       - run: gleam deps download
       - run: gleam test
 
-      - name: "Example: 0-hello-world"
+      - name: "Example: 00-hello-world"
         run: gleam test
-        working-directory: examples/0-hello-world
+        working-directory: examples/00-hello-world
 
-      - name: "Example: 1-routing"
+      - name: "Example: 01-routing"
         run: gleam test
-        working-directory: examples/1-routing
+        working-directory: examples/01-routing
 
-      - name: "Example: 2-working-with-form-data"
+      - name: "Example: 02-working-with-form-data"
         run: gleam test
-        working-directory: examples/2-working-with-form-data
+        working-directory: examples/02-working-with-form-data
 
-      - name: "Example: 3-working-with-json"
+      - name: "Example: 03-working-with-json"
         run: gleam test
-        working-directory: examples/3-working-with-json
+        working-directory: examples/03-working-with-json
 
-      - name: "Example: 4-working-with-other-formats"
+      - name: "Example: 04-working-with-other-formats"
         run: gleam test
-        working-directory: examples/4-working-with-other-formats
+        working-directory: examples/04-working-with-other-formats
 
-      - name: "Example: 5-using-a-database"
+      - name: "Example: 05-using-a-database"
         run: gleam test
-        working-directory: examples/5-using-a-database
+        working-directory: examples/05-using-a-database
 
-      - name: "Example: 6-serving-static-assets"
+      - name: "Example: 06-serving-static-assets"
         run: gleam test
-        working-directory: examples/6-serving-static-assets
+        working-directory: examples/06-serving-static-assets
 
-      - name: "Example: 7-logging"
+      - name: "Example: 07-logging"
         run: gleam test
-        working-directory: examples/7-logging
+        working-directory: examples/07-logging
 
-      - name: "Example: 8-working-with-cookies"
+      - name: "Example: 08-working-with-cookies"
         run: gleam test
-        working-directory: examples/8-working-with-cookies
+        working-directory: examples/08-working-with-cookies
+
+      - name: "Example: 09-configuring-default-responses"
+        run: gleam test
+        working-directory: examples/09-configuring-default-responses
+
+      - name: "Example: 10-working-with-files"
+        run: gleam test
+        working-directory: examples/10-working-with-files"
