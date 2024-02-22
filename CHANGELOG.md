@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- The `wisp` module gains the `file_download_from_memory` and `file_download`
+  functions.
+
 ## v0.12.0 - 2024-02-17
 
 - The output format used by the logger has been improved.
