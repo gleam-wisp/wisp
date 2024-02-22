@@ -63,4 +63,4 @@ jobs:
 
       - name: "Example: 10-working-with-files"
         run: gleam test
-        working-directory: examples/10-working-with-files"
+        working-directory: examples/10-working-with-files
