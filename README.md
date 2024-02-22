@@ -56,15 +56,16 @@ The Wisp examples are a good place to start. They cover various scenarios and
 include comments and tests.
 
 - [Hello, World!](https://github.com/lpil/wisp/tree/main/examples/0-hello-world)
-- [Routing](https://github.com/lpil/wisp/tree/main/examples/1-routing)
-- [Working with form data](https://github.com/lpil/wisp/tree/main/examples/2-working-with-form-data)
-- [Working with JSON](https://github.com/lpil/wisp/tree/main/examples/3-working-with-json)
-- [Working with other formats](https://github.com/lpil/wisp/tree/main/examples/4-working-with-other-formats)
-- [Using a database](https://github.com/lpil/wisp/tree/main/examples/5-using-a-database)
-- [Serving static assets](https://github.com/lpil/wisp/tree/main/examples/6-serving-static-assets)
-- [Logging](https://github.com/lpil/wisp/tree/main/examples/7-logging)
-- [Working with cookies](https://github.com/lpil/wisp/tree/main/examples/8-working-with-cookies)
-- [Configuring default responses](https://github.com/lpil/wisp/tree/main/examples/9-configuring-default-responses)
+- [Routing](https://github.com/lpil/wisp/tree/main/examples/01-routing)
+- [Working with form data](https://github.com/lpil/wisp/tree/main/examples/02-working-with-form-data)
+- [Working with JSON](https://github.com/lpil/wisp/tree/main/examples/03-working-with-json)
+- [Working with other formats](https://github.com/lpil/wisp/tree/main/examples/04-working-with-other-formats)
+- [Using a database](https://github.com/lpil/wisp/tree/main/examples/05-using-a-database)
+- [Serving static assets](https://github.com/lpil/wisp/tree/main/examples/06-serving-static-assets)
+- [Logging](https://github.com/lpil/wisp/tree/main/examples/07-logging)
+- [Working with cookies](https://github.com/lpil/wisp/tree/main/examples/08-working-with-cookies)
+- [Configuring default responses](https://github.com/lpil/wisp/tree/main/examples/09-configuring-default-responses)
+- [Working with files](https://github.com/lpil/wisp/tree/main/examples/09-working-with-files)
 
 API documentation is available on [HexDocs](https://hexdocs.pm/wisp/).
 
