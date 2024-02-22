@@ -18,8 +18,7 @@ The `handle_request` function has been updated to upload and download files.
 
 ### `app_test` module
 
-Tests have been added that send requests with form data bodies and check that
-the expected response is returned.
+Tests have been added that upload and download files to verify the behaviour.
 
 ### Other files
 
