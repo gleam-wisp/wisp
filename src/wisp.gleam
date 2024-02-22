@@ -1,5 +1,5 @@
 import exception
-import gleam/bytes_builder
+import gleam/bytes_builder.{type BytesBuilder}
 import gleam/bit_array
 import gleam/bool
 import gleam/dict.{type Dict}
@@ -93,6 +93,7 @@ fn mist_response(response: Response) -> HttpResponse(mist.ResponseData) {
   let body = case response.body {
     Empty -> mist.Bytes(bytes_builder.new())
     Text(text) -> mist.Bytes(bytes_builder.from_string_builder(text))
+    Bytes(bytes) -> mist.Bytes(bytes)
     File(path) -> mist_send_file(path)
   }
   response
@@ -123,6 +124,12 @@ pub type Body {
   /// you can use the `string_builder.from_string` function to convert it.
   ///
   Text(StringBuilder)
+  /// A body of binary data.
+  ///
+  /// The body is represented using a `StringBuilder`. If you have a `String`
+  /// you can use the `string_builder.from_string` function to convert it.
+  ///
+  Bytes(BytesBuilder)
   /// A body of the contents of a file.
   ///
   /// This will be sent efficiently using the `send_file` function of the
@@ -170,6 +177,81 @@ pub fn response(status: Int) -> Response {
 pub fn set_body(response: Response, body: Body) -> Response {
   response
   |> response.set_body(body)
+}
+
+/// Send a file from the disc as a file download.
+///
+/// The operating system `send_file` function is used to efficiently send the
+/// file over the network socket without reading the entire file into memory.
+///
+/// The `content-disposition` header will be set to `attachment;
+/// filename="name"` to ensure the file is downloaded by the browser. This is
+/// especially good for files that the browser would otherwise attempt to open
+/// as this can result in cross-site scripting vulnerabilities.
+///
+/// If you wish to not set the `content-disposition` header you could use the
+/// `set_body` function with the `File` body variant.
+///
+/// # Examples
+/// 
+/// ```gleam
+/// response(200)
+/// |> file_download(named: "myfile.txt", from: "/tmp/myfile.txt")
+/// // -> Response(
+/// //   200,
+/// //   [#("content-disposition", "attachment; filename=\"myfile.txt\"")],
+/// //   File("/tmp/myfile.txt"),
+/// // )
+/// ```
+///
+pub fn file_download(
+  response: Response,
+  named name: String,
+  from path: String,
+) -> Response {
+  let name = uri.percent_encode(name)
+  response
+  |> response.set_header(
+    "content-disposition",
+    "attachment; filename=\"" <> name <> "\"",
+  )
+  |> response.set_body(File(path))
+}
+
+/// Send a file from memory as a file download.
+///
+/// If your file is already on the disc use `file_download` instead, to avoid
+/// having to read the file into memory to send it.
+///
+/// The `content-disposition` header will be set to `attachment;
+/// filename="name"` to ensure the file is downloaded by the browser. This is
+/// especially good for files that the browser would otherwise attempt to open
+/// as this can result in cross-site scripting vulnerabilities.
+///
+/// # Examples
+/// 
+/// ```gleam
+/// response(200)
+/// |> file_download_from_memory(named: "myfile.txt", containing: "Hello, Joe!")
+/// // -> Response(
+/// //   200,
+/// //   [#("content-disposition", "attachment; filename=\"myfile.txt\"")],
+/// //   File("/tmp/myfile.txt"),
+/// // )
+/// ```
+///
+pub fn file_download_from_memory(
+  response: Response,
+  named name: String,
+  containing data: BytesBuilder,
+) -> Response {
+  let name = uri.percent_encode(name)
+  response
+  |> response.set_header(
+    "content-disposition",
+    "attachment; filename=\"" <> name <> "\"",
+  )
+  |> response.set_body(Bytes(data))
 }
 
 /// Create a HTML response.

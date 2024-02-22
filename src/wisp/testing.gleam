@@ -9,7 +9,7 @@ import gleam/string
 import gleam/string_builder
 import gleam/uri
 import simplifile
-import wisp.{type Request, type Response, Empty, File, Text}
+import wisp.{type Request, type Response, Bytes, Empty, File, Text}
 
 /// The default secret key base used for test requests.
 /// This should never be used outside of tests.
@@ -228,6 +228,11 @@ pub fn string_body(response: Response) -> String {
   case response.body {
     Empty -> ""
     Text(builder) -> string_builder.to_string(builder)
+    Bytes(bytes) -> {
+      let data = bytes_builder.to_bit_array(bytes)
+      let assert Ok(string) = bit_array.to_string(data)
+      string
+    }
     File(path) -> {
       let assert Ok(contents) = simplifile.read(path)
       contents
@@ -245,6 +250,7 @@ pub fn string_body(response: Response) -> String {
 pub fn bit_array_body(response: Response) -> BitArray {
   case response.body {
     Empty -> <<>>
+    Bytes(builder) -> bytes_builder.to_bit_array(builder)
     Text(builder) ->
       bytes_builder.to_bit_array(bytes_builder.from_string_builder(builder))
     File(path) -> {

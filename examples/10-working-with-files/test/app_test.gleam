@@ -32,7 +32,7 @@ pub fn file_from_disc_test() {
   response.headers
   |> should.equal([
     #("content-type", "text/markdown"),
-    #("content-disposition", "attachment; filename=hello.txt"),
+    #("content-disposition", "attachment; filename=\"hello.md\""),
   ])
 
   response
@@ -50,7 +50,7 @@ pub fn file_from_memory_test() {
   response.headers
   |> should.equal([
     #("content-type", "text/plain"),
-    #("content-disposition", "attachment; filename=hello.txt"),
+    #("content-disposition", "attachment; filename=\"hello.txt\""),
   ])
 
   response

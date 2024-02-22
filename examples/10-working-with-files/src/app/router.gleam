@@ -3,6 +3,7 @@ import gleam/http.{Get, Post}
 import gleam/list
 import gleam/result
 import gleam/string_builder
+import gleam/bytes_builder
 import wisp.{type Request, type Response}
 
 pub fn handle_request(req: Request) -> Response {
@@ -42,17 +43,20 @@ fn handle_download_file_from_memory(req: Request) -> Response {
   use <- wisp.require_method(req, Get)
 
   // In this case we have the file contents in memory as a string.
-  let file_contents = string_builder.from_string("Hello, Joe!")
+  // This is good if we have just made the file, but if the file already exists
+  // on the disc then the approach in the next function is more efficient.
+  let file_contents = bytes_builder.from_string("Hello, Joe!")
 
   wisp.ok()
   |> wisp.set_header("content-type", "text/plain")
-  // The content-disposition header is used to ensure this is treated as a file
-  // download. If the file was uploaded by the user then you want to ensure that
-  // this header is ste as otherwise the browser may try to display the file,
-  // which could enable in cross-site scripting attacks.
-  |> wisp.set_header("content-disposition", "attachment; filename=hello.txt")
-  // Use the file contents as the response body.
-  |> wisp.set_body(wisp.Text(file_contents))
+  // The content-disposition header is set by this function to ensure this is
+  // treated as a file download. If the file was uploaded by the user then you
+  // want to ensure that this header is ste as otherwise the browser may try to
+  // display the file, which could enable in cross-site scripting attacks.
+  |> wisp.file_download_from_memory(
+    named: "hello.txt",
+    containing: file_contents,
+  )
 }
 
 fn handle_download_file_from_disc(req: Request) -> Response {
@@ -65,10 +69,7 @@ fn handle_download_file_from_disc(req: Request) -> Response {
 
   wisp.ok()
   |> wisp.set_header("content-type", "text/markdown")
-  // Setting content-disposition header for security again.
-  |> wisp.set_header("content-disposition", "attachment; filename=hello.txt")
-  // Use the file contents as the response body.
-  |> wisp.set_body(wisp.File(file_path))
+  |> wisp.file_download(named: "hello.md", from: file_path)
 }
 
 fn handle_file_upload(req: Request) -> Response {
