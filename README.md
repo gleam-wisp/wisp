@@ -55,7 +55,7 @@ pub fn handle_request(request: Request) -> Response {
 The Wisp examples are a good place to start. They cover various scenarios and
 include comments and tests.
 
-- [Hello, World!](https://github.com/lpil/wisp/tree/main/examples/0-hello-world)
+- [Hello, World!](https://github.com/lpil/wisp/tree/main/examples/00-hello-world)
 - [Routing](https://github.com/lpil/wisp/tree/main/examples/01-routing)
 - [Working with form data](https://github.com/lpil/wisp/tree/main/examples/02-working-with-form-data)
 - [Working with JSON](https://github.com/lpil/wisp/tree/main/examples/03-working-with-json)
