@@ -65,7 +65,7 @@ include comments and tests.
 - [Logging](https://github.com/lpil/wisp/tree/main/examples/07-logging)
 - [Working with cookies](https://github.com/lpil/wisp/tree/main/examples/08-working-with-cookies)
 - [Configuring default responses](https://github.com/lpil/wisp/tree/main/examples/09-configuring-default-responses)
-- [Working with files](https://github.com/lpil/wisp/tree/main/examples/09-working-with-files)
+- [Working with files](https://github.com/lpil/wisp/tree/main/examples/10-working-with-files)
 
 API documentation is available on [HexDocs](https://hexdocs.pm/wisp/).
 
