@@ -17,7 +17,7 @@ someone gains access to the secret key they will be able to forge cookies. This
 example application generates a random string in `app.gleam`, but in a real
 application you will need to read this secret value from somewhere secure.
 
-[routing]: https://github.com/lpil/wisp/tree/main/examples/2-working-with-form-data
+[routing]: https://github.com/lpil/wisp/tree/main/examples/02-working-with-form-data
 
 ### `app/router` module
 

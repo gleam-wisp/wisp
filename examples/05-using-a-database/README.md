@@ -11,7 +11,7 @@ database connection.
 This example is based off of the ["working with JSON" example][json], so read
 that first. The additions are detailed here and commented in the code.
 
-[json]: https://github.com/lpil/wisp/tree/main/examples/3-working-with-json
+[json]: https://github.com/lpil/wisp/tree/main/examples/03-working-with-json
 
 ### `gleam.toml` file
 

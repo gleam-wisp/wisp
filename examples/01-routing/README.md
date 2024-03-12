@@ -11,7 +11,7 @@ request path and method.
 This example is based off of the ["Hello, World!" example][hello], so read that
 one first. The additions are detailed here and commented in the code.
 
-[hello]: https://github.com/lpil/wisp/tree/main/examples/0-hello-world
+[hello]: https://github.com/lpil/wisp/tree/main/examples/00-hello-world
 
 ### `app/router` module
 
