@@ -15,7 +15,7 @@ You likely want your application to return a generic error page rather than an e
 This example is based off of the [routing example][routing] so read that first.
 The additions are detailed here and commented in the code.
 
-[routing]: https://github.com/lpil/wisp/tree/main/examples/1-routing
+[routing]: https://github.com/lpil/wisp/tree/main/examples/01-routing
 
 ### `app/router` module
 

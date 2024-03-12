@@ -11,8 +11,8 @@ This example is based off of the ["Hello, World!" example][hello], and uses
 concepts from the [routing example][routing] so read those first. The additions
 are detailed here and commented in the code.
 
-[hello]: https://github.com/lpil/wisp/tree/main/examples/0-hello-world
-[routing]: https://github.com/lpil/wisp/tree/main/examples/1-routing
+[hello]: https://github.com/lpil/wisp/tree/main/examples/00-hello-world
+[routing]: https://github.com/lpil/wisp/tree/main/examples/01-routing
 
 ### `app/router` module
 
