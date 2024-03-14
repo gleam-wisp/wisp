@@ -12,7 +12,7 @@ request body contains invalid JSON.
 
 You likely want your application to return a generic error page rather than an empty body, and this example shows how to do that.
 
-This example is based off of the [routing example][routing] so read that first.
+This example is based off of the ["routing" example][routing] so read that first.
 The additions are detailed here and commented in the code.
 
 [routing]: https://github.com/lpil/wisp/tree/main/examples/01-routing
