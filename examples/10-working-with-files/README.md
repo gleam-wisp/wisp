@@ -7,7 +7,7 @@ gleam test  # Run the tests
 
 This example shows how to accept file uploads and allow users to download files.
 
-This example is based off of the ["Working with form data" example][formdata], 
+This example is based off of the ["working with form data" example][formdata],
 so read that first. The additions are detailed here and commented in the code.
 
 [formdata]: https://github.com/lpil/wisp/tree/main/examples/02-working-with-form-data

@@ -8,7 +8,7 @@ gleam test  # Run the tests
 This example shows how to read and write cookies, and how to sign cookies so
 they cannot be tampered with.
 
-This example is based off of the [working with form data example][form-data] so read that one
+This example is based off of the ["working with form data" example][form-data] so read that one
 first. The additions are detailed here and commented in the code.
 
 Signing of cookies uses the `secret_key_base` value. If this value changes then

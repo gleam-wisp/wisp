@@ -1,4 +1,4 @@
-# Wisp Example: Using A Database
+# Wisp Example: Using a database
 
 ```sh
 gleam run   # Run the server
