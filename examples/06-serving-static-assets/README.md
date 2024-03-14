@@ -5,8 +5,9 @@ gleam run   # Run the server
 gleam test  # Run the tests
 ```
 
-This example shows how to route requests to different handlers based on the
-request path and method.
+This example shows how to serve static assets. In this case we'll serve
+a CSS file for page styling and a JavaScript file for updating the content
+of the HTML page, but the same techniques can also be used for other file types.
 
 This example is based off of the ["Hello, World!" example][hello], so read that
 one first. The additions are detailed here and commented in the code.

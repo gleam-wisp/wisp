@@ -5,8 +5,7 @@ gleam run   # Run the server
 gleam test  # Run the tests
 ```
 
-This example shows how to route requests to different handlers based on the
-request path and method.
+This example shows how to log messages using the BEAM logger.
 
 This example is based off of the ["routing" example][routing], so read that
 one first. The additions are detailed here and commented in the code.
