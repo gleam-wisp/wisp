@@ -51,8 +51,8 @@ fn handle_download_file_from_memory(req: Request) -> Response {
   |> wisp.set_header("content-type", "text/plain")
   // The content-disposition header is set by this function to ensure this is
   // treated as a file download. If the file was uploaded by the user then you
-  // want to ensure that this header is ste as otherwise the browser may try to
-  // display the file, which could enable in cross-site scripting attacks.
+  // want to ensure that this header is set as otherwise the browser may try to
+  // display the file, which could enable cross-site scripting attacks.
   |> wisp.file_download_from_memory(
     named: "hello.txt",
     containing: file_contents,
@@ -63,7 +63,7 @@ fn handle_download_file_from_disc(req: Request) -> Response {
   use <- wisp.require_method(req, Get)
 
   // In this case the file exists on the disc.
-  // Here's we're using the project README, but in a real application you'd
+  // Here we're using the project README, but in a real application you'd
   // probably have an absolute path to wherever it is you keep your files.
   let file_path = "./README.md"
 
