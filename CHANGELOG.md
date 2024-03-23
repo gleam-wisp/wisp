@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.13.0 - 2024-03-23
 
 - The `wisp` module gains the `file_download_from_memory` and `file_download`
   functions.
