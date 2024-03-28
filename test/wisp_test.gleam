@@ -1,5 +1,6 @@
 import gleam/bit_array
 import gleam/crypto
+import gleam/dict
 import gleam/dynamic.{type Dynamic}
 import gleam/erlang
 import gleam/http
@@ -7,7 +8,6 @@ import gleam/http/request
 import gleam/http/response.{Response}
 import gleam/int
 import gleam/list
-import gleam/dict
 import gleam/set
 import gleam/string
 import gleam/string_builder

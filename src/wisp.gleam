@@ -1,11 +1,12 @@
 import exception
-import gleam/bytes_builder.{type BytesBuilder}
 import gleam/bit_array
 import gleam/bool
-import gleam/dict.{type Dict}
+import gleam/bytes_builder.{type BytesBuilder}
 import gleam/crypto
+import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
 import gleam/erlang
+import gleam/erlang/atom.{type Atom}
 import gleam/http.{type Method}
 import gleam/http/cookie
 import gleam/http/request.{type Request as HttpRequest}
@@ -13,7 +14,6 @@ import gleam/http/response.{
   type Response as HttpResponse, Response as HttpResponse,
 }
 import gleam/int
-import gleam/erlang/atom.{type Atom}
 import gleam/json
 import gleam/list
 import gleam/option.{type Option}

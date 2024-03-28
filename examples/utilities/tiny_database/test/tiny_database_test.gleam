@@ -1,7 +1,7 @@
+import gleam/map
 import gleeunit
 import gleeunit/should
 import tiny_database
-import gleam/map
 
 pub fn main() {
   gleeunit.main()

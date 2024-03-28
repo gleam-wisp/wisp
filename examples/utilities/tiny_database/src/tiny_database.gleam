@@ -1,9 +1,9 @@
-import gleam/result
+import gleam/dict.{type Dict}
 import gleam/dynamic
-import ids/nanoid
 import gleam/json
 import gleam/list
-import gleam/dict.{type Dict}
+import gleam/result
+import ids/nanoid
 import simplifile
 
 pub opaque type Connection {
