@@ -10,16 +10,16 @@ links = [
 ]
 
 [dependencies]
-exception = "~> 2.0"
-gleam_crypto = "~> 1.0"
-gleam_erlang = "~> 0.21"
-gleam_http = "~> 3.5"
-gleam_json = "~> 0.6 or ~> 1.0"
-gleam_stdlib = "~> 0.29 or ~> 1.0"
-mist = "~> 0.13 or ~> 1.0"
-simplifile = "~> 1.4"
-marceau = "~> 1.1"
-logging = "~> 1.0"
+exception = ">= 2.0.0 and < 3.0.0"
+gleam_crypto = ">= 1.0.0 and < 2.0.0"
+gleam_erlang = ">= 0.21.0 and < 2.0.0"
+gleam_http = ">= 3.5.0 and < 4.0.0"
+gleam_json = ">= 0.6.0 and < 2.0.0"
+gleam_stdlib = ">= 0.29.0 and < 2.0.0"
+mist = ">= 0.13.0 and < 2.0.0"
+simplifile = ">= 1.4.0 and != 1.6.0 and < 2.0.0"
+marceau = ">= 1.1.0 and < 2.0.0"
+logging = ">= 1.0.0 and < 2.0.0"
 
 [dev-dependencies]
 gleeunit = "~> 1.0"
