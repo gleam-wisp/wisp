@@ -17,7 +17,7 @@ defined in your application which may hold other state such as a database
 connection or user session.
 
 ```gleam
-import wisp.{Request, Response}
+import wisp.{type Request, type Response}
 
 pub type Context {
   Context(secret: String)
@@ -41,7 +41,7 @@ handled, and the `serve_static` middleware is used to serve static files
 such as images and CSS.
 
 ```gleam
-import wisp.{Request, Response}
+import wisp.{type Request, type Response}
 
 pub fn handle_request(request: Request) -> Response {
   use <- wisp.log_request
