@@ -20,6 +20,7 @@ mist = ">= 0.13.0 and < 2.0.0"
 simplifile = ">= 1.4.0 and != 1.6.0 and < 2.0.0"
 marceau = ">= 1.1.0 and < 2.0.0"
 logging = ">= 1.0.0 and < 2.0.0"
+argv = ">= 1.0.2 and < 2.0.0"
 
 [dev-dependencies]
 gleeunit = "~> 1.0"

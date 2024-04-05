@@ -1,3 +1,4 @@
+import argv
 import exception
 import gleam/bit_array
 import gleam/bool
@@ -14,6 +15,7 @@ import gleam/http/response.{
   type Response as HttpResponse, Response as HttpResponse,
 }
 import gleam/int
+import gleam/io
 import gleam/json
 import gleam/list
 import gleam/option.{type Option}
@@ -25,6 +27,35 @@ import logging
 import marceau
 import mist
 import simplifile
+
+//
+// Command line interface
+//
+
+const cli_usage = "usage:
+  # Generate a random string, suitable for use as a secret
+  gleam run -m wisp random-string 16
+"
+
+pub fn main() {
+  let result = case argv.load().arguments {
+    ["random-string", i] -> command_random_string(i)
+    _ -> Ok(io.print(cli_usage))
+  }
+  case result {
+    Ok(_) -> Nil
+    Error(e) -> io.println_error("error: " <> e)
+  }
+}
+
+fn command_random_string(i: String) -> Result(Nil, String) {
+  use i <- result.try(
+    int.parse(i)
+    |> result.replace_error("Unable to parse int: " <> i),
+  )
+  io.println(random_string(i))
+  Ok(Nil)
+}
 
 //
 // Running the server
