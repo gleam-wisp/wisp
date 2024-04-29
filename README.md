@@ -44,7 +44,7 @@ such as images and CSS.
 import wisp.{type Request, type Response}
 
 pub fn handle_request(request: Request) -> Response {
-  use <- wisp.log_request
+  use <- wisp.log_request(request)
   use <- wisp.serve_static(request, under: "/static", from: "/public")
   wisp.ok()
 }
