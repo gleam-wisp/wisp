@@ -1747,14 +1747,14 @@ fn random_slug() -> String {
 ///
 /// ```gleam
 /// wisp.ok()
-/// |> wisp.set_cookie("id", "123", wisp.PlainText, 60 * 60)
+/// |> wisp.set_cookie(request, "id", "123", wisp.PlainText, 60 * 60)
 /// ```
 /// 
 /// Setting a signed cookie that the client can read but not modify:
 /// 
 /// ```gleam
 /// wisp.ok()
-/// |> wisp.set_cookie("id", value, wisp.Signed, 60 * 60)
+/// |> wisp.set_cookie(request, "id", value, wisp.Signed, 60 * 60)
 /// ```
 ///
 pub fn set_cookie(
