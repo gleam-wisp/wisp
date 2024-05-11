@@ -7,6 +7,7 @@ import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
 import gleam/erlang
 import gleam/erlang/atom.{type Atom}
+import gleam/erlang/process
 import gleam/http.{type Method}
 import gleam/http/cookie
 import gleam/http/request.{type Request as HttpRequest}
@@ -17,6 +18,7 @@ import gleam/int
 import gleam/json
 import gleam/list
 import gleam/option.{type Option}
+import gleam/otp/actor
 import gleam/result
 import gleam/string
 import gleam/string_builder.{type StringBuilder}
@@ -60,6 +62,8 @@ pub type Body {
   /// in place of any with an empty body.
   ///
   Empty
+  /// An newly established websocket connection.
+  Websocket(process.Selector(process.ProcessDown))
 }
 
 /// An alias for a HTTP response containing a `Body`.
@@ -1875,4 +1879,60 @@ pub fn create_canned_connection(
     },
     secret_key_base,
   )
+}
+
+//
+// Websockets
+//
+
+// TODO(bgw): doc more once fleshed out
+
+/// The messages possible to receive to and from a websocket.
+pub type WebsocketMessage(a) {
+  WsText(String)
+  WsBinary(BitArray)
+  WsClosed
+  WsShutdown
+  WsCustom(a)
+}
+
+// sends to user
+type WebsocketConnection(c) =
+  internal.WebsocketConnection(c)
+
+pub type WsSupported =
+  internal.WsSupported
+
+// TODO: heavily doc this
+pub type WebsocketHandler(a, b, c) {
+  WebsocketHandler(
+    ws: WsSupported,
+    req: Request,
+    handler: fn(a, WebsocketConnection(c), WebsocketMessage(b)) ->
+      actor.Next(b, a),
+    on_init: fn(WebsocketConnection(c)) -> #(a, Option(process.Selector(b))),
+    on_close: fn(a) -> Nil,
+  )
+}
+
+pub fn ws_handler(
+  req: Request,
+  ws: WsSupported,
+  handler: fn(a, WebsocketConnection(c), WebsocketMessage(b)) ->
+    actor.Next(b, a),
+  on_init: fn(WebsocketConnection(c)) -> #(a, Option(process.Selector(b))),
+  on_close: fn(a) -> Nil,
+) -> WebsocketHandler(a, b, c) {
+  WebsocketHandler(
+    ws: ws,
+    req: req,
+    handler: handler,
+    on_init: on_init,
+    on_close: on_close,
+  )
+}
+
+pub type WebsocketSend(c) {
+  SendText(text: String, conn: WebsocketConnection(c))
+  SendBinary(binary: BitArray, conn: WebsocketConnection(c))
 }

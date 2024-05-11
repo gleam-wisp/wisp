@@ -1,6 +1,7 @@
 import gleam/bit_array
 import gleam/crypto
 import gleam/string
+import mist
 
 // HELPERS
 
@@ -83,4 +84,25 @@ pub fn random_string(length: Int) -> String {
 
 pub fn random_slug() -> String {
   random_string(16)
+}
+
+pub type Ws {
+  Ws
+}
+
+// connects to user
+// 
+pub type Socket {
+  // generics leak into request type
+  Socket(mist.Connection)
+  // TODO: can delete if we handle create_canned_connection somehow?
+  NoSocket
+}
+
+pub type WebsocketConnection(c) {
+  WebsocketConnection(c)
+}
+
+pub type WsSupported {
+  WsSupported
 }
