@@ -1794,7 +1794,7 @@ pub type Security {
 /// for a signed cookie, then `Error(Nil)` is returned.
 ///
 /// ```gleam
-/// wisp.get_cookie(request, "group")
+/// wisp.get_cookie(request, "group", wisp.PlainText)
 /// // -> Ok("A")
 /// ```
 ///
