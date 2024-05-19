@@ -360,7 +360,7 @@ pub fn string_builder_body(
 /// ```gleam
 /// let body = 
 /// response(201)
-/// |> string_builder_body("Hello, Joe!")
+/// |> string_body("Hello, Joe!")
 /// // -> Response(
 /// //   201,
 /// //   [],
