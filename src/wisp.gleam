@@ -152,28 +152,28 @@ pub type Response =
   HttpResponse(Body)
 
 /// Create an empty response with the given status code.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```gleam
 /// response(200)
 /// // -> Response(200, [], Empty)
 /// ```
-/// 
+///
 pub fn response(status: Int) -> Response {
   HttpResponse(status, [], Empty)
 }
 
 /// Set the body of a response.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```gleam
 /// response(200)
 /// |> set_body(File("/tmp/myfile.txt"))
 /// // -> Response(200, [], File("/tmp/myfile.txt"))
 /// ```
-/// 
+///
 pub fn set_body(response: Response, body: Body) -> Response {
   response
   |> response.set_body(body)
@@ -193,7 +193,7 @@ pub fn set_body(response: Response, body: Body) -> Response {
 /// `set_body` function with the `File` body variant.
 ///
 /// # Examples
-/// 
+///
 /// ```gleam
 /// response(200)
 /// |> file_download(named: "myfile.txt", from: "/tmp/myfile.txt")
@@ -229,7 +229,7 @@ pub fn file_download(
 /// as this can result in cross-site scripting vulnerabilities.
 ///
 /// # Examples
-/// 
+///
 /// ```gleam
 /// response(200)
 /// |> file_download_from_memory(named: "myfile.txt", containing: "Hello, Joe!")
@@ -255,53 +255,53 @@ pub fn file_download_from_memory(
 }
 
 /// Create a HTML response.
-/// 
+///
 /// The body is expected to be valid HTML, though this is not validated.
 /// The `content-type` header will be set to `text/html`.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```gleam
 /// let body = string_builder.from_string("<h1>Hello, Joe!</h1>")
 /// html_response(body, 200)
 /// // -> Response(200, [#("content-type", "text/html")], Text(body))
 /// ```
-/// 
+///
 pub fn html_response(html: StringBuilder, status: Int) -> Response {
   HttpResponse(status, [#("content-type", "text/html")], Text(html))
 }
 
 /// Create a JSON response.
-/// 
+///
 /// The body is expected to be valid JSON, though this is not validated.
 /// The `content-type` header will be set to `application/json`.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```gleam
 /// let body = string_builder.from_string("{\"name\": \"Joe\"}")
 /// json_response(body, 200)
 /// // -> Response(200, [#("content-type", "application/json")], Text(body))
 /// ```
-/// 
+///
 pub fn json_response(json: StringBuilder, status: Int) -> Response {
   HttpResponse(status, [#("content-type", "application/json")], Text(json))
 }
 
 /// Set the body of a response to a given HTML document, and set the
 /// `content-type` header to `text/html`.
-/// 
+///
 /// The body is expected to be valid HTML, though this is not validated.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```gleam
 /// let body = string_builder.from_string("<h1>Hello, Joe!</h1>")
 /// response(201)
 /// |> html_body(body)
 /// // -> Response(201, [#("content-type", "text/html")], Text(body))
 /// ```
-/// 
+///
 pub fn html_body(response: Response, html: StringBuilder) -> Response {
   response
   |> response.set_body(Text(html))
@@ -310,18 +310,18 @@ pub fn html_body(response: Response, html: StringBuilder) -> Response {
 
 /// Set the body of a response to a given JSON document, and set the
 /// `content-type` header to `application/json`.
-/// 
+///
 /// The body is expected to be valid JSON, though this is not validated.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```gleam
 /// let body = string_builder.from_string("{\"name\": \"Joe\"}")
 /// response(201)
 /// |> json_body(body)
 /// // -> Response(201, [#("content-type", "application/json")], Text(body))
 /// ```
-/// 
+///
 pub fn json_body(response: Response, json: StringBuilder) -> Response {
   response
   |> response.set_body(Text(json))
@@ -334,14 +334,14 @@ pub fn json_body(response: Response, json: StringBuilder) -> Response {
 /// appropriate value for the format of the content.
 ///
 /// # Examples
-/// 
+///
 /// ```gleam
 /// let body = string_builder.from_string("Hello, Joe!")
 /// response(201)
 /// |> string_builder_body(body)
 /// // -> Response(201, [], Text(body))
 /// ```
-/// 
+///
 pub fn string_builder_body(
   response: Response,
   content: StringBuilder,
@@ -356,9 +356,9 @@ pub fn string_builder_body(
 /// appropriate value for the format of the content.
 ///
 /// # Examples
-/// 
+///
 /// ```gleam
-/// let body = 
+/// let body =
 /// response(201)
 /// |> string_body("Hello, Joe!")
 /// // -> Response(
@@ -367,7 +367,7 @@ pub fn string_builder_body(
 /// //   Text(string_builder.from_string("Hello, Joe"))
 /// // )
 /// ```
-/// 
+///
 pub fn string_body(response: Response, content: String) -> Response {
   response
   |> response.set_body(Text(string_builder.from_string(content)))
@@ -384,18 +384,133 @@ pub fn string_body(response: Response, content: String) -> Response {
 /// escape_html("<h1>Hello, Joe!</h1>")
 /// // -> "&lt;h1&gt;Hello, Joe!&lt;/h1&gt;"
 /// ```
-/// 
+///
 pub fn escape_html(content: String) -> String {
-  do_escape_html("", content)
+  let bits = <<content:utf8>>
+  let acc = do_escape_html(bits, 0, bits, [])
+
+  list.reverse(acc)
+  |> bit_array.concat
+  // We know the bit array produced by `do_escape_html` is still a valid utf8
+  // string so we coerce it without passing through the validation steps of
+  // `bit_array.to_string`.
+  |> coerce_bit_array_to_string
 }
 
-fn do_escape_html(escaped: String, content: String) -> String {
-  case string.pop_grapheme(content) {
-    Ok(#("<", xs)) -> do_escape_html(escaped <> "&lt;", xs)
-    Ok(#(">", xs)) -> do_escape_html(escaped <> "&gt;", xs)
-    Ok(#("&", xs)) -> do_escape_html(escaped <> "&amp;", xs)
-    Ok(#(x, xs)) -> do_escape_html(escaped <> x, xs)
-    Error(_) -> escaped <> content
+@external(erlang, "wisp_ffi", "coerce")
+fn coerce_bit_array_to_string(bit_array: BitArray) -> String
+
+// A possible way to escape chars would be to split the string into graphemes,
+// traverse those one by one and accumulate them back into a string escaping
+// ">", "<", etc. as we see them.
+//
+// However, we can be a lot more performant by working directly on the
+// `BitArray` representing a Gleam UTF-8 String.
+// This means that, instead of popping a grapheme at a time, we can work
+// directly on BitArray slices: this has the big advantage of making sure we
+// share as much as possible with the original string without having to build
+// a new one from scratch.
+//
+@target(erlang)
+fn do_escape_html(
+  bin: BitArray,
+  skip: Int,
+  original: BitArray,
+  acc: List(BitArray),
+) -> List(BitArray) {
+  case bin {
+    // If we find a char to escape we just advance the `skip` counter so that
+    // it will be ignored in the following slice, then we append the escaped
+    // version to the accumulator.
+    <<"<":utf8, rest:bits>> -> {
+      let acc = [<<"&lt;":utf8>>, ..acc]
+      do_escape_html(rest, skip + 1, original, acc)
+    }
+
+    <<">":utf8, rest:bits>> -> {
+      let acc = [<<"&gt;":utf8>>, ..acc]
+      do_escape_html(rest, skip + 1, original, acc)
+    }
+
+    <<"&":utf8, rest:bits>> -> {
+      let acc = [<<"&amp;":utf8>>, ..acc]
+      do_escape_html(rest, skip + 1, original, acc)
+    }
+
+    // For any other bit that doesn't need to be escaped we go into an inner
+    // loop, consuming as much "non-escapable" chars as possible.
+    <<_char, rest:bits>> -> do_escape_html_regular(rest, skip, original, acc, 1)
+
+    <<>> -> acc
+
+    _ -> panic as "non byte aligned string, all strings should be byte aligned"
+  }
+}
+
+@target(erlang)
+fn do_escape_html_regular(
+  bin: BitArray,
+  skip: Int,
+  original: BitArray,
+  acc: List(BitArray),
+  len: Int,
+) -> List(BitArray) {
+  // Remember, if we're here it means we've found a char that doesn't need to be
+  // escaped, so what we want to do is advance the `len` counter until we reach
+  // a char that _does_ need to be escaped and take the slice going from
+  // `skip` with size `len`.
+  //
+  // Imagine we're escaping this string: "abc<def&ghi" and we've reached 'd':
+  // ```
+  //    abc<def&ghi
+  //       ^ `skip` points here
+  // ```
+  // We're going to be increasing `len` until we reach the '&':
+  // ```
+  //    abc<def&ghi
+  //        ^^^ len will be 3 when we reach the '&' that needs escaping
+  // ```
+  // So we take the slice corresponding to "def".
+  //
+  case bin {
+    // If we reach a char that has to be escaped we append the slice starting
+    // from `skip` with size `len` and the escaped char.
+    // This is what allows us to share as much of the original string as
+    // possible: we only allocate a new BitArray for the escaped chars,
+    // everything else is just a slice of the original String.
+    <<"<":utf8, rest:bits>> -> {
+      let assert Ok(slice) = bit_array.slice(original, skip, len)
+      let acc = [<<"&lt;":utf8>>, slice, ..acc]
+      do_escape_html(rest, skip + len + 1, original, acc)
+    }
+
+    <<">":utf8, rest:bits>> -> {
+      let assert Ok(slice) = bit_array.slice(original, skip, len)
+      let acc = [<<"&gt;":utf8>>, slice, ..acc]
+      do_escape_html(rest, skip + len + 1, original, acc)
+    }
+
+    <<"&":utf8, rest:bits>> -> {
+      let assert Ok(slice) = bit_array.slice(original, skip, len)
+      let acc = [<<"&amp;":utf8>>, slice, ..acc]
+      do_escape_html(rest, skip + len + 1, original, acc)
+    }
+
+    // If a char doesn't need escaping we keep increasing the length of the
+    // slice we're going to take.
+    <<_char, rest:bits>> ->
+      do_escape_html_regular(rest, skip, original, acc, len + 1)
+
+    <<>> ->
+      case skip {
+        0 -> [original]
+        _ -> {
+          let assert Ok(slice) = bit_array.slice(original, skip, len)
+          [slice, ..acc]
+        }
+      }
+
+    _ -> panic as "non byte aligned string, all strings should be byte aligned"
   }
 }
 
@@ -593,10 +708,10 @@ pub fn internal_server_error() -> Response {
 //
 
 /// The connection to the client for a HTTP request.
-/// 
+///
 /// The body of the request can be read from this connection using functions
 /// such as `require_multipart_body`.
-/// 
+///
 pub opaque type Connection {
   Connection(
     reader: Reader,
@@ -676,19 +791,19 @@ pub fn set_max_body_size(request: Request, size: Int) -> Request {
 }
 
 /// Get the maximum permitted size of a request body of the request in bytes.
-/// 
+///
 pub fn get_max_body_size(request: Request) -> Int {
   request.body.max_body_size
 }
 
 /// Set the secret key base used to sign cookies and other sensitive data.
-/// 
+///
 /// This key must be at least 64 bytes long and should be kept secret. Anyone
 /// with this secret will be able to manipulate signed cookies and other sensitive
 /// data.
 ///
 /// # Panics
-/// 
+///
 /// This function will panic if the key is less than 64 bytes long.
 ///
 pub fn set_secret_key_base(request: Request, key: String) -> Request {
@@ -701,7 +816,7 @@ pub fn set_secret_key_base(request: Request, key: String) -> Request {
 }
 
 /// Get the secret key base used to sign cookies and other sensitive data.
-/// 
+///
 pub fn get_secret_key_base(request: Request) -> String {
   request.body.secret_key_base
 }
@@ -723,7 +838,7 @@ pub fn set_max_files_size(request: Request, size: Int) -> Request {
 
 /// Get the maximum permitted total size of a files uploaded by a request in
 /// bytes.
-/// 
+///
 pub fn get_max_files_size(request: Request) -> Int {
   request.body.max_files_size
 }
@@ -743,13 +858,13 @@ pub fn set_read_chunk_size(request: Request, size: Int) -> Request {
 
 /// Get the size limit for each chunk of the request body when read from the
 /// client.
-/// 
+///
 pub fn get_read_chunk_size(request: Request) -> Int {
   request.body.read_chunk_size
 }
 
 /// A convenient alias for a HTTP request with a Wisp connection as the body.
-/// 
+///
 pub type Request =
   HttpRequest(Connection)
 
@@ -758,7 +873,7 @@ pub type Request =
 /// if the method is not correct.
 ///
 /// # Examples
-/// 
+///
 /// ```gleam
 /// fn handle_request(request: Request) -> Response {
 ///   use <- wisp.require_method(request, http.Patch)
@@ -779,7 +894,7 @@ pub fn require_method(
 
 // TODO: re-export once Gleam has a syntax for that
 /// Return the non-empty segments of a request path.
-/// 
+///
 /// # Examples
 ///
 /// ```gleam
@@ -793,7 +908,7 @@ pub const path_segments = request.path_segments
 
 // TODO: re-export once Gleam has a syntax for that
 /// Set a given header to a given value, replacing any existing value.
-/// 
+///
 /// # Examples
 ///
 /// ```gleam
@@ -863,13 +978,13 @@ pub fn method_override(request: HttpRequest(a)) -> HttpRequest(a) {
 /// return an incorrect value, depending on the underlying web server. It is the
 /// responsibility of the caller to cache the body if it is needed multiple
 /// times.
-/// 
+///
 /// If the body is larger than the `max_body_size` limit then an empty response
 /// with status code 413: Entity too large will be returned to the client.
-/// 
+///
 /// If the body is found not to be valid UTF-8 then an empty response with
 /// status code 400: Bad request will be returned to the client.
-/// 
+///
 /// # Examples
 ///
 /// ```gleam
@@ -899,10 +1014,10 @@ pub fn require_string_body(
 /// return an incorrect value, depending on the underlying web server. It is the
 /// responsibility of the caller to cache the body if it is needed multiple
 /// times.
-/// 
+///
 /// If the body is larger than the `max_body_size` limit then an empty response
 /// with status code 413: Entity too large will be returned to the client.
-/// 
+///
 /// # Examples
 ///
 /// ```gleam
@@ -925,19 +1040,19 @@ pub fn require_bit_array_body(
 // TODO: don't always return entity to large. Other errors are possible, such as
 // network errors.
 /// Read the entire body of the request as a bit string.
-/// 
+///
 /// You may instead wish to use the `require_bit_array_body` or the
 /// `require_string_body` middleware functions instead.
-/// 
+///
 /// This function does not cache the body in any way, so if you call this
 /// function (or any other body reading function) more than once it may hang or
 /// return an incorrect value, depending on the underlying web server. It is the
 /// responsibility of the caller to cache the body if it is needed multiple
 /// times.
-/// 
+///
 /// If the body is larger than the `max_body_size` limit then an empty response
 /// with status code 413: Entity too large will be returned to the client.
-/// 
+///
 pub fn read_body_to_bitstring(request: Request) -> Result(BitArray, Nil) {
   let connection = request.body
   read_body_loop(
@@ -971,10 +1086,10 @@ fn read_body_loop(
 /// A middleware which extracts form data from the body of a request that is
 /// encoded as either `application/x-www-form-urlencoded` or
 /// `multipart/form-data`.
-/// 
+///
 /// Extracted fields are sorted into alphabetical order by key, so if you wish
 /// to use pattern matching the order can be relied upon.
-/// 
+///
 /// ```gleam
 /// fn handle_request(request: Request) -> Response {
 ///   use form <- wisp.require_form(request)
@@ -1003,7 +1118,7 @@ fn read_body_loop(
 ///
 /// If the body cannot be parsed successfully then an empty response with status
 /// code 400: Bad request will be returned to the client.
-/// 
+///
 pub fn require_form(
   request: Request,
   next: fn(FormData) -> Response,
@@ -1030,7 +1145,7 @@ pub fn require_form(
 /// Unsupported media type if the header is not the expected value
 ///
 /// # Examples
-/// 
+///
 /// ```gleam
 /// fn handle_request(request: Request) -> Response {
 ///   use <- wisp.require_content_type(request, "application/json")
@@ -1050,7 +1165,7 @@ pub fn require_content_type(
 }
 
 /// A middleware which extracts JSON from the body of a request.
-/// 
+///
 /// ```gleam
 /// fn handle_request(request: Request) -> Response {
 ///   use json <- wisp.require_json(request)
@@ -1071,7 +1186,7 @@ pub fn require_content_type(
 ///
 /// If the body cannot be parsed successfully then an empty response with status
 /// code 400: Bad request will be returned to the client.
-/// 
+///
 pub fn require_json(request: Request, next: fn(Dynamic) -> Response) -> Response {
   use <- require_content_type(request, "application/json")
   use body <- require_string_body(request)
@@ -1305,7 +1420,7 @@ fn or_400(result: Result(value, error), next: fn(value) -> Response) -> Response
 }
 
 /// Data parsed from form sent in a request's body.
-/// 
+///
 pub type FormData {
   FormData(
     /// String values of the form's fields.
@@ -1429,7 +1544,7 @@ fn join_path(a: String, b: String) -> String {
 ///
 /// The `under` parameter is the request path prefix that must match for the
 /// file to be served.
-/// 
+///
 /// | `under`   | `from`  | `request.path`     | `file`                  |
 /// |-----------|---------|--------------------|-------------------------|
 /// | `/static` | `/data` | `/static/file.txt` | `/data/file.txt`        |
@@ -1576,7 +1691,7 @@ pub fn delete_temporary_files(
 /// > erlang.priv_directory("my_app")
 /// // -> Ok("/some/location/my_app/priv")
 /// ```
-/// 
+///
 pub const priv_directory = erlang.priv_directory
 
 //
@@ -1585,92 +1700,92 @@ pub const priv_directory = erlang.priv_directory
 
 /// Configure the Erlang logger, setting the minimum log level to `info`, to be
 /// called when your application starts.
-/// 
+///
 /// You may wish to use an alternative for this such as one provided by a more
 /// sophisticated logging library.
-/// 
+///
 /// In future this function may be extended to change the output format.
-/// 
+///
 pub fn configure_logger() -> Nil {
   logging.configure()
 }
 
 /// Log a message to the Erlang logger with the level of `emergency`.
-/// 
+///
 /// See the [Erlang logger documentation][1] for more information.
-/// 
+///
 /// [1]: https://www.erlang.org/doc/man/logger
-/// 
+///
 pub fn log_emergency(message: String) -> Nil {
   logging.log(logging.Emergency, message)
 }
 
 /// Log a message to the Erlang logger with the level of `alert`.
-/// 
+///
 /// See the [Erlang logger documentation][1] for more information.
-/// 
+///
 /// [1]: https://www.erlang.org/doc/man/logger
-/// 
+///
 pub fn log_alert(message: String) -> Nil {
   logging.log(logging.Alert, message)
 }
 
 /// Log a message to the Erlang logger with the level of `critical`.
-/// 
+///
 /// See the [Erlang logger documentation][1] for more information.
-/// 
+///
 /// [1]: https://www.erlang.org/doc/man/logger
-/// 
+///
 pub fn log_critical(message: String) -> Nil {
   logging.log(logging.Critical, message)
 }
 
 /// Log a message to the Erlang logger with the level of `error`.
-/// 
+///
 /// See the [Erlang logger documentation][1] for more information.
-/// 
+///
 /// [1]: https://www.erlang.org/doc/man/logger
-/// 
+///
 pub fn log_error(message: String) -> Nil {
   logging.log(logging.Error, message)
 }
 
 /// Log a message to the Erlang logger with the level of `warning`.
-/// 
+///
 /// See the [Erlang logger documentation][1] for more information.
-/// 
+///
 /// [1]: https://www.erlang.org/doc/man/logger
-/// 
+///
 pub fn log_warning(message: String) -> Nil {
   logging.log(logging.Warning, message)
 }
 
 /// Log a message to the Erlang logger with the level of `notice`.
-/// 
+///
 /// See the [Erlang logger documentation][1] for more information.
-/// 
+///
 /// [1]: https://www.erlang.org/doc/man/logger
-/// 
+///
 pub fn log_notice(message: String) -> Nil {
   logging.log(logging.Notice, message)
 }
 
 /// Log a message to the Erlang logger with the level of `info`.
-/// 
+///
 /// See the [Erlang logger documentation][1] for more information.
-/// 
+///
 /// [1]: https://www.erlang.org/doc/man/logger
-/// 
+///
 pub fn log_info(message: String) -> Nil {
   logging.log(logging.Info, message)
 }
 
 /// Log a message to the Erlang logger with the level of `debug`.
-/// 
+///
 /// See the [Erlang logger documentation][1] for more information.
-/// 
+///
 /// [1]: https://www.erlang.org/doc/man/logger
-/// 
+///
 pub fn log_debug(message: String) -> Nil {
   logging.log(logging.Debug, message)
 }
@@ -1689,13 +1804,13 @@ pub fn random_string(length: Int) -> String {
 
 /// Sign a message which can later be verified using the `verify_signed_message`
 /// function to detect if the message has been tampered with.
-/// 
+///
 /// Signed messages are not encrypted and can be read by anyone. They are not
 /// suitable for storing sensitive information.
-/// 
+///
 /// This function uses the secret key base from the request. If the secret
 /// changes then the signature will no longer be verifiable.
-/// 
+///
 pub fn sign_message(
   request: Request,
   message: BitArray,
@@ -1705,13 +1820,13 @@ pub fn sign_message(
 }
 
 /// Verify a signed message which was signed using the `sign_message` function.
-/// 
+///
 /// Returns the content of the message if the signature is valid, otherwise
 /// returns an error.
-/// 
+///
 /// This function uses the secret key base from the request. If the secret
 /// changes then the signature will no longer be verifiable.
-/// 
+///
 pub fn verify_signed_message(
   request: Request,
   message: String,
@@ -1749,9 +1864,9 @@ fn random_slug() -> String {
 /// wisp.ok()
 /// |> wisp.set_cookie(request, "id", "123", wisp.PlainText, 60 * 60)
 /// ```
-/// 
+///
 /// Setting a signed cookie that the client can read but not modify:
-/// 
+///
 /// ```gleam
 /// wisp.ok()
 /// |> wisp.set_cookie(request, "id", value, wisp.Signed, 60 * 60)
@@ -1821,10 +1936,10 @@ pub fn get_cookie(
 
 // TODO: chunk the body
 /// Create a connection which will return the given body when read.
-/// 
+///
 /// This function is intended for use in tests, though you probably want the
 /// `wisp/testing` module instead.
-/// 
+///
 pub fn create_canned_connection(
   body: BitArray,
   secret_key_base: String,
