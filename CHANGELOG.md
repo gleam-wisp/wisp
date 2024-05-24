@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The `escape_html` function in the `wisp` module has been optimised.
+
 ## v0.14.0 - 2024-03-28
 
 - The `mist` version constraint has been relaxed to permit 0.x or 1.x versions.
