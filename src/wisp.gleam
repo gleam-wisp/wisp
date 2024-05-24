@@ -411,7 +411,6 @@ fn coerce_bit_array_to_string(bit_array: BitArray) -> String
 // share as much as possible with the original string without having to build
 // a new one from scratch.
 //
-@target(erlang)
 fn do_escape_html(
   bin: BitArray,
   skip: Int,
@@ -447,7 +446,6 @@ fn do_escape_html(
   }
 }
 
-@target(erlang)
 fn do_escape_html_regular(
   bin: BitArray,
   skip: Int,
