@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Updated simplifile to v2.0.0 and replaced the renamed `simplifile.verify_is_file`
+  function with `simplifile.is_file`.
 - The `mist` version constraint has been increased to >= 1.2.0.
 - The `escape_html` function in the `wisp` module has been optimised.
 
