@@ -6,7 +6,7 @@ gleam = ">= 0.32.0"
 [dependencies]
 gleam_stdlib = "~> 0.30"
 wisp = { path = "../.." }
-mist = "~> 0.14"
+mist = "~> 1.0"
 gleam_erlang = "~> 0.23"
 
 [dev-dependencies]
