@@ -3,8 +3,8 @@ import gleam/dynamic
 import gleam/json
 import gleam/list
 import gleam/result
-import ids/nanoid
 import simplifile
+import youid/uuid
 
 pub opaque type Connection {
   Connection(root: String)
@@ -44,7 +44,7 @@ pub fn insert(
   values: Dict(String, String),
 ) -> Result(String, Nil) {
   let assert Ok(_) = simplifile.create_directory_all(connection.root)
-  let id = nanoid.generate()
+  let id = uuid.v4_string()
   let values =
     values
     |> dict.to_list
