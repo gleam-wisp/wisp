@@ -6,7 +6,7 @@ gleam = ">= 0.32.0"
 
 [dependencies]
 gleam_stdlib = "~> 0.30"
-simplifile = "~> 1.0"
+simplifile = "~> 2.0"
 gleam_json = "~> 0.6"
 youid = ">= 1.1.0 and < 2.0.0"
 

@@ -8,7 +8,7 @@ packages = [
   { name = "gleam_json", version = "0.7.0", build_tools = ["gleam"], requirements = ["gleam_stdlib", "thoas"], otp_app = "gleam_json", source = "hex", outer_checksum = "CB405BD93A8828BCD870463DE29375E7B2D252D9D124C109E5B618AAC00B86FC" },
   { name = "gleam_stdlib", version = "0.38.0", build_tools = ["gleam"], requirements = [], otp_app = "gleam_stdlib", source = "hex", outer_checksum = "663CF11861179AF415A625307447775C09404E752FF99A24E2057C835319F1BE" },
   { name = "gleeunit", version = "1.1.2", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleeunit", source = "hex", outer_checksum = "72CDC3D3F719478F26C4E2C5FED3E657AC81EC14A47D2D2DEBB8693CA3220C3B" },
-  { name = "simplifile", version = "1.7.0", build_tools = ["gleam"], requirements = ["filepath", "gleam_stdlib"], otp_app = "simplifile", source = "hex", outer_checksum = "1D5DFA3A2F9319EC85825F6ED88B8E449F381B0D55A62F5E61424E748E7DDEB0" },
+  { name = "simplifile", version = "2.0.0", build_tools = ["gleam"], requirements = ["filepath", "gleam_stdlib"], otp_app = "simplifile", source = "hex", outer_checksum = "95219227A43FCFE62C6E494F413A1D56FF953B68FE420698612E3D89A1EFE029" },
   { name = "thoas", version = "0.4.1", build_tools = ["rebar3"], requirements = [], otp_app = "thoas", source = "hex", outer_checksum = "4918D50026C073C4AB1388437132C77A6F6F7C8AC43C60C13758CC0ADCE2134E" },
   { name = "youid", version = "1.1.0", build_tools = ["gleam"], requirements = ["gleam_crypto", "gleam_erlang", "gleam_stdlib"], otp_app = "youid", source = "hex", outer_checksum = "15BF3E8173C8741930E23D22071CD55AE203B6E43B9E0C6C9E7D9F116808E418" },
 ]
@@ -17,5 +17,5 @@ packages = [
 gleam_json = { version = "~> 0.6" }
 gleam_stdlib = { version = "~> 0.30" }
 gleeunit = { version = "~> 1.0" }
-simplifile = { version = "~> 1.0" }
-youid = { version = ">= 1.1.0 and < 2.0.0"}
+simplifile = { version = "~> 2.0" }
+youid = { version = ">= 1.1.0 and < 2.0.0" }
