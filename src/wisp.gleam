@@ -1729,7 +1729,7 @@ pub fn configure_logger() -> Nil {
   logging.configure()
 }
 
-/// Type wrapper around Erlang logger's LogLevel
+/// Type to set the log level of the Erlang's logger
 ///
 /// See the [Erlang logger documentation][1] for more information.
 ///
