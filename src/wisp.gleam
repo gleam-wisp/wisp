@@ -1735,8 +1735,29 @@ pub fn configure_logger() -> Nil {
 ///
 /// [1]: https://www.erlang.org/doc/man/logger
 ///
-pub type LogLevel =
-  logging.LogLevel
+pub type LogLevel {
+  Emergency
+  Alert
+  Critical
+  Error
+  Warning
+  Notice
+  Info
+  Debug
+}
+
+fn log_level_to_logger_log_level(log_level: LogLevel) -> logging.LogLevel {
+  case log_level {
+    Emergency -> logging.Emergency
+    Alert -> logging.Alert
+    Critical -> logging.Critical
+    Error -> logging.Error
+    Warning -> logging.Warning
+    Notice -> logging.Notice
+    Info -> logging.Info
+    Debug -> logging.Debug
+  }
+}
 
 /// Set the log level of the Erlang logger to `log_level`.
 ///
@@ -1744,8 +1765,8 @@ pub type LogLevel =
 ///
 /// [1]: https://www.erlang.org/doc/man/logger
 ///
-pub fn set_logger_level(log_level: LogLevel) {
-  logging.set_level(log_level)
+pub fn set_logger_level(log_level: LogLevel) -> Nil {
+  logging.set_level(log_level_to_logger_log_level(log_level))
 }
 
 /// Log a message to the Erlang logger with the level of `emergency`.
