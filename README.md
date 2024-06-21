@@ -69,6 +69,40 @@ include comments and tests.
 
 API documentation is available on [HexDocs](https://hexdocs.pm/wisp/).
 
+# Deployment
+
+You can dockerize your wisp application by creating a Dockerfile with the following
+code:
+
+```Dockerfile
+# Create builder image
+FROM ghcr.io/gleam-lang/gleam:v1.2.1-erlang-alpine AS builder
+
+# Add project code
+COPY . /build/
+
+# Move to build folder
+WORKDIR /build
+
+# Compile the project
+RUN gleam export erlang-shipment \
+  && mv build/erlang-shipment /app \
+  && rm -r /build
+
+
+# Create runner image
+FROM ghcr.io/gleam-lang/gleam:v1.2.1-erlang  as runner
+
+# Copy binaries from the previous build stages.
+COPY --from=builder /app /app
+
+# Copy the priv folder to serve static assets
+COPY ./priv /priv
+
+ENTRYPOINT ["app/entrypoint.sh"]
+CMD ["run"]
+```
+
 # Wisp applications
 
 These open source Wisp applications may be useful examples.
