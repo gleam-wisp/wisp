@@ -5,9 +5,7 @@ description = "A practical web framework for Gleam"
 licences = ["Apache-2.0"]
 
 repository = { type = "github", user = "gleam-wisp", repo = "wisp" }
-links = [
-  { title = "Sponsor", href = "https://github.com/sponsors/lpil" },
-]
+links = [{ title = "Sponsor", href = "https://github.com/sponsors/lpil" }]
 
 [dependencies]
 exception = ">= 2.0.0 and < 3.0.0"
@@ -19,7 +17,7 @@ gleam_stdlib = ">= 0.29.0 and < 2.0.0"
 mist = ">= 1.2.0 and < 2.0.0"
 simplifile = ">= 2.0.0 and < 3.0.0"
 marceau = ">= 1.1.0 and < 2.0.0"
-logging = ">= 1.0.0 and < 2.0.0"
+logging = ">= 1.2.0 and < 2.0.0"
 
 [dev-dependencies]
 gleeunit = "~> 1.0"

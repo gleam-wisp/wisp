@@ -2,7 +2,6 @@
 
 ## v0.16.0 - 2024-06-24
 
-- The `gleeunit` version constraint has been increased to >= 1.2.0.
 - The `logging` version constraint has been increased to >= 1.2.0.
 - Added `set_logger_level` to set the erlang logger level.
 
