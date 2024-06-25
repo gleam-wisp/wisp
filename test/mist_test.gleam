@@ -1,4 +1,5 @@
 import gleam/erlang/process
+import gleam/int
 import gleam/option.{None}
 import gleam/otp/actor
 import gleam/string_builder
@@ -45,12 +46,22 @@ fn handle_req(req: wisp.Request, ctx: fn() -> Context) -> wisp.Response {
 
 fn ws_handler(req: wisp.Request, ctx: Context) {
   let on_init = fn(conn: wisp.WebsocketConnection(mist.WebsocketConnection)) {
-    let assert Ok(_sent) = "hi" |> wisp.SendText(conn) |> wisp_mist.ws_send
-    #("", None)
+    let assert Ok(_sent) =
+      "Hello, Joe!" |> wisp.SendText(conn) |> wisp_mist.send
+    #(0, None)
   }
-  let handler = fn(state, _conn, msg) {
+  let handler = fn(state, conn, msg) {
     case msg {
-      wisp.WsText(_text) -> actor.continue(state)
+      wisp.WsText(text) -> {
+        let assert Ok(_) = case text {
+          "ping" -> "pong" |> wisp.SendText(conn) |> wisp_mist.send
+          "count" ->
+            int.to_string(state) |> wisp.SendText(conn) |> wisp_mist.send
+          _ -> Ok(Nil)
+        }
+        let state = state + 1
+        actor.continue(state)
+      }
       wisp.WsBinary(_binary) -> actor.continue(state)
       wisp.WsClosed | wisp.WsShutdown -> actor.Stop(process.Normal)
       wisp.WsCustom(_selector) -> actor.continue(state)
