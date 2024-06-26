@@ -1,7 +1,6 @@
 import gleam/bit_array
 import gleam/crypto
 import gleam/string
-import mist
 
 // HELPERS
 
@@ -86,23 +85,17 @@ pub fn random_slug() -> String {
   random_string(16)
 }
 
-pub type Ws {
-  Ws
-}
+// WEBSOCKET 
 
-// connects to user
-// 
-pub type Socket {
-  // generics leak into request type
-  Socket(mist.Connection)
-  // TODO: can delete if we handle create_canned_connection somehow?
-  NoSocket
-}
-
+// The active websocket connection should be stored in here to be used when the
+// application needs to send messages to the webscoket client.
 pub type WebsocketConnection(c) {
   WebsocketConnection(c)
 }
 
+// Anything requried to start a websocket connection should be stored in here.
+// A webserver with web socket capabilities should provide this as part of the
+// wisp<->server handler adapter.
 pub type Ws(d) {
   Ws(d)
 }
