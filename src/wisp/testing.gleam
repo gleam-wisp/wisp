@@ -9,7 +9,7 @@ import gleam/string
 import gleam/string_builder
 import gleam/uri
 import simplifile
-import wisp.{type Request, type Response, Bytes, Empty, File, Text}
+import wisp.{type Request, type Response, Bytes, Empty, File, Text, Websocket}
 
 /// The default secret key base used for test requests.
 /// This should never be used outside of tests.
@@ -226,7 +226,7 @@ pub fn patch_json(
 ///
 pub fn string_body(response: Response) -> String {
   case response.body {
-    Empty -> ""
+    Empty | Websocket(_) -> ""
     Text(builder) -> string_builder.to_string(builder)
     Bytes(bytes) -> {
       let data = bytes_builder.to_bit_array(bytes)
@@ -249,7 +249,7 @@ pub fn string_body(response: Response) -> String {
 ///
 pub fn bit_array_body(response: Response) -> BitArray {
   case response.body {
-    Empty -> <<>>
+    Empty | Websocket(_) -> <<>>
     Bytes(builder) -> bytes_builder.to_bit_array(builder)
     Text(builder) ->
       bytes_builder.to_bit_array(bytes_builder.from_string_builder(builder))
