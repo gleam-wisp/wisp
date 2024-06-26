@@ -21,6 +21,7 @@ packages = [
   { name = "ranger", version = "1.2.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "ranger", source = "hex", outer_checksum = "1566C272B1D141B3BBA38B25CB761EF56E312E79EC0E2DFD4D3C19FB0CC1F98C" },
   { name = "simplifile", version = "2.0.1", build_tools = ["gleam"], requirements = ["filepath", "gleam_stdlib"], otp_app = "simplifile", source = "hex", outer_checksum = "5FFEBD0CAB39BDD343C3E1CCA6438B2848847DC170BA2386DF9D7064F34DF000" },
   { name = "thoas", version = "1.2.1", build_tools = ["rebar3"], requirements = [], otp_app = "thoas", source = "hex", outer_checksum = "E38697EDFFD6E91BD12CEA41B155115282630075C2A727E7A6B2947F5408B86A" },
+  { name = "stratus", version = "0.9.0", build_tools = ["gleam"], requirements = ["gleam_crypto", "gleam_erlang", "gleam_http", "gleam_otp", "gleam_stdlib", "gramps", "logging"], otp_app = "stratus", source = "hex", outer_checksum = "4C1F14C801D1499E97A208F3EA82928DC1AFAF463DEA9F506F62BBE3E1D2C535" },
 ]
 
 [requirements]
@@ -29,10 +30,11 @@ gleam_crypto = { version = ">= 1.0.0 and < 2.0.0" }
 gleam_erlang = { version = ">= 0.21.0 and < 2.0.0" }
 gleam_http = { version = ">= 3.5.0 and < 4.0.0" }
 gleam_json = { version = ">= 0.6.0 and < 2.0.0" }
-gleam_otp = { version = ">= 0.10.0 and < 1.0.0"}
+gleam_otp = { version = ">= 0.10.0 and < 1.0.0" }
 gleam_stdlib = { version = ">= 0.29.0 and < 2.0.0" }
 gleeunit = { version = "~> 1.0" }
 logging = { version = ">= 1.2.0 and < 2.0.0" }
 marceau = { version = ">= 1.1.0 and < 2.0.0" }
 mist = { version = ">= 1.2.0 and < 2.0.0" }
 simplifile = { version = ">= 2.0.0 and < 3.0.0" }
+stratus = { version = ">= 0.9.0 and < 1.0.0"}

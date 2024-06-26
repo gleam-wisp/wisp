@@ -62,7 +62,9 @@ pub type Body {
   /// in place of any with an empty body.
   ///
   Empty
-  /// An newly established websocket connection.
+  /// Upgrades the socket to a websocket, is only used internally by the
+  /// web server and should not be called directly.
+  ///
   Websocket(process.Selector(process.ProcessDown))
 }
 
@@ -1900,7 +1902,7 @@ pub type WebsocketMessage(a) {
 type WebsocketConnection(c) =
   internal.WebsocketConnection(c)
 
-/// A capability for web socket servers to connect to clients
+/// For web socket capable servers to connect to clients
 ///
 pub type Ws(d) =
   internal.Ws(d)
@@ -1909,16 +1911,18 @@ pub type Ws(d) =
 ///
 /// Through the `on_init` function, a connection to the web socket client is initially
 /// made available and the default actor state for the websocket can be set.
-/// Optionally, a `selector` can be created to send mesasges to the handler function
-/// as `WsCustom` messsages from inside the application
-/// application
 ///
-/// # Examples
+/// The `handler` function deals with the messages being send to
+/// or received from the websocket and may take actions such as updating the state or
+/// communicating with other actors or functions.
+///
+/// The `on_close` function takes the state and should run any cleanup actions
+/// such as notifying of disconnects to other actors.
+///
+/// # Example Basic
 ///
 /// ```gleam
-///
-///
-/// fn websocket(req: Request, ws: Ws) {
+/// fn websocket(req: Request, ws: Ws) -> Response {
 ///   let state = 0
 ///   let on_init = fn(_conn) { #(state, None) }
 ///   let handler = fn(state, conn, msg) {
@@ -1930,9 +1934,7 @@ pub type Ws(d) =
 ///         }
 ///         actor.continue(state)
 ///       }
-///       wisp.WsBinary(_binary) -> actor.continue(state)
-///       wisp.WsCustom(_selector) -> actor.continue(state)
-///       wisp.WsClosed | wisp.WsShutdown -> actor.Stop(process.Normal)
+///       _ -> actor.Stop(process.Normal)
 ///     }
 ///   }
 ///   let on_close = fn(_state) { Nil }
@@ -1940,6 +1942,12 @@ pub type Ws(d) =
 ///   |> wisp_mist.websocket
 /// }
 /// ```
+///
+///
+/// # Example with selector
+///
+/// Optionally, `on_init` can be provided a `selector`  to send mesasges to
+/// the handler function as `WsCustom` messsages from inside the application
 ///
 /// ```gleam
 /// type State {
@@ -1956,33 +1964,36 @@ pub type Ws(d) =
 ///       actor.continue(state)
 ///     }
 ///     wisp.WsCustom(selector_msg) -> {
-///       selector_msg |> wisp.SendBinary(conn) |> wisp_mist.send
+///       selector_msg |> wisp.SendText(conn) |> wisp_mist.send
 ///       actor.continue(state)
 ///     }
-///     wisp.WsBinary(_binary) -> actor.continue(state)
-///     wisp.WsClosed | wisp.WsShutdown -> actor.Stop(process.Normal)
+///     _ -> actor.Stop(process.Normal)
 ///   }
 /// }
 ///
 /// fn on_init(conn, server) {
-///   "Hello, Joe!" |> wisp.SendText(conn) |> wisp_mist.send
 ///   let state = State(0, server)
 ///   let subj = process.new_subject()
 ///   let selector =
 ///     process.new_selector() |> process.selecting(subj, function.identity)
 ///   process.send(state.server, "connected")
+///   "Hello, Joe!" |> wisp.SendText(conn) |> wisp_mist.send
 ///   #(state, Some(selector))
 /// }
 ///
 /// fn on_close(state) {
 ///   process.send(state.server, "disconnected")
+///   Nil
 /// }
 ///
-/// fn websocket(req, ws, server ) {
+/// fn websocket(req, ws, server) -> Response {
 ///   wisp.WebsocketHandler(req, ws, handler, on_init(_, server), on_close)
 ///   |> wisp_mist.websocket
 /// }
 /// ```
+///
+/// This type will need to be passed to your webserver of choice websocket
+/// function, such as `wisp_mist.websocket`.
 ///
 pub type WebsocketHandler(a, b, c, d) {
   WebsocketHandler(
@@ -2002,6 +2013,8 @@ pub type WebsocketHandler(a, b, c, d) {
 /// ```
 ///
 pub type WebsocketSend(c) {
+  /// A payload of unicode text.
   SendText(text: String, conn: WebsocketConnection(c))
+  /// A payload of binary data.
   SendBinary(binary: BitArray, conn: WebsocketConnection(c))
 }

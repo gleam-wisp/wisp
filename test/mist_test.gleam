@@ -1,21 +1,55 @@
 import gleam/erlang/process
-import gleam/function
+import gleam/http/request
 import gleam/int
-import gleam/option.{None, Some}
+import gleam/io
+import gleam/option.{None}
 import gleam/otp/actor
 import gleam/string_builder
 import mist
+import stratus
 import wisp
 import wisp/testing
 import wisp/wisp_mist
 
 pub fn websocket_test() {
-  webserver()
-  process.sleep_forever()
+  process.start(fn() { webserver() }, True)
+  process.sleep(200)
+  process.start(fn() { send_ping() }, True)
   testing.get("/test/html", [])
 }
 
-pub fn webserver() {
+fn send_ping() {
+  let assert Ok(req) = request.to("http://127.0.0.1:8000/test/ws")
+  let on_init = fn() { #(Nil, None) }
+  let handler = fn(msg, state, conn) {
+    let assert Ok(_) = case msg {
+      stratus.Text(text) -> {
+        io.debug(text)
+        case text {
+          "Hello, Joe!" -> "ping" |> stratus.send_text_message(conn, _)
+          "pong" -> {
+            stratus.close(conn)
+          }
+          _ -> panic as "unknown text message"
+        }
+      }
+      stratus.User(text) -> {
+        "ping" |> stratus.send_text_message(conn, _)
+      }
+      _ -> panic as "unimplemented"
+    }
+    actor.continue(state)
+  }
+  let builder =
+    stratus.websocket(req, on_init, handler)
+    |> stratus.on_close(fn(_) { panic as "closed" })
+  let assert Ok(subj) = stratus.initialize(builder)
+  stratus.send_message(subj, "hi")
+  process.sleep_forever()
+  Nil
+}
+
+fn webserver() {
   let secret_key_base = wisp.random_string(64)
   let assert Ok(_) =
     wisp_mist.handler(
@@ -52,13 +86,16 @@ fn ws_handler(req: wisp.Request, ctx: Context) {
     #(0, None)
   }
   let handler = fn(state, conn, msg) {
+    io.debug(msg)
     case msg {
       wisp.WsText(text) -> {
         let assert Ok(_) = case text {
-          "ping" -> "pong" |> wisp.SendText(conn) |> wisp_mist.send
+          "ping" -> "pong" |> wisp.SendText(conn) |> io.debug |> wisp_mist.send
+          "ping\n" ->
+            "pong" |> wisp.SendText(conn) |> io.debug |> wisp_mist.send
           "count" ->
             int.to_string(state) |> wisp.SendText(conn) |> wisp_mist.send
-          _ -> Ok(Nil)
+          repeat -> repeat |> wisp.SendText(conn) |> io.debug |> wisp_mist.send
         }
         let state = state + 1
         actor.continue(state)
