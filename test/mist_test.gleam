@@ -1,6 +1,7 @@
 import gleam/erlang/process
+import gleam/function
 import gleam/int
-import gleam/option.{None}
+import gleam/option.{None, Some}
 import gleam/otp/actor
 import gleam/string_builder
 import mist
@@ -18,7 +19,7 @@ pub fn webserver() {
   let secret_key_base = wisp.random_string(64)
   let assert Ok(_) =
     wisp_mist.handler(
-      fn(req, ws, socket) { handle_req(req, fn() { Context(ws, socket) }) },
+      fn(req, ws) { handle_req(req, fn() { Context(ws) }) },
       secret_key_base,
     )
     |> mist.new
@@ -29,7 +30,7 @@ pub fn webserver() {
 }
 
 type Context {
-  Context(ws: wisp.WsSupported, socket: wisp_mist.Ws)
+  Context(ws: wisp.Ws(mist.Connection))
 }
 
 fn handle_req(req: wisp.Request, ctx: fn() -> Context) -> wisp.Response {
@@ -68,6 +69,6 @@ fn ws_handler(req: wisp.Request, ctx: Context) {
     }
   }
   let on_close = fn(_state) { Nil }
-  wisp.ws_handler(req, ctx.ws, handler, on_init, on_close)
-  |> wisp_mist.websocket(ctx.socket)
+  wisp.WebsocketHandler(req, ctx.ws, handler, on_init, on_close)
+  |> wisp_mist.websocket
 }

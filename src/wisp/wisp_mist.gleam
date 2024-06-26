@@ -36,7 +36,7 @@ import wisp/internal
 /// }
 /// ```
 pub fn handler(
-  handler: fn(wisp.Request, wisp.WsSupported, Ws) -> wisp.Response,
+  handler: fn(wisp.Request, wisp.Ws(mist.Connection)) -> wisp.Response,
   secret_key_base: String,
 ) -> fn(HttpRequest(mist.Connection)) -> HttpResponse(mist.ResponseData) {
   fn(request: HttpRequest(_)) {
@@ -51,7 +51,7 @@ pub fn handler(
 
     let response =
       request
-      |> handler(internal.WsSupported, Ws(mist))
+      |> handler(internal.Ws(mist))
       |> mist_response
 
     response
@@ -104,22 +104,17 @@ fn mist_send_file(path: String) -> mist.ResponseData {
 
 // WEBSOCKETS
 
-pub opaque type Ws {
-  Ws(mist.Connection)
-}
-
 /// Creates a websocket from a wisp websocket handler spec
 pub fn websocket(
-  ws: wisp.WebsocketHandler(a, b, mist.WebsocketConnection),
-  socket: Ws,
+  ws: wisp.WebsocketHandler(a, b, mist.WebsocketConnection, mist.Connection),
 ) -> wisp.Response {
   let handler = mist_ws_handler(ws)
   let on_init = mist_ws_on_init(ws)
-  mist_websocket(ws.req, socket, handler, on_init, ws.on_close)
+  mist_websocket(ws.req, ws.ws, handler, on_init, ws.on_close)
 }
 
 fn mist_ws_handler(
-  ws: wisp.WebsocketHandler(a, b, mist.WebsocketConnection),
+  ws: wisp.WebsocketHandler(a, b, mist.WebsocketConnection, mist.Connection),
 ) -> fn(a, mist.WebsocketConnection, mist.WebsocketMessage(b)) ->
   actor.Next(b, a) {
   fn(state: a, conn: mist.WebsocketConnection, msg: mist.WebsocketMessage(b)) {
@@ -130,7 +125,7 @@ fn mist_ws_handler(
 }
 
 fn mist_ws_on_init(
-  ws: wisp.WebsocketHandler(a, b, mist.WebsocketConnection),
+  ws: wisp.WebsocketHandler(a, b, mist.WebsocketConnection, mist.Connection),
 ) -> fn(mist.WebsocketConnection) -> #(a, Option(process.Selector(b))) {
   fn(conn: mist.WebsocketConnection) {
     let conn = internal.WebsocketConnection(conn)
@@ -140,14 +135,14 @@ fn mist_ws_on_init(
 
 fn mist_websocket(
   req: wisp.Request,
-  socket: Ws,
+  socket: wisp.Ws(mist.Connection),
   handler handler: fn(a, mist.WebsocketConnection, mist.WebsocketMessage(b)) ->
     actor.Next(b, a),
   on_init on_init: fn(mist.WebsocketConnection) ->
     #(a, Option(process.Selector(b))),
   on_close on_close: fn(a) -> Nil,
 ) -> wisp.Response {
-  let Ws(x) = socket
+  let internal.Ws(x) = socket
   let req = request.set_body(req, x)
   let resp = mist.websocket(req, handler, on_init(_), on_close)
   case resp.status, resp.body {

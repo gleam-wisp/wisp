@@ -1885,9 +1885,8 @@ pub fn create_canned_connection(
 // Websockets
 //
 
-// TODO(bgw): doc more once fleshed out
-
-/// The messages possible to receive to and from a websocket.
+/// The messages possible to receive to and from a websocket handler.
+///
 pub type WebsocketMessage(a) {
   WsText(String)
   WsBinary(BitArray)
@@ -1896,18 +1895,99 @@ pub type WebsocketMessage(a) {
   WsCustom(a)
 }
 
-// sends to user
+/// An active websocket connection used to send messages to the client
+///
 type WebsocketConnection(c) =
   internal.WebsocketConnection(c)
 
-pub type WsSupported =
-  internal.WsSupported
+/// A capability for web socket servers to connect to clients
+///
+pub type Ws(d) =
+  internal.Ws(d)
 
-// TODO: heavily doc this
-pub type WebsocketHandler(a, b, c) {
+/// Configuration for a websockets creation and lifecycle.
+///
+/// Through the `on_init` function, a connection to the web socket client is initially
+/// made available and the default actor state for the websocket can be set.
+/// Optionally, a `selector` can be created to send mesasges to the handler function
+/// as `WsCustom` messsages from inside the application
+/// application
+///
+/// # Examples
+///
+/// ```gleam
+///
+///
+/// fn websocket(req: Request, ws: Ws) {
+///   let state = 0
+///   let on_init = fn(_conn) { #(state, None) }
+///   let handler = fn(state, conn, msg) {
+///     case msg {
+///       wisp.WsText(text) -> {
+///         case text {
+///           "ping" -> "pong" |> wisp.SendText(conn) |> wisp_mist.send
+///           _ -> Ok(Nil)
+///         }
+///         actor.continue(state)
+///       }
+///       wisp.WsBinary(_binary) -> actor.continue(state)
+///       wisp.WsCustom(_selector) -> actor.continue(state)
+///       wisp.WsClosed | wisp.WsShutdown -> actor.Stop(process.Normal)
+///     }
+///   }
+///   let on_close = fn(_state) { Nil }
+///   wisp.WebsocketHandler(req, ws, handler, on_init, on_close)
+///   |> wisp_mist.websocket
+/// }
+/// ```
+///
+/// ```gleam
+/// type State {
+///   State(counter: Int, server: process.Subject(String))
+/// }
+///
+/// fn handler(state, conn, msg) {
+///   case msg {
+///     wisp.WsText(text) -> {
+///       case text {
+///         "ping" -> "pong" |> wisp.SendText(conn) |> wisp_mist.send
+///         _ -> Ok(Nil)
+///       }
+///       actor.continue(state)
+///     }
+///     wisp.WsCustom(selector_msg) -> {
+///       selector_msg |> wisp.SendBinary(conn) |> wisp_mist.send
+///       actor.continue(state)
+///     }
+///     wisp.WsBinary(_binary) -> actor.continue(state)
+///     wisp.WsClosed | wisp.WsShutdown -> actor.Stop(process.Normal)
+///   }
+/// }
+///
+/// fn on_init(conn, server) {
+///   "Hello, Joe!" |> wisp.SendText(conn) |> wisp_mist.send
+///   let state = State(0, server)
+///   let subj = process.new_subject()
+///   let selector =
+///     process.new_selector() |> process.selecting(subj, function.identity)
+///   process.send(state.server, "connected")
+///   #(state, Some(selector))
+/// }
+///
+/// fn on_close(state) {
+///   process.send(state.server, "disconnected")
+/// }
+///
+/// fn websocket(req, ws, server ) {
+///   wisp.WebsocketHandler(req, ws, handler, on_init(_, server), on_close)
+///   |> wisp_mist.websocket
+/// }
+/// ```
+///
+pub type WebsocketHandler(a, b, c, d) {
   WebsocketHandler(
-    ws: WsSupported,
     req: Request,
+    ws: Ws(d),
     handler: fn(a, WebsocketConnection(c), WebsocketMessage(b)) ->
       actor.Next(b, a),
     on_init: fn(WebsocketConnection(c)) -> #(a, Option(process.Selector(b))),
@@ -1915,23 +1995,12 @@ pub type WebsocketHandler(a, b, c) {
   )
 }
 
-pub fn ws_handler(
-  req: Request,
-  ws: WsSupported,
-  handler: fn(a, WebsocketConnection(c), WebsocketMessage(b)) ->
-    actor.Next(b, a),
-  on_init: fn(WebsocketConnection(c)) -> #(a, Option(process.Selector(b))),
-  on_close: fn(a) -> Nil,
-) -> WebsocketHandler(a, b, c) {
-  WebsocketHandler(
-    ws: ws,
-    req: req,
-    handler: handler,
-    on_init: on_init,
-    on_close: on_close,
-  )
-}
-
+/// Build a message to send to an active websocket connection
+///
+/// ```gleam
+/// "pong" |> wisp.SendText(conn) |> wisp_mist.send
+/// ```
+///
 pub type WebsocketSend(c) {
   SendText(text: String, conn: WebsocketConnection(c))
   SendBinary(binary: BitArray, conn: WebsocketConnection(c))
