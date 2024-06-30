@@ -1736,26 +1736,26 @@ pub fn configure_logger() -> Nil {
 /// [1]: https://www.erlang.org/doc/man/logger
 ///
 pub type LogLevel {
-  LevelEmergency
-  LevelAlert
-  LevelCritical
-  LevelError
-  LevelWarning
-  LevelNotice
-  LevelInfo
-  LevelDebug
+  EmergencyLevel
+  AlertLevel
+  CriticalLevel
+  ErrorLevel
+  WarningLevel
+  NoticeLevel
+  InfoLevel
+  DebugLevel
 }
 
 fn log_level_to_logging_log_level(log_level: LogLevel) -> logging.LogLevel {
   case log_level {
-    LevelEmergency -> logging.Emergency
-    LevelAlert -> logging.Alert
-    LevelCritical -> logging.Critical
-    LevelError -> logging.Error
-    LevelWarning -> logging.Warning
-    LevelNotice -> logging.Notice
-    LevelInfo -> logging.Info
-    LevelDebug -> logging.Debug
+    EmergencyLevel -> logging.Emergency
+    AlertLevel -> logging.Alert
+    CriticalLevel -> logging.Critical
+    ErrorLevel -> logging.Error
+    WarningLevel -> logging.Warning
+    NoticeLevel -> logging.Notice
+    InfoLevel -> logging.Info
+    DebugLevel -> logging.Debug
   }
 }
 
