@@ -4,7 +4,7 @@
 
 - The `wisp` module gains the `set_logger_level` function and `LogLevel` type.
 
-## v0.16.0 - 2024-06-24
+## v0.16.0 - 2024-07-13
 
 - HTML and JSON body functions now include `charset=utf-8` in the content-type
   header.
