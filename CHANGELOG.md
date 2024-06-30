@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.16.0 - 2024-06-24
+
+- The `logging` version constraint has been increased to >= 1.2.0.
+- Added `set_logger_level` to set the Erlang logger level.
+
 ## v0.15.0 - 2024-05-12
 
 - The `mist` version constraint has been increased to >= 1.2.0.
