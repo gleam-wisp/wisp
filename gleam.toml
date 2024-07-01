@@ -5,16 +5,14 @@ description = "A practical web framework for Gleam"
 licences = ["Apache-2.0"]
 
 repository = { type = "github", user = "gleam-wisp", repo = "wisp" }
-links = [
-  { title = "Sponsor", href = "https://github.com/sponsors/lpil" },
-]
+links = [{ title = "Sponsor", href = "https://github.com/sponsors/lpil" }]
 
 [dependencies]
 exception = ">= 2.0.0 and < 3.0.0"
 gleam_crypto = ">= 1.0.0 and < 2.0.0"
 gleam_erlang = ">= 0.21.0 and < 2.0.0"
 gleam_http = ">= 3.5.0 and < 4.0.0"
-gleam_json = ">= 0.6.0 and < 2.0.0"
+gleam_json = ">= 0.6.0 and < 3.0.0"
 gleam_stdlib = ">= 0.29.0 and < 2.0.0"
 mist = ">= 1.2.0 and < 2.0.0"
 simplifile = ">= 2.0.0 and < 3.0.0"
