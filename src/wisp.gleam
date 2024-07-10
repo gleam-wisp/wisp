@@ -126,8 +126,8 @@ pub type Body {
   Text(StringBuilder)
   /// A body of binary data.
   ///
-  /// The body is represented using a `StringBuilder`. If you have a `String`
-  /// you can use the `string_builder.from_string` function to convert it.
+  /// The body is represented using a `BytesBuilder`. If you have a `BitArray`
+  /// you can use the `bytes_builder.from_bit_array` function to convert it.
   ///
   Bytes(BytesBuilder)
   /// A body of the contents of a file.
