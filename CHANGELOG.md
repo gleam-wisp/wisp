@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.16.0 - Unreleased
+## v0.16.0 - 2024-07-13
 
 - HTML and JSON body functions now include `charset=utf-8` in the content-type
   header.
