@@ -40,7 +40,7 @@ pub fn list_people_test() {
   response.status
   |> should.equal(200)
   response.headers
-  |> should.equal([#("content-type", "application/json")])
+  |> should.equal([#("content-type", "application/json; charset=utf-8")])
 
   // Initially there are no people in the database
   response

@@ -14,7 +14,7 @@ pub fn hello_world_test() {
   |> should.equal(200)
 
   response.headers
-  |> should.equal([#("content-type", "text/html")])
+  |> should.equal([#("content-type", "text/html; charset=utf-8")])
 
   response
   |> testing.string_body

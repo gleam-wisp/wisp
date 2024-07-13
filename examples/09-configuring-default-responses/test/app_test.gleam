@@ -15,7 +15,7 @@ pub fn home_test() {
   |> should.equal(200)
 
   response.headers
-  |> should.equal([#("content-type", "text/html")])
+  |> should.equal([#("content-type", "text/html; charset=utf-8")])
 
   let assert True =
     response
@@ -31,7 +31,7 @@ pub fn internal_server_error_test() {
   |> should.equal(500)
 
   response.headers
-  |> should.equal([#("content-type", "text/html")])
+  |> should.equal([#("content-type", "text/html; charset=utf-8")])
 
   let assert True =
     response
@@ -46,7 +46,7 @@ pub fn unprocessable_entity_test() {
   |> should.equal(422)
 
   response.headers
-  |> should.equal([#("content-type", "text/html")])
+  |> should.equal([#("content-type", "text/html; charset=utf-8")])
 
   let assert True =
     response
@@ -61,7 +61,7 @@ pub fn bad_request_test() {
   |> should.equal(400)
 
   response.headers
-  |> should.equal([#("content-type", "text/html")])
+  |> should.equal([#("content-type", "text/html; charset=utf-8")])
 
   let assert True =
     response
@@ -76,7 +76,7 @@ pub fn method_not_allowed_test() {
   |> should.equal(405)
 
   response.headers
-  |> should.equal([#("allow", ""), #("content-type", "text/html")])
+  |> should.equal([#("allow", ""), #("content-type", "text/html; charset=utf-8")])
 
   let assert True =
     response
@@ -91,7 +91,7 @@ pub fn not_found_test() {
   |> should.equal(404)
 
   response.headers
-  |> should.equal([#("content-type", "text/html")])
+  |> should.equal([#("content-type", "text/html; charset=utf-8")])
 
   let assert True =
     response
@@ -106,7 +106,7 @@ pub fn entity_too_large_test() {
   |> should.equal(413)
 
   response.headers
-  |> should.equal([#("content-type", "text/html")])
+  |> should.equal([#("content-type", "text/html; charset=utf-8")])
 
   let assert True =
     response

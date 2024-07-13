@@ -26,7 +26,7 @@ pub fn get_home_page_test() {
   |> should.equal(200)
 
   response.headers
-  |> should.equal([#("content-type", "text/html")])
+  |> should.equal([#("content-type", "text/html; charset=utf-8")])
 }
 
 pub fn get_stylesheet_test() {
