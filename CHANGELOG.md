@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.16.0 - Unreleased
+
+- HTML and JSON body functions now include `charset=utf-8` in the content-type
+  header.
+
 ## v0.15.0 - 2024-05-12
 
 - The `mist` version constraint has been increased to >= 1.2.0.

@@ -123,7 +123,7 @@ pub fn json_response_test() {
   response.status
   |> should.equal(201)
   response.headers
-  |> should.equal([#("content-type", "application/json")])
+  |> should.equal([#("content-type", "application/json; charset=utf-8")])
   response
   |> testing.string_body
   |> should.equal("{\"one\":1,\"two\":2}")
@@ -135,7 +135,7 @@ pub fn html_response_test() {
   response.status
   |> should.equal(200)
   response.headers
-  |> should.equal([#("content-type", "text/html")])
+  |> should.equal([#("content-type", "text/html; charset=utf-8")])
   response
   |> testing.string_body
   |> should.equal("Hello, world!")
@@ -149,7 +149,10 @@ pub fn html_body_test() {
   response.status
   |> should.equal(405)
   response.headers
-  |> should.equal([#("allow", "GET"), #("content-type", "text/html")])
+  |> should.equal([
+    #("allow", "GET"),
+    #("content-type", "text/html; charset=utf-8"),
+  ])
   response
   |> testing.string_body
   |> should.equal("Hello, world!")
@@ -359,7 +362,7 @@ pub fn serve_static_test() {
   response.status
   |> should.equal(200)
   response.headers
-  |> should.equal([#("content-type", "text/plain")])
+  |> should.equal([#("content-type", "text/plain; charset=utf-8")])
   response.body
   |> should.equal(wisp.File("./test/fixture.txt"))
 
@@ -370,9 +373,20 @@ pub fn serve_static_test() {
   response.status
   |> should.equal(200)
   response.headers
-  |> should.equal([#("content-type", "application/json")])
+  |> should.equal([#("content-type", "application/json; charset=utf-8")])
   response.body
   |> should.equal(wisp.File("./test/fixture.json"))
+
+  // Get some other file
+  let response =
+    testing.get("/stuff/test/fixture.dat", [])
+    |> handler
+  response.status
+  |> should.equal(200)
+  response.headers
+  |> should.equal([#("content-type", "application/octet-stream")])
+  response.body
+  |> should.equal(wisp.File("./test/fixture.dat"))
 
   // Get something not handled by the static file server
   let response =
@@ -397,7 +411,7 @@ pub fn serve_static_under_has_no_trailing_slash_test() {
   response.status
   |> should.equal(200)
   response.headers
-  |> should.equal([#("content-type", "text/plain")])
+  |> should.equal([#("content-type", "text/plain; charset=utf-8")])
   response.body
   |> should.equal(wisp.File("./test/fixture.txt"))
 }
@@ -413,7 +427,7 @@ pub fn serve_static_from_has_no_trailing_slash_test() {
   response.status
   |> should.equal(200)
   response.headers
-  |> should.equal([#("content-type", "text/plain")])
+  |> should.equal([#("content-type", "text/plain; charset=utf-8")])
   response.body
   |> should.equal(wisp.File("./test/fixture.txt"))
 }
@@ -733,14 +747,18 @@ pub fn handle_head_test() {
   |> handler(Error(Nil))
   |> should.equal(Response(
     201,
-    [#("content-type", "text/html")],
+    [#("content-type", "text/html; charset=utf-8")],
     wisp.Text(string_builder.from_string("Hello!")),
   ))
 
   testing.get("/", [])
   |> request.set_method(http.Head)
   |> handler(Ok("HEAD"))
-  |> should.equal(Response(201, [#("content-type", "text/html")], wisp.Empty))
+  |> should.equal(Response(
+    201,
+    [#("content-type", "text/html; charset=utf-8")],
+    wisp.Empty,
+  ))
 
   testing.get("/", [])
   |> request.set_method(http.Post)
@@ -885,7 +903,7 @@ pub fn json_body_test() {
   |> wisp.json_body(string_builder.from_string("{\"one\":1,\"two\":2}"))
   |> should.equal(Response(
     200,
-    [#("content-type", "application/json")],
+    [#("content-type", "application/json; charset=utf-8")],
     wisp.Text(string_builder.from_string("{\"one\":1,\"two\":2}")),
   ))
 }

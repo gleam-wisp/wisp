@@ -268,7 +268,11 @@ pub fn file_download_from_memory(
 /// ```
 ///
 pub fn html_response(html: StringBuilder, status: Int) -> Response {
-  HttpResponse(status, [#("content-type", "text/html")], Text(html))
+  HttpResponse(
+    status,
+    [#("content-type", "text/html; charset=utf-8")],
+    Text(html),
+  )
 }
 
 /// Create a JSON response.
@@ -285,7 +289,11 @@ pub fn html_response(html: StringBuilder, status: Int) -> Response {
 /// ```
 ///
 pub fn json_response(json: StringBuilder, status: Int) -> Response {
-  HttpResponse(status, [#("content-type", "application/json")], Text(json))
+  HttpResponse(
+    status,
+    [#("content-type", "application/json; charset=utf-8")],
+    Text(json),
+  )
 }
 
 /// Set the body of a response to a given HTML document, and set the
@@ -299,13 +307,13 @@ pub fn json_response(json: StringBuilder, status: Int) -> Response {
 /// let body = string_builder.from_string("<h1>Hello, Joe!</h1>")
 /// response(201)
 /// |> html_body(body)
-/// // -> Response(201, [#("content-type", "text/html")], Text(body))
+/// // -> Response(201, [#("content-type", "text/html; charset=utf-8")], Text(body))
 /// ```
 ///
 pub fn html_body(response: Response, html: StringBuilder) -> Response {
   response
   |> response.set_body(Text(html))
-  |> response.set_header("content-type", "text/html")
+  |> response.set_header("content-type", "text/html; charset=utf-8")
 }
 
 /// Set the body of a response to a given JSON document, and set the
@@ -319,13 +327,13 @@ pub fn html_body(response: Response, html: StringBuilder) -> Response {
 /// let body = string_builder.from_string("{\"name\": \"Joe\"}")
 /// response(201)
 /// |> json_body(body)
-/// // -> Response(201, [#("content-type", "application/json")], Text(body))
+/// // -> Response(201, [#("content-type", "application/json; charset=utf-8")], Text(body))
 /// ```
 ///
 pub fn json_body(response: Response, json: StringBuilder) -> Response {
   response
   |> response.set_body(Text(json))
-  |> response.set_header("content-type", "application/json")
+  |> response.set_header("content-type", "application/json; charset=utf-8")
 }
 
 /// Set the body of a response to a given string builder.
@@ -1598,10 +1606,15 @@ pub fn serve_static(
         |> result.unwrap("")
         |> marceau.extension_to_mime_type
 
+      let content_type = case mime_type {
+        "application/json" | "text/" <> _ -> mime_type <> "; charset=utf-8"
+        _ -> mime_type
+      }
+
       case simplifile.is_file(path) {
         Ok(True) ->
           response.new(200)
-          |> response.set_header("content-type", mime_type)
+          |> response.set_header("content-type", content_type)
           |> response.set_body(File(path))
         _ -> handler()
       }
