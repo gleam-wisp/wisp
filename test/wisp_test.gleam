@@ -1,3 +1,4 @@
+import exception
 import gleam/bit_array
 import gleam/crypto
 import gleam/dict
@@ -333,7 +334,9 @@ pub fn require_string_body_invalid_test() {
 }
 
 pub fn rescue_crashes_error_test() {
-  // TODO: Determine how to silence the logger for this test.
+  wisp.set_logger_level(wisp.CriticalLevel)
+  use <- exception.defer(fn() { wisp.set_logger_level(wisp.InfoLevel) })
+
   {
     use <- wisp.rescue_crashes
     panic as "we need to crash to test the middleware"
