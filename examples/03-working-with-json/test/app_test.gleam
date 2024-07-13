@@ -22,7 +22,7 @@ pub fn submit_wrong_content_type_test() {
   |> should.equal(415)
 
   response.headers
-  |> should.equal([#("accept", "application/json; charset=utf-8")])
+  |> should.equal([#("accept", "application/json")])
 }
 
 pub fn submit_missing_parameters_test() {
