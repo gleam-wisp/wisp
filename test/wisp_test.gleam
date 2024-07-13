@@ -505,6 +505,16 @@ pub fn require_content_type_test() {
   |> should.equal(wisp.ok())
 }
 
+pub fn require_content_type_charset_test() {
+  {
+    let request =
+      testing.get("/", [#("content-type", "text/plain; charset=utf-8")])
+    use <- wisp.require_content_type(request, "text/plain")
+    wisp.ok()
+  }
+  |> should.equal(wisp.ok())
+}
+
 pub fn require_content_type_missing_test() {
   {
     let request = testing.get("/", [])

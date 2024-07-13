@@ -1165,7 +1165,15 @@ pub fn require_content_type(
   next: fn() -> Response,
 ) -> Response {
   case list.key_find(request.headers, "content-type") {
-    Ok(content_type) if content_type == expected -> next()
+    Ok(content_type) ->
+      // This header may have further such as `; charset=utf-8`, so discard
+      // that if it exists.
+      case string.split_once(content_type, ";") {
+        Ok(#(content_type, _)) if content_type == expected -> next()
+        _ if content_type == expected -> next()
+        _ -> unsupported_media_type([expected])
+      }
+
     _ -> unsupported_media_type([expected])
   }
 }

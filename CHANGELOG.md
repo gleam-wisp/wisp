@@ -4,6 +4,8 @@
 
 - HTML and JSON body functions now include `charset=utf-8` in the content-type
   header.
+- The `require_content_type` function now handles additional attributes
+  correctly.
 
 ## v0.15.0 - 2024-05-12
 
