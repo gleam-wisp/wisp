@@ -14,6 +14,20 @@ import mist
 import wisp
 import wisp/internal
 
+// Aliases around various Mist specific types
+
+pub type Connection =
+  mist.Connection
+
+pub type ResponseData =
+  mist.ResponseData
+
+pub type WebsocketConnection =
+  mist.WebsocketConnection
+
+pub type WebsocketMessage(b) =
+  mist.WebsocketMessage(b)
+
 //
 // Running the server
 //
@@ -27,18 +41,23 @@ import wisp/internal
 /// pub fn main() {
 ///   let secret_key_base = "..."
 ///   let assert Ok(_) =
-///     handle_request
-///     |> wisp_mist.handler(secret_key_base)
+///     fn(req, ws) { handle_req(req, fn() { Context(ws) } ) }
+///     |> wisp.mist_handler(secret_key_base)
 ///     |> mist.new
 ///     |> mist.port(8000)
 ///     |> mist.start_http
 ///   process.sleep_forever()
 /// }
+///
+/// type Context {
+///   Context(ws: wisp.Ws(wisp_mist.Connection))
+/// }
+///
 /// ```
 pub fn handler(
-  handler: fn(wisp.Request, wisp.Ws(mist.Connection)) -> wisp.Response,
+  handler: fn(wisp.Request, wisp.Ws(Connection)) -> wisp.Response,
   secret_key_base: String,
-) -> fn(HttpRequest(mist.Connection)) -> HttpResponse(mist.ResponseData) {
+) -> fn(HttpRequest(Connection)) -> HttpResponse(ResponseData) {
   fn(request: HttpRequest(_)) {
     let mist: mist.Connection = request.body
     let connection =
@@ -104,15 +123,21 @@ fn mist_send_file(path: String) -> mist.ResponseData {
 
 // WEBSOCKETS
 
-/// Creates a websocket from a wisp websocket handler spec
+/// Creates a websocket from a `wisp.WebsocketHandler` type.
+///
+/// ```gleam
+/// wisp.WebsocketHandler(req, ws, handler, on_init(_, server), on_close)
+/// |> wisp_mist.websocket
+/// ```
 pub fn websocket(
-  ws: wisp.WebsocketHandler(a, b, mist.WebsocketConnection, mist.Connection),
+  ws: wisp.WebsocketHandler(a, b, WebsocketConnection, Connection),
 ) -> wisp.Response {
   let handler = mist_ws_handler(ws)
   let on_init = mist_ws_on_init(ws)
   mist_websocket(ws.req, ws.ws, handler, on_init, ws.on_close)
 }
 
+/// Converts a wisp websocket handler to a mist one.
 fn mist_ws_handler(
   ws: wisp.WebsocketHandler(a, b, mist.WebsocketConnection, mist.Connection),
 ) -> fn(a, mist.WebsocketConnection, mist.WebsocketMessage(b)) ->
@@ -124,6 +149,7 @@ fn mist_ws_handler(
   }
 }
 
+/// Converts a wisp websocket init to a mist one.
 fn mist_ws_on_init(
   ws: wisp.WebsocketHandler(a, b, mist.WebsocketConnection, mist.Connection),
 ) -> fn(mist.WebsocketConnection) -> #(a, Option(process.Selector(b))) {
@@ -133,6 +159,7 @@ fn mist_ws_on_init(
   }
 }
 
+/// Converts a wisp websocket to a mist one.
 fn mist_websocket(
   req: wisp.Request,
   socket: wisp.Ws(mist.Connection),
@@ -154,6 +181,7 @@ fn mist_websocket(
   }
 }
 
+/// Converts a mist websocket message to a wisp one.
 fn from_mist_websocket_message(
   msg: mist.WebsocketMessage(a),
 ) -> wisp.WebsocketMessage(a) {
@@ -166,9 +194,14 @@ fn from_mist_websocket_message(
   }
 }
 
-/// Sends data to a websocket connection from a wisp websocket send spec
+/// Sends data to a websocket connection using a `wisp.WebsocketSend` type.
+///
+/// ```gleam
+/// "pong" |> wisp.SendText(conn) |> wisp_mist.send
+/// ```
+///
 pub fn send(
-  send: wisp.WebsocketSend(mist.WebsocketConnection),
+  send: wisp.WebsocketSend(WebsocketConnection),
 ) -> Result(Nil, socket.SocketReason) {
   let internal.WebsocketConnection(con) = send.conn
   case send {
