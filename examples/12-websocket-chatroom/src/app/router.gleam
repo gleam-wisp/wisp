@@ -88,10 +88,12 @@ const client = "
       socket.send('ping');
   }
 
-
-  document.querySelector('input').addEventListener('keyup', (event) => {
+  // Handle sending input messages and clearing the text
+  var chatbox = document.querySelector('input');
+  chatbox.addEventListener('keyup', (event) => {
     if (event.key === 'Enter') {
-      socket.send(document.querySelector('input').value);
+      socket.send(chatbox.value);
+      chatbox.value = '';
     }
   });
   </script>

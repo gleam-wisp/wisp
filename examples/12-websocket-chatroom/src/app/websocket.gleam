@@ -52,11 +52,6 @@ fn on_init(
   #(state, selector)
 }
 
-// This handles the message loop for our actor. When a message comes from a
-// client (WsText) or from another process (WsCustom via our Selector) we need
-// to handle that event.
-//
-// Our handler will simply respond to any "ping" text message with a "pong" response.
 fn handler(
   state: State,
   conn: wisp.WebsocketConnection(WebsocketConnection),
