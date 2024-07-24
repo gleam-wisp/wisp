@@ -1,4 +1,4 @@
-# Wisp Example: Routing
+# Wisp Example: Websockets
 
 ```sh
 gleam run   # Run the server
