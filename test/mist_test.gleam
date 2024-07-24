@@ -1,7 +1,6 @@
 import gleam/erlang/process
 import gleam/http/request
 import gleam/int
-import gleam/io
 import gleam/option.{None}
 import gleam/otp/actor
 import gleeunit/should
@@ -11,10 +10,10 @@ import wisp
 import wisp/wisp_mist
 
 /// Create a websocket server and client
-/// Websocket sends hello on connect
-/// Client responsed ping
-/// server responsed pong
-/// client successfully closes itself
+/// - Websocket sends hello on connect
+/// - Client responsed ping
+/// - Server responsed pong
+/// - Client successfully closes itself
 pub fn websocket_test() {
   let subj = process.new_subject()
   let assert Ok(_) = webserver()
@@ -58,7 +57,6 @@ fn webserver() {
   |> mist.new
   |> mist.port(8000)
   |> mist.start_http
-  |> io.debug
 }
 
 type Context {
