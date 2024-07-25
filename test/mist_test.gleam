@@ -59,11 +59,14 @@ fn webserver() {
   |> mist.start_http
 }
 
-type Context {
-  Context(ws: wisp.Ws(wisp_mist.Connection))
+type Context(state, msg) {
+  Context(ws: wisp.WsCap(state, msg))
 }
 
-fn handle_req(req: wisp.Request, ctx: fn() -> Context) -> wisp.Response {
+fn handle_req(
+  req: wisp.Request,
+  ctx: fn() -> Context(String, String),
+) -> wisp.Response {
   let ctx = ctx()
   case wisp.path_segments(req) {
     ["test", "ws"] -> ws_handler(req, ctx)
@@ -71,24 +74,20 @@ fn handle_req(req: wisp.Request, ctx: fn() -> Context) -> wisp.Response {
   }
 }
 
-fn ws_handler(req: wisp.Request, ctx: Context) -> wisp.Response {
-  let on_init = fn(
-    conn: wisp.WebsocketConnection(wisp_mist.WebsocketConnection),
-  ) {
-    let assert Ok(_sent) =
-      "Hello, Joe!" |> wisp.SendText(conn) |> wisp_mist.send
-    #(0, None)
+fn ws_handler(req: wisp.Request, ctx: Context(String, String)) -> wisp.Response {
+  let on_init = fn(conn: wisp.WsConn) {
+    let assert Ok(Nil) = "Hello, Joe!" |> wisp.SendText |> conn()
+    #("", None)
   }
-  let handler = fn(state, conn, msg) {
+  let handler = fn(state: String, conn: wisp.WsConn, msg) {
     case msg {
       wisp.WsText(text) -> {
-        let assert Ok(_) = case text {
-          "ping" | "ping\n" -> "pong" |> wisp.SendText(conn) |> wisp_mist.send
-          "count" ->
-            int.to_string(state) |> wisp.SendText(conn) |> wisp_mist.send
-          repeat -> repeat |> wisp.SendText(conn) |> wisp_mist.send
+        let assert Ok(Nil) = case text {
+          "ping" | "ping\n" -> "pong" |> wisp.SendText |> conn()
+          "count" -> state |> wisp.SendText |> conn()
+          repeat -> repeat |> wisp.SendText |> conn()
         }
-        let state = state + 1
+        //let state = state + 1
         actor.continue(state)
       }
       wisp.WsBinary(_binary) -> actor.continue(state)
@@ -97,6 +96,8 @@ fn ws_handler(req: wisp.Request, ctx: Context) -> wisp.Response {
     }
   }
   let on_close = fn(_state) { Nil }
-  wisp.WebsocketHandler(req, ctx.ws, handler, on_init, on_close)
-  |> wisp_mist.websocket
+
+  let wisp.WsCap(do_ws) = ctx.ws
+  wisp.WebsocketHandler(handler, on_init, on_close)
+  |> do_ws(req, _)
 }

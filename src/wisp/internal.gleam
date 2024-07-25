@@ -2,8 +2,6 @@ import gleam/bit_array
 import gleam/crypto
 import gleam/string
 
-// HELPERS
-
 //
 // Requests
 //
@@ -83,19 +81,4 @@ pub fn random_string(length: Int) -> String {
 
 pub fn random_slug() -> String {
   random_string(16)
-}
-
-// WEBSOCKET 
-
-// The active websocket connection should be stored in here to be used when the
-// application needs to send messages to the webscoket client.
-pub type WebsocketConnection(c) {
-  WebsocketConnection(c)
-}
-
-// Anything requried to start a websocket connection should be stored in here.
-// A webserver with web socket capabilities should provide this as part of the
-// wisp<->server handler adapter.
-pub type Ws(d) {
-  Ws(d)
 }

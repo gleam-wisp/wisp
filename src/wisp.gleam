@@ -1915,8 +1915,8 @@ pub type WebsocketMessage(a) {
 /// This connection is used from within a websocket handler function to
 /// send data to the client via `SendText` or `SendBinary`
 ///
-type WebsocketConnection(c) =
-  internal.WebsocketConnection(c)
+pub type WsConn =
+  fn(WebsocketSend) -> Result(Nil, WsError)
 
 /// A socket connection used to connect to clients.
 ///
@@ -1924,8 +1924,9 @@ type WebsocketConnection(c) =
 /// function. It is required to turn a http connection into an
 /// active websocket (`WebsocketConnection`).
 ///
-pub type Ws(d) =
-  internal.Ws(d)
+pub type WsCap(state, msg) {
+  WsCap(fn(Request, WebsocketHandler(state, msg)) -> Response)
+}
 
 /// Configuration for a websockets creation and life-cycle.
 ///
@@ -2016,26 +2017,32 @@ pub type Ws(d) =
 /// This type will need to be passed to your webserver of choice websocket
 /// function, such as `wisp_mist.websocket`.
 ///
-pub type WebsocketHandler(a, b, c, d) {
+pub type WebsocketHandler(state, msg) {
   WebsocketHandler(
-    req: Request,
-    ws: Ws(d),
-    handler: fn(a, WebsocketConnection(c), WebsocketMessage(b)) ->
-      actor.Next(b, a),
-    on_init: fn(WebsocketConnection(c)) -> #(a, Option(process.Selector(b))),
-    on_close: fn(a) -> Nil,
+    handler: fn(state, WsConn, WebsocketMessage(msg)) -> actor.Next(msg, state),
+    on_init: fn(WsConn) -> #(state, Option(process.Selector(msg))),
+    on_close: fn(state) -> Nil,
   )
 }
 
 /// Build a message to send to an active websocket connection
 ///
 /// ```gleam
-/// "pong" |> wisp.SendText(conn) |> wisp_mist.send
+/// "pong" |> wisp.SendText |> ws_conn()
 /// ```
 ///
-pub type WebsocketSend(c) {
+pub type WebsocketSend {
   /// A payload of unicode text.
-  SendText(text: String, conn: WebsocketConnection(c))
+  SendText(text: String)
   /// A payload of binary data.
-  SendBinary(binary: BitArray, conn: WebsocketConnection(c))
+  SendBinary(binary: BitArray)
+}
+
+/// TODO: Placeholder error type, flesh out.
+/// Error types that can occur upon sending to a websocket.
+pub type WsError {
+  WsErrClosed
+  WsErrTimeout
+  WsErrTerminated
+  WsErrOther(String)
 }
