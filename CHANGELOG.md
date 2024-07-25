@@ -2,6 +2,8 @@
 
 ## v0.17.0 - Unreleased
 
+- The Mist web server related functions have been moved to the `wisp_mist`
+  module.
 - The `wisp` module gains the `set_logger_level` function and `LogLevel` type.
 
 ## v0.16.0 - 2024-07-13
