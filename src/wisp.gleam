@@ -723,7 +723,7 @@ pub fn get_secret_key_base(request: Request) -> String {
 ///
 /// This limit only applies for files in a multipart body that get streamed to
 /// disc. For headers and other content that gets read into memory use the
-/// `max_files_size` limit.
+/// `max_body_size` limit.
 ///
 pub fn set_max_files_size(request: Request, size: Int) -> Request {
   internal.Connection(..request.body, max_files_size: size)
