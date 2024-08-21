@@ -1,7 +1,6 @@
 import directories
 import gleam/bit_array
 import gleam/crypto
-import gleam/result
 import gleam/string
 
 // HELPERS
@@ -31,7 +30,10 @@ pub fn make_connection(
   secret_key_base: String,
 ) -> Connection {
   // Fallback to current working directory when no valid tmp directory exists
-  let prefix = result.unwrap(directories.tmp_dir(), ".") <> "/gleam-wisp/"
+  let prefix = case directories.tmp_dir() {
+    Ok(tmp_dir) -> tmp_dir <> "/gleam-wisp/"
+    Error(_) -> "./tmp/"
+  }
   let temporary_directory = join_path(prefix, random_slug())
   Connection(
     reader: body_reader,
