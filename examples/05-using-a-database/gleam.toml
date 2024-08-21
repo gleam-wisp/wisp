@@ -9,7 +9,7 @@ wisp = { path = "../.." }
 gleam_json = "~> 0.6"
 tiny_database = { path = "../utilities/tiny_database" }
 gleam_erlang = "~> 0.23"
-mist = ">= 1.2.0 and < 2.0.0"
+mist = ">= 2.0.0 and < 3.0.0"
 gleam_http = "~> 3.5"
 
 [dev-dependencies]

@@ -8,7 +8,7 @@ gleam_stdlib = "~> 0.30"
 wisp = { path = "../.." }
 gsv = "~> 1.0"
 gleam_erlang = "~> 0.23"
-mist = ">= 1.2.0 and < 2.0.0"
+mist = ">= 2.0.0 and < 3.0.0"
 gleam_http = "~> 3.5"
 
 [dev-dependencies]
