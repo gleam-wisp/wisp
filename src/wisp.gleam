@@ -7,6 +7,7 @@ import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
 import gleam/erlang
 import gleam/erlang/atom.{type Atom}
+import gleam/erlang/process
 import gleam/http.{type Method}
 import gleam/http/cookie
 import gleam/http/request.{type Request as HttpRequest}
@@ -17,6 +18,7 @@ import gleam/int
 import gleam/json
 import gleam/list
 import gleam/option.{type Option}
+import gleam/otp/actor
 import gleam/result
 import gleam/string
 import gleam/string_builder.{type StringBuilder}
@@ -60,6 +62,10 @@ pub type Body {
   /// in place of any with an empty body.
   ///
   Empty
+  /// Upgrades the socket to a websocket, is only used internally by the
+  /// web server and should not be called directly.
+  ///
+  Websocket(process.Selector(process.ProcessDown))
 }
 
 /// An alias for a HTTP response containing a `Body`.
@@ -1875,4 +1881,168 @@ pub fn create_canned_connection(
     },
     secret_key_base,
   )
+}
+
+//
+// Websockets
+//
+
+/// The messages possible to receive to and from a websocket handler.
+///
+pub type WebsocketMessage(a) {
+  /// A string message received from a websocket.
+  ///
+  WsText(String)
+  /// A binary data message received from a websocket.
+  ///
+  WsBinary(BitArray)
+  /// A websocket closed message received from a websocket client disconnection.
+  ///
+  WsClosed
+  /// A Shutdown request used to cleanly close a websocket connection on the
+  /// server-side.
+  ///
+  WsShutdown
+  /// A custom message type sent to the websocket handlers subject/selector
+  /// (created during `on_init`) from within the application by another
+  /// actor/process.
+  ///
+  WsCustom(a)
+}
+
+/// An active websocket connection used to send messages to the client
+///
+/// This connection is used from within a websocket handler function to
+/// send data to the client via `SendText` or `SendBinary`
+///
+pub type WsConn =
+  fn(WebsocketSend) -> Result(Nil, WsError)
+
+/// A socket connection used to connect to clients.
+///
+/// This is provided by a websocket capable server's handler
+/// function. It is required to turn a http connection into an
+/// active websocket (`WebsocketConnection`).
+///
+pub type WsCap(state, msg) {
+  WsCap(fn(Request, WebsocketHandler(state, msg)) -> Response)
+}
+
+/// Configuration for a websockets creation and life-cycle.
+///
+/// Through the `on_init` function, a connection to the web socket client is initially
+/// made available and the default actor state for the websocket can be set.
+///
+/// The `handler` function deals with the messages being send to
+/// or received from the websocket and may take actions such as updating the state or
+/// communicating with other actors or functions.
+///
+/// The `on_close` function takes the state and should run any cleanup actions
+/// such as notifying of disconnects to other actors.
+///
+/// # Example Basic
+///
+/// ```gleam
+/// fn websocket(req: Request, ws: Ws) -> Response {
+///   let state = 0
+///   let on_init = fn(_conn) { #(state, None) }
+///   let handler = fn(state, conn, msg) {
+///     case msg {
+///       wisp.WsText(text) -> {
+///         case text {
+///           "ping" -> "pong" |> wisp.SendText(conn) |> wisp_mist.send
+///           _ -> Ok(Nil)
+///         }
+///         actor.continue(state)
+///       }
+///       _ -> actor.Stop(process.Normal)
+///     }
+///   }
+///   let on_close = fn(_state) { Nil }
+///   wisp.WebsocketHandler(req, ws, handler, on_init, on_close)
+///   |> wisp_mist.websocket
+/// }
+/// ```
+///
+///
+/// # Example with selector
+///
+/// Optionally, `on_init` can be provided a `selector` which is used to send
+/// messages to the handler function as `WsCustom` messages from inside the
+/// application
+///
+/// ```gleam
+/// type State {
+///   State(counter: Int, server: process.Subject(String))
+/// }
+///
+/// fn handler(state, conn, msg) {
+///   case msg {
+///     wisp.WsText(text) -> {
+///       case text {
+///         "ping" -> "pong" |> wisp.SendText(conn) |> wisp_mist.send
+///         _ -> Ok(Nil)
+///       }
+///       actor.continue(state)
+///     }
+///     wisp.WsCustom(selector_msg) -> {
+///       selector_msg |> wisp.SendText(conn) |> wisp_mist.send
+///       actor.continue(state)
+///     }
+///     _ -> actor.Stop(process.Normal)
+///   }
+/// }
+///
+/// fn on_init(conn, server) {
+///   let state = State(0, server)
+///   let subj = process.new_subject()
+///   let selector =
+///     process.new_selector() |> process.selecting(subj, function.identity)
+///   process.send(state.server, "connected")
+///   "Hello, Joe!" |> wisp.SendText(conn) |> wisp_mist.send
+///   #(state, Some(selector))
+/// }
+///
+/// fn on_close(state) {
+///   process.send(state.server, "disconnected")
+///   Nil
+/// }
+///
+/// fn websocket(req, ws, server) -> Response {
+///   wisp.WebsocketHandler(req, ws, handler, on_init(_, server), on_close)
+///   |> wisp_mist.websocket
+/// }
+/// ```
+///
+/// This type will need to be passed to your webserver of choice websocket
+/// function, such as `wisp_mist.websocket`.
+///
+pub type WebsocketHandler(state, msg) {
+  WebsocketHandler(
+    handler: fn(state, WsConn, WebsocketMessage(msg)) -> actor.Next(msg, state),
+    on_init: fn(WsConn) -> #(state, Option(process.Selector(msg))),
+    on_close: fn(state) -> Nil,
+  )
+}
+
+/// Build a message to send to an active websocket connection
+///
+/// ```gleam
+/// "pong" |> wisp.SendText |> ws_conn()
+/// ```
+///
+pub type WebsocketSend {
+  /// A payload of unicode text.
+  SendText(text: String)
+  /// A payload of binary data.
+  SendBinary(binary: BitArray)
+}
+
+/// TODO: Placeholder error type, flesh out.
+/// Error types that can occur upon sending to a websocket.
+pub type WsError {
+  WsErrClosed
+  WsErrTimeout
+  WsErrTerminated
+  WsErrOther(String)
 }

@@ -2,8 +2,6 @@ import gleam/bit_array
 import gleam/crypto
 import gleam/string
 
-// HELPERS
-
 //
 // Requests
 //
