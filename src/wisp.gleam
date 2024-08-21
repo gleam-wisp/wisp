@@ -1541,7 +1541,7 @@ pub fn handle_head(
 
 /// Create a new temporary directory for the given request.
 ///
-/// If you are using the `mist_handler` function or another compliant web server
+/// If you are using the Mist adapter or another compliant web server
 /// adapter then this file will be deleted for you when the request is complete.
 /// Otherwise you will need to call the `delete_temporary_files` function
 /// yourself.
@@ -1558,7 +1558,7 @@ pub fn new_temporary_file(
 
 /// Delete any temporary files created for the given request.
 ///
-/// If you are using the `mist_handler` function or another compliant web server
+/// If you are using the Mist adapter or another compliant web server
 /// adapter then this file will be deleted for you when the request is complete.
 /// Otherwise you will need to call this function yourself.
 ///

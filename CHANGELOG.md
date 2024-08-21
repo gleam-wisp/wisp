@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.17.0 - Unreleased
+## v1.0.0 - Unreleased
 
 - The Mist web server related functions have been moved to the `wisp_mist`
   module.
