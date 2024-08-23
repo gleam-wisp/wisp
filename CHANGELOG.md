@@ -1,8 +1,9 @@
 # Changelog
 
-## v1.1.0 - Unreleased
+## v1.1.0 - 2024-08-23
 
-- Rather than using `/tmp`, the platform-specific temporary directory is detected used
+- Rather than using `/tmp`, the platform-specific temporary directory is
+  detected used.
 
 ## v1.0.0 - 2024-08-21
 
