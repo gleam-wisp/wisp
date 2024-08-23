@@ -1,11 +1,14 @@
 # Changelog
 
-## v1.0.0 - Unreleased
+## v1.1.0 - Unreleased
+
+- Rather than using `/tmp`, the platform-specific temporary directory is detected used
+
+## v1.0.0 - 2024-08-21
 
 - The Mist web server related functions have been moved to the `wisp_mist`
   module.
 - The `wisp` module gains the `set_logger_level` function and `LogLevel` type.
-- Rather than using `/tmp`, the platform-specific temporary directory is detected used
 
 ## v0.16.0 - 2024-07-13
 
