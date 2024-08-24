@@ -24,7 +24,7 @@ pub fn main() {
   let handler = router.handle_request(_, context)
 
   let assert Ok(_) =
-    handler
+    fn(req, _) { handler(req) }
     |> wisp_mist.handler(secret_key_base)
     |> mist.new
     |> mist.port(8000)
