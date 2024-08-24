@@ -1887,7 +1887,7 @@ pub fn create_canned_connection(
 // Websockets
 //
 
-/// The messages possible to receive to and from a websocket handler.
+/// The messages received in a websocket handler.
 ///
 pub type WsMessage(a) {
   /// A string message received from a websocket.
