@@ -82,3 +82,14 @@ pub fn random_string(length: Int) -> String {
 pub fn random_slug() -> String {
   random_string(16)
 }
+
+//
+// Websockets
+//
+
+/// A type used purely to block the user constructing a `wisp.WsCapability`
+/// via the public api as it should only be constructed by the web server if it
+/// supports websockets.
+pub type WsCapability {
+  WsCapability
+}

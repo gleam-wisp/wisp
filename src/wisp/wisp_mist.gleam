@@ -59,7 +59,7 @@ pub fn handler(
       fn(req: wisp.Request, wsh: wisp.WsHandler(a, b)) -> wisp.Response {
         request.set_body(req, mist) |> websocket(wsh)
       }
-      |> wisp.WsCapability
+      |> wisp.WsCapability(internal.WsCapability)
 
     let response =
       request

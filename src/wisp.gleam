@@ -1915,17 +1915,20 @@ pub type WsMessage(a) {
 /// This connection is used from within a websocket handler function to
 /// send data to the client via `WsSendText` or `WsSendBinary`
 ///
-pub type WsConnection =
+type WsConnection =
   fn(WsSend) -> Result(Nil, WsError)
 
-/// A socket connection used to connect to clients.
+/// A capability used to support websocket execution from a capable server.
 ///
 /// This is provided by a websocket capable server's handler
 /// function. It is required to turn a http connection into an
 /// active websocket (`WsConnection`).
 ///
 pub type WsCapability(state, msg) {
-  WsCapability(fn(Request, WsHandler(state, msg)) -> Response)
+  WsCapability(
+    handler: fn(Request, WsHandler(state, msg)) -> Response,
+    ws: internal.WsCapability,
+  )
 }
 
 /// Configuration for a websockets creation and life-cycle.
@@ -2049,8 +2052,8 @@ pub type WsError {
 /// Start a websocket session.
 ///
 /// This takes all the parameters required to begin a websocket session with a
-/// client and requires a websocket capabile web server such as mist which
-/// provides the `WsCapability` as part of it's handler function.
+/// client and requires a websocket capable web server such as mist which
+/// provides the `WsCapability` as part of its handler function.
 ///
 /// ```gleam
 /// wisp.WsHandler(handler, on_init, on_close) |> wisp.websocket(req, ws_capability)
@@ -2061,6 +2064,6 @@ pub fn websocket(
   req: Request,
   capability: WsCapability(state, msg),
 ) -> Response {
-  let WsCapability(do_websocket) = capability
+  let WsCapability(do_websocket, _) = capability
   do_websocket(req, handler)
 }
