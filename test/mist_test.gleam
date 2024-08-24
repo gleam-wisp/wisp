@@ -59,14 +59,11 @@ fn webserver() {
   |> mist.start_http
 }
 
-type Context(state, msg) {
-  Context(ws: wisp.WsCap(state, msg))
+type Context {
+  Context(ws: wisp.WsCapability(Int, String))
 }
 
-fn handle_req(
-  req: wisp.Request,
-  ctx: fn() -> Context(String, String),
-) -> wisp.Response {
+fn handle_req(req: wisp.Request, ctx: fn() -> Context) -> wisp.Response {
   let ctx = ctx()
   case wisp.path_segments(req) {
     ["test", "ws"] -> ws_handler(req, ctx)
@@ -74,20 +71,19 @@ fn handle_req(
   }
 }
 
-fn ws_handler(req: wisp.Request, ctx: Context(String, String)) -> wisp.Response {
-  let on_init = fn(conn: wisp.WsConn) {
-    let assert Ok(Nil) = "Hello, Joe!" |> wisp.SendText |> conn()
-    #("", None)
+fn ws_handler(req: wisp.Request, ctx: Context) -> wisp.Response {
+  let on_init = fn(conn: wisp.WsConnection) {
+    let assert Ok(Nil) = "Hello, Joe!" |> wisp.WsSendText |> conn()
+    #(0, None)
   }
-  let handler = fn(state: String, conn: wisp.WsConn, msg) {
+  let handler = fn(state: Int, conn: wisp.WsConnection, msg) {
     case msg {
       wisp.WsText(text) -> {
         let assert Ok(Nil) = case text {
-          "ping" | "ping\n" -> "pong" |> wisp.SendText |> conn()
-          "count" -> state |> wisp.SendText |> conn()
-          repeat -> repeat |> wisp.SendText |> conn()
+          "ping" | "ping\n" -> "pong" |> wisp.WsSendText |> conn()
+          "count" -> state |> int.to_string |> wisp.WsSendText |> conn()
+          repeat -> repeat |> wisp.WsSendText |> conn()
         }
-        //let state = state + 1
         actor.continue(state)
       }
       wisp.WsBinary(_binary) -> actor.continue(state)
@@ -97,7 +93,6 @@ fn ws_handler(req: wisp.Request, ctx: Context(String, String)) -> wisp.Response 
   }
   let on_close = fn(_state) { Nil }
 
-  let wisp.WsCap(do_ws) = ctx.ws
-  wisp.WebsocketHandler(handler, on_init, on_close)
-  |> do_ws(req, _)
+  wisp.WsHandler(handler, on_init, on_close)
+  |> wisp.websocket(req, ctx.ws)
 }

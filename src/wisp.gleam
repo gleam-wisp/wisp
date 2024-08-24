@@ -1889,7 +1889,7 @@ pub fn create_canned_connection(
 
 /// The messages possible to receive to and from a websocket handler.
 ///
-pub type WebsocketMessage(a) {
+pub type WsMessage(a) {
   /// A string message received from a websocket.
   ///
   WsText(String)
@@ -1913,19 +1913,19 @@ pub type WebsocketMessage(a) {
 /// An active websocket connection used to send messages to the client
 ///
 /// This connection is used from within a websocket handler function to
-/// send data to the client via `SendText` or `SendBinary`
+/// send data to the client via `WsSendText` or `WsSendBinary`
 ///
-pub type WsConn =
-  fn(WebsocketSend) -> Result(Nil, WsError)
+pub type WsConnection =
+  fn(WsSend) -> Result(Nil, WsError)
 
 /// A socket connection used to connect to clients.
 ///
 /// This is provided by a websocket capable server's handler
 /// function. It is required to turn a http connection into an
-/// active websocket (`WebsocketConnection`).
+/// active websocket (`WsConnection`).
 ///
-pub type WsCap(state, msg) {
-  WsCap(fn(Request, WebsocketHandler(state, msg)) -> Response)
+pub type WsCapability(state, msg) {
+  WsCapability(fn(Request, WsHandler(state, msg)) -> Response)
 }
 
 /// Configuration for a websockets creation and life-cycle.
@@ -1943,14 +1943,14 @@ pub type WsCap(state, msg) {
 /// # Example Basic
 ///
 /// ```gleam
-/// fn websocket(req: Request, ws: Ws) -> Response {
+/// fn websocket(req: Request, ws: WsCapability) -> Response {
 ///   let state = 0
 ///   let on_init = fn(_conn) { #(state, None) }
 ///   let handler = fn(state, conn, msg) {
 ///     case msg {
 ///       wisp.WsText(text) -> {
 ///         case text {
-///           "ping" -> "pong" |> wisp.SendText(conn) |> wisp_mist.send
+///           "ping" -> "pong" |> wisp.WsSendText |> conn()
 ///           _ -> Ok(Nil)
 ///         }
 ///         actor.continue(state)
@@ -1959,8 +1959,9 @@ pub type WsCap(state, msg) {
 ///     }
 ///   }
 ///   let on_close = fn(_state) { Nil }
-///   wisp.WebsocketHandler(req, ws, handler, on_init, on_close)
-///   |> wisp_mist.websocket
+///
+///   wisp.WsHandler(handler, on_init, on_close)
+///   |> wisp.websocket(req, ws)
 /// }
 /// ```
 ///
@@ -1980,13 +1981,13 @@ pub type WsCap(state, msg) {
 ///   case msg {
 ///     wisp.WsText(text) -> {
 ///       case text {
-///         "ping" -> "pong" |> wisp.SendText(conn) |> wisp_mist.send
+///         "ping" -> "pong" |> wisp.WsSendText |> conn()
 ///         _ -> Ok(Nil)
 ///       }
 ///       actor.continue(state)
 ///     }
 ///     wisp.WsCustom(selector_msg) -> {
-///       selector_msg |> wisp.SendText(conn) |> wisp_mist.send
+///       selector_msg |> wisp.WsSendText |> conn()
 ///       actor.continue(state)
 ///     }
 ///     _ -> actor.Stop(process.Normal)
@@ -1999,7 +2000,7 @@ pub type WsCap(state, msg) {
 ///   let selector =
 ///     process.new_selector() |> process.selecting(subj, function.identity)
 ///   process.send(state.server, "connected")
-///   "Hello, Joe!" |> wisp.SendText(conn) |> wisp_mist.send
+///   "Hello, Joe!" |> wisp.WsSendText |> conn()
 ///   #(state, Some(selector))
 /// }
 ///
@@ -2009,40 +2010,57 @@ pub type WsCap(state, msg) {
 /// }
 ///
 /// fn websocket(req, ws, server) -> Response {
-///   wisp.WebsocketHandler(req, ws, handler, on_init(_, server), on_close)
-///   |> wisp_mist.websocket
+///   wisp.WsHandler(handler, on_init(_, server), on_close)
+///   |> wisp.websocket(req, ws)
 /// }
 /// ```
 ///
-/// This type will need to be passed to your webserver of choice websocket
-/// function, such as `wisp_mist.websocket`.
-///
-pub type WebsocketHandler(state, msg) {
-  WebsocketHandler(
-    handler: fn(state, WsConn, WebsocketMessage(msg)) -> actor.Next(msg, state),
-    on_init: fn(WsConn) -> #(state, Option(process.Selector(msg))),
+pub type WsHandler(state, msg) {
+  WsHandler(
+    handler: fn(state, WsConnection, WsMessage(msg)) -> actor.Next(msg, state),
+    on_init: fn(WsConnection) -> #(state, Option(process.Selector(msg))),
     on_close: fn(state) -> Nil,
   )
 }
 
-/// Build a message to send to an active websocket connection
+/// Build a message to send to an active websocket connection.
 ///
 /// ```gleam
-/// "pong" |> wisp.SendText |> ws_conn()
+/// "pong" |> wisp.WsSendText |> conn()
 /// ```
 ///
-pub type WebsocketSend {
+pub type WsSend {
   /// A payload of unicode text.
-  SendText(text: String)
+  WsSendText(text: String)
   /// A payload of binary data.
-  SendBinary(binary: BitArray)
+  WsSendBinary(binary: BitArray)
 }
 
 /// TODO: Placeholder error type, flesh out.
 /// Error types that can occur upon sending to a websocket.
+///
 pub type WsError {
   WsErrClosed
   WsErrTimeout
   WsErrTerminated
   WsErrOther(String)
+}
+
+/// Start a websocket session.
+///
+/// This takes all the parameters required to begin a websocket session with a
+/// client and requires a websocket capabile web server such as mist which
+/// provides the `WsCapability` as part of it's handler function.
+///
+/// ```gleam
+/// wisp.WsHandler(handler, on_init, on_close) |> wisp.websocket(req, ws_capability)
+/// ```
+///
+pub fn websocket(
+  handler: WsHandler(state, msg),
+  req: Request,
+  capability: WsCapability(state, msg),
+) -> Response {
+  let WsCapability(do_websocket) = capability
+  do_websocket(req, handler)
 }

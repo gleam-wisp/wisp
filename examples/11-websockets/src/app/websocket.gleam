@@ -3,31 +3,28 @@ import gleam/int
 import gleam/option.{type Option, None}
 import gleam/otp/actor
 import wisp.{type Request, type Response}
-import wisp/wisp_mist.{type Connection, type WebsocketConnection}
 
 // The state our websocket will maintain for each connection. We will hold a
 // counter which we will increment each time we receive a websocket message.
-type State {
+pub type State {
   State(counter: Int)
 }
 
 // Our websocket actor requires some setup functions in order to function
 // We need to build out three core functions: handler, on_init and on_close.
-pub fn ping_pong(req: Request, ws: wisp.Ws(Connection)) -> Response {
+pub fn ping_pong(req: Request, ws: wisp.WsCapability(State, String)) -> Response {
   // We will create our websocket handler type, holding our various actor functions.
-  // After which we will pass this to our web servers `websocket` function.
-  wisp.WebsocketHandler(req, ws, handler, on_init, on_close)
-  |> wisp_mist.websocket
+  // After which we will pass this to the `websocket` function to start the websocket.
+  wisp.WsHandler(handler, on_init, on_close)
+  |> wisp.websocket(req, ws)
 }
 
 // This handles the start-up of our actor. We need to initialize our default
 // state and optionally create a process subject/selector for our application
 // to send messages to the websocket if required.
-fn on_init(
-  conn: wisp.WebsocketConnection(WebsocketConnection),
-) -> #(State, Option(Selector(String))) {
+fn on_init(conn: wisp.WsConnection) -> #(State, Option(Selector(String))) {
   // We send a message to let the client know it is successfully connected.
-  let assert Ok(Nil) = "connected" |> wisp.SendText(conn) |> wisp_mist.send
+  let assert Ok(Nil) = "connected" |> wisp.WsSendText |> conn()
   // Then we setup our state type with default values.
   let state = State(counter: 0)
   // We could optionally then setup a selector, which would allow other actors
@@ -44,8 +41,8 @@ fn on_init(
 // Our handler will simply respond to any "ping" text message with a "pong" response.
 fn handler(
   state: State,
-  conn: wisp.WebsocketConnection(WebsocketConnection),
-  msg: wisp.WebsocketMessage(String),
+  conn: wisp.WsConnection,
+  msg: wisp.WsMessage(String),
 ) -> actor.Next(String, State) {
   // We need to handle the incoming messages to the websocket actor
   case msg {
@@ -55,9 +52,9 @@ fn handler(
       // typically be handled, such as by closing the socket or logging an error.
       let assert Ok(Nil) = case text {
         // If we receive a 'ping' message from the client, the server will now response 'pong' directly back.
-        "ping" -> "pong" |> wisp.SendText(conn) |> wisp_mist.send
+        "ping" -> "pong" |> wisp.WsSendText |> conn()
         // If we receive any other text, we will notify the client it is invalid
-        _ -> "invalid message" |> wisp.SendText(conn) |> wisp_mist.send
+        _ -> "invalid message" |> wisp.WsSendText |> conn()
       }
       // After receiving a message, we will increment our actors state counter by one
       let state = State(counter: state.counter + 1)
@@ -76,7 +73,7 @@ fn handler(
     // forward onto the client. We set our selector to None in our on_init, so
     // this will not actually be reachable in our example.
     wisp.WsCustom(text) -> {
-      let assert Ok(Nil) = text |> wisp.SendText(conn) |> wisp_mist.send
+      let assert Ok(Nil) = text |> wisp.WsSendText |> conn()
       actor.continue(state)
     }
   }
