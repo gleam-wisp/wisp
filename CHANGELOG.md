@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.2.0 - Unreleased
+
+- Breaking change - Update minimal gleam target version to 1.1.0
+
 ## v1.1.0 - 2024-08-23
 
 - Rather than using `/tmp`, the platform-specific temporary directory is
