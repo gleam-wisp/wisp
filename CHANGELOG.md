@@ -2,7 +2,8 @@
 
 ## v1.2.0 - Unreleased
 
-- Breaking change - Update minimal gleam target version to 1.1.0
+- The Gleam version requirement has been corrected to `>= 1.1.0` from the
+  previously inaccurate `">= 0.32.0`.
 
 ## v1.1.0 - 2024-08-23
 
