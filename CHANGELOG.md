@@ -5,6 +5,7 @@
 - The requirement for Mist has been relaxed to < 4.0.0.
 - The Gleam version requirement has been corrected to `>= 1.1.0` from the
   previously inaccurate `">= 0.32.0`.
+- Wisp runs with with mist < 3.0.0 and gleam_json < 3.0.0.
 
 ## v1.1.0 - 2024-08-23
 
