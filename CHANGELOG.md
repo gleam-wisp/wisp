@@ -2,6 +2,7 @@
 
 ## v1.2.0 - Unreleased
 
+- The requirement for Mist has been relaxed to < 4.0.0.
 - The Gleam version requirement has been corrected to `>= 1.1.0` from the
   previously inaccurate `">= 0.32.0`.
 
