@@ -1,4 +1,4 @@
-# Wisp Example: Working with form data
+# Wisp Example: Configuring default responses
 
 ```sh
 gleam run   # Run the server
