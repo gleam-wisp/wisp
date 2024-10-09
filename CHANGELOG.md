@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.2.0 - Unreleased
+## v1.2.0 - 2024-10-09
 
 - The requirement for `gleam_json` has been relaxed to < 3.0.0.
 - The requirement for `mist` has been relaxed to < 4.0.0.
