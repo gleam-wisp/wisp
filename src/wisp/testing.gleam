@@ -1,12 +1,12 @@
 import gleam/bit_array
-import gleam/bytes_builder
+import gleam/bytes_tree
 import gleam/crypto
 import gleam/http
 import gleam/http/request
 import gleam/json.{type Json}
 import gleam/option.{None, Some}
 import gleam/string
-import gleam/string_builder
+import gleam/string_tree
 import gleam/uri
 import simplifile
 import wisp.{type Request, type Response, Bytes, Empty, File, Text}
@@ -227,9 +227,9 @@ pub fn patch_json(
 pub fn string_body(response: Response) -> String {
   case response.body {
     Empty -> ""
-    Text(builder) -> string_builder.to_string(builder)
+    Text(tree) -> string_tree.to_string(tree)
     Bytes(bytes) -> {
-      let data = bytes_builder.to_bit_array(bytes)
+      let data = bytes_tree.to_bit_array(bytes)
       let assert Ok(string) = bit_array.to_string(data)
       string
     }
@@ -250,9 +250,8 @@ pub fn string_body(response: Response) -> String {
 pub fn bit_array_body(response: Response) -> BitArray {
   case response.body {
     Empty -> <<>>
-    Bytes(builder) -> bytes_builder.to_bit_array(builder)
-    Text(builder) ->
-      bytes_builder.to_bit_array(bytes_builder.from_string_builder(builder))
+    Bytes(tree) -> bytes_tree.to_bit_array(tree)
+    Text(tree) -> bytes_tree.to_bit_array(bytes_tree.from_string_tree(tree))
     File(path) -> {
       let assert Ok(contents) = simplifile.read_bits(path)
       contents

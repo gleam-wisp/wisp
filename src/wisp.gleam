@@ -1,7 +1,7 @@
 import exception
 import gleam/bit_array
 import gleam/bool
-import gleam/bytes_builder.{type BytesBuilder}
+import gleam/bytes_tree.{type BytesTree}
 import gleam/crypto
 import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
@@ -19,7 +19,7 @@ import gleam/list
 import gleam/option.{type Option}
 import gleam/result
 import gleam/string
-import gleam/string_builder.{type StringBuilder}
+import gleam/string_tree.{type StringTree}
 import gleam/uri
 import logging
 import marceau
@@ -35,16 +35,16 @@ import wisp/internal
 pub type Body {
   /// A body of unicode text.
   ///
-  /// The body is represented using a `StringBuilder`. If you have a `String`
-  /// you can use the `string_builder.from_string` function to convert it.
+  /// The body is represented using a `StringTree`. If you have a `String`
+  /// you can use the `string_tree.from_string` function to convert it.
   ///
-  Text(StringBuilder)
+  Text(StringTree)
   /// A body of binary data.
   ///
-  /// The body is represented using a `BytesBuilder`. If you have a `BitArray`
-  /// you can use the `bytes_builder.from_bit_array` function to convert it.
+  /// The body is represented using a `BytesTree`. If you have a `BitArray`
+  /// you can use the `bytes_tree.from_bit_array` function to convert it.
   ///
-  Bytes(BytesBuilder)
+  Bytes(BytesTree)
   /// A body of the contents of a file.
   ///
   /// This will be sent efficiently using the `send_file` function of the
@@ -146,8 +146,9 @@ pub fn file_download(
 /// # Examples
 ///
 /// ```gleam
+/// let content = bytes_tree.from_string("Hello, Joe!")
 /// response(200)
-/// |> file_download_from_memory(named: "myfile.txt", containing: "Hello, Joe!")
+/// |> file_download_from_memory(named: "myfile.txt", containing: content)
 /// // -> Response(
 /// //   200,
 /// //   [#("content-disposition", "attachment; filename=\"myfile.txt\"")],
@@ -158,7 +159,7 @@ pub fn file_download(
 pub fn file_download_from_memory(
   response: Response,
   named name: String,
-  containing data: BytesBuilder,
+  containing data: BytesTree,
 ) -> Response {
   let name = uri.percent_encode(name)
   response
@@ -177,12 +178,12 @@ pub fn file_download_from_memory(
 /// # Examples
 ///
 /// ```gleam
-/// let body = string_builder.from_string("<h1>Hello, Joe!</h1>")
+/// let body = string_tree.from_string("<h1>Hello, Joe!</h1>")
 /// html_response(body, 200)
 /// // -> Response(200, [#("content-type", "text/html")], Text(body))
 /// ```
 ///
-pub fn html_response(html: StringBuilder, status: Int) -> Response {
+pub fn html_response(html: StringTree, status: Int) -> Response {
   HttpResponse(
     status,
     [#("content-type", "text/html; charset=utf-8")],
@@ -198,12 +199,12 @@ pub fn html_response(html: StringBuilder, status: Int) -> Response {
 /// # Examples
 ///
 /// ```gleam
-/// let body = string_builder.from_string("{\"name\": \"Joe\"}")
+/// let body = string_tree.from_string("{\"name\": \"Joe\"}")
 /// json_response(body, 200)
 /// // -> Response(200, [#("content-type", "application/json")], Text(body))
 /// ```
 ///
-pub fn json_response(json: StringBuilder, status: Int) -> Response {
+pub fn json_response(json: StringTree, status: Int) -> Response {
   HttpResponse(
     status,
     [#("content-type", "application/json; charset=utf-8")],
@@ -219,13 +220,13 @@ pub fn json_response(json: StringBuilder, status: Int) -> Response {
 /// # Examples
 ///
 /// ```gleam
-/// let body = string_builder.from_string("<h1>Hello, Joe!</h1>")
+/// let body = string_tree.from_string("<h1>Hello, Joe!</h1>")
 /// response(201)
 /// |> html_body(body)
 /// // -> Response(201, [#("content-type", "text/html; charset=utf-8")], Text(body))
 /// ```
 ///
-pub fn html_body(response: Response, html: StringBuilder) -> Response {
+pub fn html_body(response: Response, html: StringTree) -> Response {
   response
   |> response.set_body(Text(html))
   |> response.set_header("content-type", "text/html; charset=utf-8")
@@ -239,19 +240,19 @@ pub fn html_body(response: Response, html: StringBuilder) -> Response {
 /// # Examples
 ///
 /// ```gleam
-/// let body = string_builder.from_string("{\"name\": \"Joe\"}")
+/// let body = string_tree.from_string("{\"name\": \"Joe\"}")
 /// response(201)
 /// |> json_body(body)
 /// // -> Response(201, [#("content-type", "application/json; charset=utf-8")], Text(body))
 /// ```
 ///
-pub fn json_body(response: Response, json: StringBuilder) -> Response {
+pub fn json_body(response: Response, json: StringTree) -> Response {
   response
   |> response.set_body(Text(json))
   |> response.set_header("content-type", "application/json; charset=utf-8")
 }
 
-/// Set the body of a response to a given string builder.
+/// Set the body of a response to a given string tree.
 ///
 /// You likely want to also set the request `content-type` header to an
 /// appropriate value for the format of the content.
@@ -259,21 +260,18 @@ pub fn json_body(response: Response, json: StringBuilder) -> Response {
 /// # Examples
 ///
 /// ```gleam
-/// let body = string_builder.from_string("Hello, Joe!")
+/// let body = string_tree.from_string("Hello, Joe!")
 /// response(201)
-/// |> string_builder_body(body)
+/// |> string_tree_body(body)
 /// // -> Response(201, [], Text(body))
 /// ```
 ///
-pub fn string_builder_body(
-  response: Response,
-  content: StringBuilder,
-) -> Response {
+pub fn string_tree_body(response: Response, content: StringTree) -> Response {
   response
   |> response.set_body(Text(content))
 }
 
-/// Set the body of a response to a given string builder.
+/// Set the body of a response to a given string.
 ///
 /// You likely want to also set the request `content-type` header to an
 /// appropriate value for the format of the content.
@@ -287,13 +285,13 @@ pub fn string_builder_body(
 /// // -> Response(
 /// //   201,
 /// //   [],
-/// //   Text(string_builder.from_string("Hello, Joe"))
+/// //   Text(string_tree.from_string("Hello, Joe"))
 /// // )
 /// ```
 ///
 pub fn string_body(response: Response, content: String) -> Response {
   response
-  |> response.set_body(Text(string_builder.from_string(content)))
+  |> response.set_body(Text(string_tree.from_string(content)))
 }
 
 /// Escape a string so that it can be safely included in a HTML document.
@@ -1475,7 +1473,7 @@ pub fn serve_static(
     http.Get, True -> {
       let path =
         path
-        |> string.drop_left(string.length(prefix))
+        |> string.drop_start(string.length(prefix))
         |> string.replace(each: "..", with: "")
         |> internal.join_path(directory, _)
 

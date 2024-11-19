@@ -1,5 +1,5 @@
 import exception
-import gleam/bytes_builder
+import gleam/bytes_tree
 import gleam/http/request.{type Request as HttpRequest}
 import gleam/http/response.{type Response as HttpResponse}
 import gleam/option
@@ -63,7 +63,7 @@ fn wrap_mist_chunk(
   chunk: Result(mist.Chunk, mist.ReadError),
 ) -> Result(internal.Read, Nil) {
   chunk
-  |> result.nil_error
+  |> result.replace_error(Nil)
   |> result.map(fn(chunk) {
     case chunk {
       mist.Done -> internal.ReadingFinished
@@ -75,8 +75,8 @@ fn wrap_mist_chunk(
 
 fn mist_response(response: wisp.Response) -> HttpResponse(mist.ResponseData) {
   let body = case response.body {
-    wisp.Empty -> mist.Bytes(bytes_builder.new())
-    wisp.Text(text) -> mist.Bytes(bytes_builder.from_string_builder(text))
+    wisp.Empty -> mist.Bytes(bytes_tree.new())
+    wisp.Text(text) -> mist.Bytes(bytes_tree.from_string_tree(text))
     wisp.Bytes(bytes) -> mist.Bytes(bytes)
     wisp.File(path) -> mist_send_file(path)
   }
@@ -90,7 +90,7 @@ fn mist_send_file(path: String) -> mist.ResponseData {
     Error(error) -> {
       wisp.log_error(string.inspect(error))
       // TODO: return 500
-      mist.Bytes(bytes_builder.new())
+      mist.Bytes(bytes_tree.new())
     }
   }
 }

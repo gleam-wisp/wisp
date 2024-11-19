@@ -11,7 +11,7 @@ import gleam/int
 import gleam/list
 import gleam/set
 import gleam/string
-import gleam/string_builder
+import gleam/string_tree
 import gleeunit
 import gleeunit/should
 import simplifile
@@ -119,7 +119,7 @@ pub fn unprocessable_entity_test() {
 }
 
 pub fn json_response_test() {
-  let body = string_builder.from_string("{\"one\":1,\"two\":2}")
+  let body = string_tree.from_string("{\"one\":1,\"two\":2}")
   let response = wisp.json_response(body, 201)
   response.status
   |> should.equal(201)
@@ -131,7 +131,7 @@ pub fn json_response_test() {
 }
 
 pub fn html_response_test() {
-  let body = string_builder.from_string("Hello, world!")
+  let body = string_tree.from_string("Hello, world!")
   let response = wisp.html_response(body, 200)
   response.status
   |> should.equal(200)
@@ -143,7 +143,7 @@ pub fn html_response_test() {
 }
 
 pub fn html_body_test() {
-  let body = string_builder.from_string("Hello, world!")
+  let body = string_tree.from_string("Hello, world!")
   let response =
     wisp.method_not_allowed([http.Get])
     |> wisp.html_body(body)
@@ -751,7 +751,7 @@ pub fn handle_head_test() {
     list.key_find(request.headers, "x-original-method")
     |> should.equal(header)
 
-    string_builder.from_string("Hello!")
+    string_tree.from_string("Hello!")
     |> wisp.html_response(201)
   }
 
@@ -761,7 +761,7 @@ pub fn handle_head_test() {
   |> should.equal(Response(
     201,
     [#("content-type", "text/html; charset=utf-8")],
-    wisp.Text(string_builder.from_string("Hello!")),
+    wisp.Text(string_tree.from_string("Hello!")),
   ))
 
   testing.get("/", [])
@@ -897,27 +897,27 @@ pub fn string_body_test() {
   |> should.equal(Response(
     200,
     [],
-    wisp.Text(string_builder.from_string("Hello, world!")),
+    wisp.Text(string_tree.from_string("Hello, world!")),
   ))
 }
 
-pub fn string_builder_body_test() {
+pub fn string_tree_body_test() {
   wisp.ok()
-  |> wisp.string_builder_body(string_builder.from_string("Hello, world!"))
+  |> wisp.string_tree_body(string_tree.from_string("Hello, world!"))
   |> should.equal(Response(
     200,
     [],
-    wisp.Text(string_builder.from_string("Hello, world!")),
+    wisp.Text(string_tree.from_string("Hello, world!")),
   ))
 }
 
 pub fn json_body_test() {
   wisp.ok()
-  |> wisp.json_body(string_builder.from_string("{\"one\":1,\"two\":2}"))
+  |> wisp.json_body(string_tree.from_string("{\"one\":1,\"two\":2}"))
   |> should.equal(Response(
     200,
     [#("content-type", "application/json; charset=utf-8")],
-    wisp.Text(string_builder.from_string("{\"one\":1,\"two\":2}")),
+    wisp.Text(string_tree.from_string("{\"one\":1,\"two\":2}")),
   ))
 }
 

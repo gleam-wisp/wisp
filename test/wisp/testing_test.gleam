@@ -2,7 +2,7 @@ import gleam/http
 import gleam/http/response
 import gleam/json
 import gleam/option.{None, Some}
-import gleam/string_builder
+import gleam/string_tree
 import gleeunit/should
 import wisp
 import wisp/testing
@@ -502,7 +502,7 @@ pub fn string_body_file_test() {
 
 pub fn string_body_text_test() {
   wisp.ok()
-  |> response.set_body(wisp.Text(string_builder.from_string("Hello, Joe!")))
+  |> response.set_body(wisp.Text(string_tree.from_string("Hello, Joe!")))
   |> testing.string_body
   |> should.equal("Hello, Joe!")
 }
@@ -523,7 +523,7 @@ pub fn bit_array_body_file_test() {
 
 pub fn bit_array_body_text_test() {
   wisp.ok()
-  |> response.set_body(wisp.Text(string_builder.from_string("Hello, Joe!")))
+  |> response.set_body(wisp.Text(string_tree.from_string("Hello, Joe!")))
   |> testing.bit_array_body
   |> should.equal(<<"Hello, Joe!":utf8>>)
 }
