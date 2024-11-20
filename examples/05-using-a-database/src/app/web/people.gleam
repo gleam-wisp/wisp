@@ -1,8 +1,8 @@
 import app/web.{type Context}
+import gleam/dict
 import gleam/dynamic.{type Dynamic}
 import gleam/http.{Get, Post}
 import gleam/json
-import gleam/dict
 import gleam/result.{try}
 import tiny_database
 import wisp.{type Request, type Response}
@@ -122,7 +122,7 @@ fn decode_person(json: Dynamic) -> Result(Person, Nil) {
   // In this example we are not going to be reporting specific errors to the
   // user, so we can discard the error and replace it with Nil.
   result
-  |> result.nil_error
+  |> result.replace_error(Nil)
 }
 
 /// Save a person to the database and return the id of the newly created record.

@@ -1,6 +1,6 @@
-import wisp
 import gleam/bool
-import gleam/string_builder
+import gleam/string_tree
+import wisp
 
 pub fn middleware(
   req: wisp.Request,
@@ -32,22 +32,22 @@ pub fn default_responses(handle_request: fn() -> wisp.Response) -> wisp.Response
   case response.status {
     404 | 405 ->
       "<h1>There's nothing here</h1>"
-      |> string_builder.from_string
+      |> string_tree.from_string
       |> wisp.html_body(response, _)
 
     400 | 422 ->
       "<h1>Bad request</h1>"
-      |> string_builder.from_string
+      |> string_tree.from_string
       |> wisp.html_body(response, _)
 
     413 ->
       "<h1>Request entity too large</h1>"
-      |> string_builder.from_string
+      |> string_tree.from_string
       |> wisp.html_body(response, _)
 
     500 ->
       "<h1>Internal server error</h1>"
-      |> string_builder.from_string
+      |> string_tree.from_string
       |> wisp.html_body(response, _)
 
     // For other status codes redirect to the home page
