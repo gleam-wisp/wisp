@@ -1,5 +1,5 @@
 import app/web
-import gleam/string_builder
+import gleam/string_tree
 import wisp.{type Request, type Response}
 
 pub fn handle_request(req: Request) -> Response {
@@ -9,7 +9,7 @@ pub fn handle_request(req: Request) -> Response {
     // This request returns a non-empty body.
     [] -> {
       "<h1>Hello, Joe!</h1>"
-      |> string_builder.from_string
+      |> string_tree.from_string
       |> wisp.html_response(200)
     }
 

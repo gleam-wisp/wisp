@@ -1,9 +1,9 @@
 import app/web
+import gleam/bytes_tree
 import gleam/http.{Get, Post}
 import gleam/list
 import gleam/result
-import gleam/string_builder
-import gleam/bytes_builder
+import gleam/string_tree
 import wisp.{type Request, type Response}
 
 pub fn handle_request(req: Request) -> Response {
@@ -35,7 +35,7 @@ const html = "
 fn show_home(req: Request) -> Response {
   use <- wisp.require_method(req, Get)
   html
-  |> string_builder.from_string
+  |> string_tree.from_string
   |> wisp.html_response(200)
 }
 
@@ -45,7 +45,7 @@ fn handle_download_file_from_memory(req: Request) -> Response {
   // In this case we have the file contents in memory as a string.
   // This is good if we have just made the file, but if the file already exists
   // on the disc then the approach in the next function is more efficient.
-  let file_contents = bytes_builder.from_string("Hello, Joe!")
+  let file_contents = bytes_tree.from_string("Hello, Joe!")
 
   wisp.ok()
   |> wisp.set_header("content-type", "text/plain")
@@ -107,7 +107,7 @@ fn handle_file_upload(req: Request) -> Response {
   case result {
     Ok(name) -> {
       { "<p>Thank you for your file!" <> name <> "</p>" <> html }
-      |> string_builder.from_string
+      |> string_tree.from_string
       |> wisp.html_response(200)
     }
     Error(_) -> {

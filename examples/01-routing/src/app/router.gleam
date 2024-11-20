@@ -1,7 +1,7 @@
-import wisp.{type Request, type Response}
-import gleam/string_builder
-import gleam/http.{Get, Post}
 import app/web
+import gleam/http.{Get, Post}
+import gleam/string_tree
+import wisp.{type Request, type Response}
 
 pub fn handle_request(req: Request) -> Response {
   use req <- web.middleware(req)
@@ -31,7 +31,7 @@ fn home_page(req: Request) -> Response {
   // used to return a 405: Method Not Allowed response for all other methods.
   use <- wisp.require_method(req, Get)
 
-  let html = string_builder.from_string("Hello, Joe!")
+  let html = string_tree.from_string("Hello, Joe!")
   wisp.ok()
   |> wisp.html_body(html)
 }
@@ -48,14 +48,14 @@ fn comments(req: Request) -> Response {
 
 fn list_comments() -> Response {
   // In a later example we'll show how to read from a database.
-  let html = string_builder.from_string("Comments!")
+  let html = string_tree.from_string("Comments!")
   wisp.ok()
   |> wisp.html_body(html)
 }
 
 fn create_comment(_req: Request) -> Response {
   // In a later example we'll show how to parse data from the request body.
-  let html = string_builder.from_string("Created")
+  let html = string_tree.from_string("Created")
   wisp.created()
   |> wisp.html_body(html)
 }
@@ -66,7 +66,7 @@ fn show_comment(req: Request, id: String) -> Response {
   // The `id` path parameter has been passed to this function, so we could use
   // it to look up a comment in a database.
   // For now we'll just include in the response body.
-  let html = string_builder.from_string("Comment with id " <> id)
+  let html = string_tree.from_string("Comment with id " <> id)
   wisp.ok()
   |> wisp.html_body(html)
 }
