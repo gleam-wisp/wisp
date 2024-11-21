@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.3.0 - 2024-11-21
+
+- Updated for `gleam_stdlib` v0.43.0.
+
 ## v1.2.0 - 2024-10-09
 
 - The requirement for `gleam_json` has been relaxed to < 3.0.0.
