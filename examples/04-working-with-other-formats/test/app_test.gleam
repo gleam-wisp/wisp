@@ -40,5 +40,5 @@ pub fn post_successful_test() {
 
   response
   |> testing.string_body
-  |> should.equal("headers,row-count\n\"name,is-cool\",2")
+  |> should.equal("headers,row-count\n\"name,is-cool\",2\n")
 }
