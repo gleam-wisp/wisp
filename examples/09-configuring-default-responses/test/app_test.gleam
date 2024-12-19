@@ -1,8 +1,8 @@
+import app/router
+import gleam/string
 import gleeunit
 import gleeunit/should
-import gleam/string
 import wisp/testing
-import app/router
 
 pub fn main() {
   gleeunit.main()
@@ -76,7 +76,10 @@ pub fn method_not_allowed_test() {
   |> should.equal(405)
 
   response.headers
-  |> should.equal([#("allow", ""), #("content-type", "text/html; charset=utf-8")])
+  |> should.equal([
+    #("allow", ""),
+    #("content-type", "text/html; charset=utf-8"),
+  ])
 
   let assert True =
     response

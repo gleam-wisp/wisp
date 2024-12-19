@@ -1,8 +1,8 @@
+import app/router
+import gleam/string
 import gleeunit
 import gleeunit/should
-import gleam/string
 import wisp/testing
-import app/router
 
 pub fn main() {
   gleeunit.main()

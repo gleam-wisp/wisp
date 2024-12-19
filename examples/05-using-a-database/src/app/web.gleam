@@ -1,5 +1,5 @@
-import wisp
 import tiny_database
+import wisp
 
 // A new Context type, which holds any additional data that the request handlers
 // need in addition to the request.

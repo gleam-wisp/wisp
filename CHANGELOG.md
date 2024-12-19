@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.4.0 - 2024-12-19
+
+- Updated for `mist` v5.0.0.
+
 ## v1.3.0 - 2024-11-21
 
 - Updated for `gleam_stdlib` v0.43.0.

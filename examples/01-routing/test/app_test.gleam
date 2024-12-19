@@ -1,7 +1,7 @@
+import app/router
 import gleeunit
 import gleeunit/should
 import wisp/testing
-import app/router
 
 pub fn main() {
   gleeunit.main()
