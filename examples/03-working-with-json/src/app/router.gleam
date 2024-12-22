@@ -1,5 +1,5 @@
 import app/web
-import gleam/dynamic.{type Dynamic}
+import gleam/dynamic/decode
 import gleam/http.{Post}
 import gleam/json
 import gleam/result
@@ -15,14 +15,10 @@ pub type Person {
 // dynamic values [1].
 //
 // [1]: https://hexdocs.pm/gleam_stdlib/gleam/dynamic.html
-fn decode_person(json: Dynamic) -> Result(Person, dynamic.DecodeErrors) {
-  let decoder =
-    dynamic.decode2(
-      Person,
-      dynamic.field("name", dynamic.string),
-      dynamic.field("is-cool", dynamic.bool),
-    )
-  decoder(json)
+fn person_decoder() -> decode.Decoder(Person) {
+  use name <- decode.field("name", decode.string)
+  use is_cool <- decode.field("is-cool", decode.bool)
+  decode.success(Person(name:, is_cool:))
 }
 
 pub fn handle_request(req: Request) -> Response {
@@ -36,8 +32,8 @@ pub fn handle_request(req: Request) -> Response {
   use json <- wisp.require_json(req)
 
   let result = {
-    // The dynamic value can be decoded into a `Person` value.
-    use person <- result.try(decode_person(json))
+    // The JSON data can be decoded into a `Person` value.
+    use person <- result.try(decode.run(json, person_decoder()))
 
     // And then a JSON response can be created from the person.
     let object =
