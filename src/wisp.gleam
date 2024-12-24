@@ -1837,9 +1837,9 @@ pub type Security {
 /// ```
 ///
 pub fn get_cookie(
-  request: Request,
-  name: String,
-  security: Security,
+  request request: Request,
+  name name: String,
+  security security: Security,
 ) -> Result(String, Nil) {
   use value <- result.try(
     request
