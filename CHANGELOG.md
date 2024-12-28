@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.5.0 - 2024-12-28
+
+- `handle_head` no longer sets the body to `Empty`. This is so the webserver can
+  get the content-length of the body that would have been set, which may be
+  useful to clients.
+
 ## v1.4.0 - 2024-12-19
 
 - Updated for `mist` v5.0.0.

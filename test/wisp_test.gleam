@@ -770,7 +770,7 @@ pub fn handle_head_test() {
   |> should.equal(Response(
     201,
     [#("content-type", "text/html; charset=utf-8")],
-    wisp.Empty,
+    wisp.Text(string_tree.from_string("Hello!")),
   ))
 
   testing.get("/", [])

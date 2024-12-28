@@ -1528,7 +1528,6 @@ pub fn handle_head(
       |> request.set_method(http.Get)
       |> request.prepend_header("x-original-method", "HEAD")
       |> handler
-      |> response.set_body(Empty)
     _ -> handler(req)
   }
 }
