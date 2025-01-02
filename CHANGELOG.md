@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.5.1 - 2025-01-02
+
+- Fixed a bug where Wisp would fail to compile.
+
 ## v1.5.0 - 2024-12-28
 
 - `handle_head` no longer sets the body to `Empty`. This is so the webserver can
