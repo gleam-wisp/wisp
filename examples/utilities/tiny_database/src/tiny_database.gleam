@@ -36,7 +36,7 @@ pub fn truncate(connection: Connection) -> Result(Nil, Nil) {
 pub fn list(connection: Connection) -> Result(List(String), Nil) {
   let assert Ok(_) = simplifile.create_directory_all(connection.root)
   simplifile.read_directory(connection.root)
-  |> result.nil_error
+  |> result.replace_error(Nil)
 }
 
 pub fn insert(
@@ -52,7 +52,7 @@ pub fn insert(
   let json = json.to_string(json.object(values))
   use _ <- result.try(
     simplifile.write(file_path(connection, id), json)
-    |> result.nil_error,
+    |> result.replace_error(Nil),
   )
   Ok(id)
 }
@@ -63,14 +63,14 @@ pub fn read(
 ) -> Result(Dict(String, String), Nil) {
   use data <- result.try(
     simplifile.read(file_path(connection, id))
-    |> result.nil_error,
+    |> result.replace_error(Nil),
   )
 
   let decoder = dynamic.dict(dynamic.string, dynamic.string)
 
   use data <- result.try(
     json.decode(data, decoder)
-    |> result.nil_error,
+    |> result.replace_error(Nil),
   )
 
   Ok(data)
