@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The function `wisp.get_cookie` gains function labels for its arguments.
+
 ## v1.5.1 - 2025-01-02
 
 - Fixed a bug where Wisp would fail to compile.
