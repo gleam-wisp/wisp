@@ -5,6 +5,7 @@ import gleam/bytes_tree.{type BytesTree}
 import gleam/crypto
 import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
+import gleam/dynamic/decode
 import gleam/erlang
 import gleam/erlang/atom.{type Atom}
 import gleam/http.{type Method}
@@ -1367,7 +1368,7 @@ pub fn rescue_crashes(handler: fn() -> Response) -> Response {
         exception.Thrown(detail) -> #(Thrown, detail)
         exception.Exited(detail) -> #(Exited, detail)
       }
-      case dynamic.dict(atom.from_dynamic, Ok)(detail) {
+      case decode.run(detail, atom_dict_decoder()) {
         Ok(details) -> {
           let c = atom.create_from_string("class")
           log_error_dict(dict.insert(details, c, dynamic.from(kind)))
@@ -1378,6 +1379,18 @@ pub fn rescue_crashes(handler: fn() -> Response) -> Response {
       internal_server_error()
     }
   }
+}
+
+fn atom_dict_decoder() -> decode.Decoder(Dict(Atom, Dynamic)) {
+  let atom =
+    decode.new_primitive_decoder("Atom", fn(data) {
+      case atom.from_dynamic(data) {
+        Ok(atom) -> Ok(atom)
+        Error(_) -> Error(atom.create_from_string("nil"))
+      }
+    })
+  let dynamic = decode.new_primitive_decoder("Dynamic", Ok)
+  decode.dict(atom, dynamic)
 }
 
 type DoNotLeak

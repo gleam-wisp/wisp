@@ -1,5 +1,5 @@
 name = "wisp"
-version = "1.5.1"
+version = "1.5.2"
 gleam = ">= 1.4.0"
 description = "A practical web framework for Gleam"
 licences = ["Apache-2.0"]
@@ -10,7 +10,7 @@ links = [{ title = "Sponsor", href = "https://github.com/sponsors/lpil" }]
 [dependencies]
 exception = ">= 2.0.0 and < 3.0.0"
 gleam_crypto = ">= 1.0.0 and < 2.0.0"
-gleam_erlang = ">= 0.21.0 and < 2.0.0"
+gleam_erlang = ">= 0.34.0 and < 2.0.0"
 gleam_http = ">= 3.5.0 and < 4.0.0"
 gleam_json = ">= 0.6.0 and < 3.0.0"
 gleam_stdlib = ">= 0.43.0 and < 2.0.0"

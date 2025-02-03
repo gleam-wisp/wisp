@@ -1,7 +1,8 @@
 # Changelog
 
-## Unreleased
+## v1.5.2 - 2025-02-03
 
+- Updated for `gleam_erlang` v0.34.0.
 - The function `wisp.get_cookie` gains function labels for its arguments.
 
 ## v1.5.1 - 2025-01-02
