@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.5.3 - 2025-02-06
+
+- Relaxed the `gleam_http` requirement to permit v4.
+
 ## v1.5.2 - 2025-02-03
 
 - Updated for `gleam_erlang` v0.34.0.
