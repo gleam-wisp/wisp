@@ -1,7 +1,10 @@
 import directories
 import gleam/bit_array
 import gleam/crypto
+import gleam/int
+import gleam/result
 import gleam/string
+import simplifile
 
 // HELPERS
 
@@ -87,4 +90,16 @@ pub fn random_string(length: Int) -> String {
 
 pub fn random_slug() -> String {
   random_string(16)
+}
+
+/// Generates etag using file size + file mtime as seconds
+///
+/// Exmaple etag value: `2C-67A4D2F1`
+pub fn generate_etag(path: String) -> Result(String, simplifile.FileError) {
+  use file_info <- result.try(simplifile.file_info(path))
+  Ok(
+    int.to_base16(file_info.size)
+    <> "-"
+    <> int.to_base16(file_info.mtime_seconds),
+  )
 }
