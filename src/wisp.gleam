@@ -18,7 +18,6 @@ import gleam/int
 import gleam/json
 import gleam/list
 import gleam/option.{type Option}
-import gleam/order
 import gleam/result
 import gleam/string
 import gleam/string_tree.{type StringTree}
@@ -1637,21 +1636,14 @@ fn set_headers(headers: List(#(String, String)), resp: Response) -> Response {
 
 /// Calculates etag for requested file and then checks for the request header `if-none-match`.
 ///
-/// If the header isn't present, it returns the file with a generated etag. If the header is present,
-/// it compares the old etag with the new one and returns the file with the new etag if they don't match.
-///
-/// Otherwise it returns status 304 without the file, allowing the browser to use the cached version.
+/// If the header isn't present or the value doesn't match the newly generated etag, it returns the file with the newly generated etag.
+/// Otherwise if the etag matches, it returns status 304 without the file, allowing the browser to use the cached version.
 ///
 fn handle_etag(req: Request, resp: Response, path: String) -> Response {
   case internal.generate_etag(path) {
     Ok(etag) -> {
       case request.get_header(req, "if-none-match") {
-        Ok(old_etag) -> {
-          case string.compare(old_etag, etag) {
-            order.Eq -> response(304)
-            _ -> response.set_header(resp, "etag", etag)
-          }
-        }
+        Ok(old_etag) if old_etag == etag -> response(304)
         _ -> response.set_header(resp, "etag", etag)
       }
     }
