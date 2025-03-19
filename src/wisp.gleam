@@ -1519,15 +1519,6 @@ pub fn serve_static(
   }
 }
 
-/// Recursively adds headers to a response
-fn set_headers(headers: List(#(String, String)), resp: Response) -> Response {
-  case headers {
-    [] -> resp
-    [#(key, value), ..rest] ->
-      set_headers(rest, response.set_header(resp, key, value))
-  }
-}
-
 /// Calculates etag for requested file and then checks for the request header `if-none-match`.
 ///
 /// If the header isn't present or the value doesn't match the newly generated etag, it returns the file with the newly generated etag.
