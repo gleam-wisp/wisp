@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Updated `serve_static` to generate etags for static assets.
+
 ## v1.5.3 - 2025-02-06
 
 - Relaxed the `gleam_http` requirement to permit v4.
