@@ -1433,33 +1433,6 @@ pub fn log_request(req: Request, handler: fn() -> Response) -> Response {
   response
 }
 
-/// Options for `serve_static_with`.
-///
-/// - `etags` is a boolean that enables the use of entity tags. Enabling this will generate etags for all files served
-/// from the location passed to `serve_static_with`.
-/// - `response_headers` is a `ResponseHeaderOptions` type. This allows for defining a list of response headers, in a tuple format. eg. "cache-control": "max-age=31536000".
-/// As well as optionally filtering by file type. Giving you control over which file types get the supplied headers added to them.
-///
-/// See `ResponseHeaderOptions` type for more details.
-///
-pub type ServeStaticOptions {
-  ServeStaticOptions(etags: Bool, response_headers: ResponseHeaderOptions)
-}
-
-/// Options for adding response headers to a statically served file
-///
-/// - Variant `ResponseHeaders` takes a list of response headers, in tuple format. eg. "cache-control": "max-age=31536000".
-/// Headers defined will be added to all statically served files. An empty list will result in identical behaviour to `serve_static`.
-///
-/// - Variant `ResponseHeadersFor` allows for filtering by file type. It takes a list of response headers and a list of file types.
-/// eg. ["js", "css"]. Response headers will only be added to files with the same file type.
-/// Unlisted file types will still be served but they won't have the headers defined in `headers` applied to them.
-///
-pub type ResponseHeaderOptions {
-  ResponseHeaders(List(#(String, String)))
-  ResponseHeadersFor(headers: List(#(String, String)), file_types: List(String))
-}
-
 /// A middleware function that serves files from a directory, along with a
 /// suitable `content-type` header for known file extensions.
 ///
@@ -1507,69 +1480,6 @@ pub fn serve_static(
   from directory: String,
   next handler: fn() -> Response,
 ) -> Response {
-  // Call serve_static_with with empty options
-  serve_static_with(
-    req,
-    under: prefix,
-    from: directory,
-    options: ServeStaticOptions(
-      etags: False,
-      response_headers: ResponseHeaders([]),
-    ),
-    next: handler,
-  )
-}
-
-/// Functions the same as `serve_static` but takes options for enabling etags and setting response headers for specific file types.
-/// This allows for configuring headers such as Cache-Control etc.
-///
-/// # Examples
-/// Serve files from static folder and apply cache-control header to `.js` and `.css` files.
-/// All other file will be served but they won't have the defined response headers added to them.
-/// ```gleam
-/// fn handle_request(req: Request) -> Response {
-///   let assert Ok(priv) = priv_directory("my_application")
-///   use <- wisp.serve_static_with(
-///     req,
-///     under: "/static",
-///     from: priv,
-///     options: wisp.ServeStaticOptions(
-///       etags: False,
-///       response_headers: wisp.ResponseHeadersFor(
-///         headers: [#("cache-control", "max-age=31536000, immutable, private")],
-///         file_types: ["js", "css"],
-///       ),
-///     ),
-///   )
-///   // ...
-/// }
-/// ```
-///
-/// Serve files from static folder using etags. If files have not been edited, `serve_static_with`
-/// will return a status 304 allowing the browser to use the cached version of the file.
-/// ```gleam
-/// fn handle_request(req: Request) -> Response {
-///   let assert Ok(priv) = priv_directory("my_application")
-///   use <- wisp.serve_static_with(
-///     req,
-///     under: "/static",
-///     from: priv,
-///     options: wisp.ServeStaticOptions(
-///       etags: True,
-///       response_headers: wisp.ResponseHeaders([]),
-///     ),
-///   )
-///   // ...
-/// }
-/// ```
-///
-pub fn serve_static_with(
-  req: Request,
-  under prefix: String,
-  from directory: String,
-  options options: ServeStaticOptions,
-  next handler: fn() -> Response,
-) -> Response {
   let path = internal.remove_preceeding_slashes(req.path)
   let prefix = internal.remove_preceeding_slashes(prefix)
   case req.method, string.starts_with(path, prefix) {
@@ -1599,24 +1509,8 @@ pub fn serve_static_with(
             |> response.set_header("content-type", content_type)
             |> response.set_body(File(path))
 
-          // Handle Response headers
-          let resp = case options.response_headers {
-            // Add defined headers to response
-            ResponseHeaders(headers) -> set_headers(headers, resp)
-            // check if file type matches, then add headers accordingly
-            // if file type doesn't match, pass through response unedited
-            ResponseHeadersFor(headers, file_types) ->
-              case list.contains(file_types, file_type) {
-                True -> set_headers(headers, resp)
-                False -> resp
-              }
-          }
-
           // Handle etag generation
-          case options.etags {
-            True -> handle_etag(req, resp, path)
-            False -> resp
-          }
+          handle_etag(req, resp, path)
         }
         _ -> handler()
       }
