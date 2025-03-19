@@ -363,7 +363,8 @@ pub fn serve_static_test() {
   let response =
     testing.get("/stuff/test/fixture.txt", [])
     |> handler
-  let assert Ok(etag) = internal.generate_etag("test/fixture.txt")
+  let assert Ok(file_info) = simplifile.file_info("test/fixture.txt")
+  let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
 
   response.status
   |> should.equal(200)
@@ -379,7 +380,8 @@ pub fn serve_static_test() {
   let response =
     testing.get("/stuff/test/fixture.json", [])
     |> handler
-  let assert Ok(etag) = internal.generate_etag("test/fixture.json")
+  let assert Ok(file_info) = simplifile.file_info("test/fixture.json")
+  let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
 
   response.status
   |> should.equal(200)
@@ -395,7 +397,8 @@ pub fn serve_static_test() {
   let response =
     testing.get("/stuff/test/fixture.dat", [])
     |> handler
-  let assert Ok(etag) = internal.generate_etag("test/fixture.dat")
+  let assert Ok(file_info) = simplifile.file_info("test/fixture.dat")
+  let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
 
   response.status
   |> should.equal(200)
@@ -427,7 +430,8 @@ pub fn serve_static_under_has_no_trailing_slash_test() {
     use <- wisp.serve_static(request, under: "stuff", from: "./")
     wisp.ok()
   }
-  let assert Ok(etag) = internal.generate_etag("test/fixture.txt")
+  let assert Ok(file_info) = simplifile.file_info("test/fixture.txt")
+  let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
 
   response.status
   |> should.equal(200)
@@ -448,7 +452,8 @@ pub fn serve_static_from_has_no_trailing_slash_test() {
     use <- wisp.serve_static(request, under: "stuff", from: ".")
     wisp.ok()
   }
-  let assert Ok(etag) = internal.generate_etag("test/fixture.txt")
+  let assert Ok(file_info) = simplifile.file_info("test/fixture.txt")
+  let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
 
   response.status
   |> should.equal(200)
@@ -493,7 +498,8 @@ pub fn serve_static_etags_returns_304_test() {
   let response =
     testing.get("/stuff/test/fixture.txt", [])
     |> handler
-  let assert Ok(etag) = internal.generate_etag("test/fixture.txt")
+  let assert Ok(file_info) = simplifile.file_info("test/fixture.txt")
+  let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
 
   should.equal(response.status, 200)
   should.equal(response.headers, [

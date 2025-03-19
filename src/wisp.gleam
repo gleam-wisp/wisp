@@ -1502,15 +1502,12 @@ pub fn serve_static(
         _ -> mime_type
       }
 
-      case simplifile.is_file(path) {
-        Ok(True) -> {
-          let resp =
-            response.new(200)
-            |> response.set_header("content-type", content_type)
-            |> response.set_body(File(path))
-
-          // Handle etag generation
-          handle_etag(req, resp, path)
+      case simplifile.file_info(path) {
+        Ok(file_info) -> {
+          response.new(200)
+          |> response.set_header("content-type", content_type)
+          |> response.set_body(File(path))
+          |> handle_etag(req, file_info)
         }
         _ -> handler()
       }
@@ -1524,15 +1521,16 @@ pub fn serve_static(
 /// If the header isn't present or the value doesn't match the newly generated etag, it returns the file with the newly generated etag.
 /// Otherwise if the etag matches, it returns status 304 without the file, allowing the browser to use the cached version.
 ///
-fn handle_etag(req: Request, resp: Response, path: String) -> Response {
-  case internal.generate_etag(path) {
-    Ok(etag) -> {
-      case request.get_header(req, "if-none-match") {
-        Ok(old_etag) if old_etag == etag -> response(304)
-        _ -> response.set_header(resp, "etag", etag)
-      }
-    }
-    _ -> resp
+fn handle_etag(
+  resp: Response,
+  req: Request,
+  file_info: simplifile.FileInfo,
+) -> Response {
+  let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
+
+  case request.get_header(req, "if-none-match") {
+    Ok(old_etag) if old_etag == etag -> response(304)
+    _ -> response.set_header(resp, "etag", etag)
   }
 }
 
