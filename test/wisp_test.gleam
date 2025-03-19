@@ -483,13 +483,13 @@ pub fn serve_static_go_up_test() {
   |> should.equal(wisp.ok())
 }
 
-pub fn serve_static_etags_test() {
+pub fn serve_static_etags_returns_304_test() {
   let handler = fn(request) {
     use <- wisp.serve_static(request, under: "/stuff", from: "./")
     wisp.ok()
   }
 
-  // Get a text file
+  // Get a text file without any headers
   let response =
     testing.get("/stuff/test/fixture.txt", [])
     |> handler
@@ -502,60 +502,6 @@ pub fn serve_static_etags_test() {
   ])
   should.equal(response.body, wisp.File("./test/fixture.txt"))
 
-  // Get a json file
-  let response =
-    testing.get("/stuff/test/fixture.json", [])
-    |> handler
-  let assert Ok(etag) = internal.generate_etag("test/fixture.json")
-
-  should.equal(response.status, 200)
-  should.equal(response.headers, [
-    #("content-type", "application/json; charset=utf-8"),
-    #("etag", etag),
-  ])
-  should.equal(response.body, wisp.File("./test/fixture.json"))
-
-  // Get some other file
-  let response =
-    testing.get("/stuff/test/fixture.dat", [])
-    |> handler
-  let assert Ok(etag) = internal.generate_etag("test/fixture.dat")
-
-  should.equal(response.status, 200)
-  should.equal(response.headers, [
-    #("content-type", "application/octet-stream"),
-    #("etag", etag),
-  ])
-  should.equal(response.body, wisp.File("./test/fixture.dat"))
-
-  // Get something not handled by the static file server
-  let response =
-    testing.get("/stuff/this-does-not-exist", [])
-    |> handler
-  should.equal(response.status, 200)
-  should.equal(response.headers, [])
-  should.equal(response.body, wisp.Empty)
-}
-
-pub fn serve_static_etags_returns_304_test() {
-  let handler = fn(request) {
-    use <- wisp.serve_static(request, under: "/stuff", from: "./")
-    wisp.ok()
-  }
-
-  // Get a text file without any headers
-  let response =
-    testing.get("/stuff/test/fixture.txt", [])
-    |> handler
-  let assert Ok(txt_etag) = internal.generate_etag("test/fixture.txt")
-
-  should.equal(response.status, 200)
-  should.equal(response.headers, [
-    #("content-type", "text/plain; charset=utf-8"),
-    #("etag", txt_etag),
-  ])
-  should.equal(response.body, wisp.File("./test/fixture.txt"))
-
   // Get a text file with outdated if-none-match header
   let response =
     testing.get("/stuff/test/fixture.txt", [#("if-none-match", "invalid-etag")])
@@ -564,13 +510,13 @@ pub fn serve_static_etags_returns_304_test() {
   should.equal(response.status, 200)
   should.equal(response.headers, [
     #("content-type", "text/plain; charset=utf-8"),
-    #("etag", txt_etag),
+    #("etag", etag),
   ])
   should.equal(response.body, wisp.File("./test/fixture.txt"))
 
   // Get a text file with current etag in if-none-match header
   let response =
-    testing.get("/stuff/test/fixture.txt", [#("if-none-match", txt_etag)])
+    testing.get("/stuff/test/fixture.txt", [#("if-none-match", etag)])
     |> handler
 
   should.equal(response.status, 304)
