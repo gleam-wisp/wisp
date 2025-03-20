@@ -1503,12 +1503,16 @@ pub fn serve_static(
       }
 
       case simplifile.file_info(path) {
-        Ok(file_info) -> {
-          response.new(200)
-          |> response.set_header("content-type", content_type)
-          |> response.set_body(File(path))
-          |> handle_etag(req, file_info)
-        }
+        Ok(file_info) ->
+          case simplifile.file_info_type(file_info) {
+            simplifile.File -> {
+              response.new(200)
+              |> response.set_header("content-type", content_type)
+              |> response.set_body(File(path))
+              |> handle_etag(req, file_info)
+            }
+            _ -> handler()
+          }
         _ -> handler()
       }
     }

@@ -420,6 +420,17 @@ pub fn serve_static_test() {
   |> should.equal([])
   response.body
   |> should.equal(wisp.Empty)
+
+  // Get a directory
+  let response =
+    testing.get("/stuff/", [])
+    |> handler
+  response.status
+  |> should.equal(200)
+  response.headers
+  |> should.equal([])
+  response.body
+  |> should.equal(wisp.Empty)
 }
 
 pub fn serve_static_under_has_no_trailing_slash_test() {
