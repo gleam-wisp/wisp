@@ -9,6 +9,7 @@ import gleam/http/request
 import gleam/http/response.{Response}
 import gleam/int
 import gleam/list
+import gleam/result
 import gleam/set
 import gleam/string
 import gleam/string_tree
@@ -420,10 +421,22 @@ pub fn serve_static_test() {
   |> should.equal([])
   response.body
   |> should.equal(wisp.Empty)
+}
+
+pub fn serve_static_directory_request_test() {
+  let handler = fn(request) {
+    use <- wisp.serve_static(request, under: "/stuff", from: "./")
+    wisp.ok()
+  }
+
+  // confirm test directory is a directory
+  simplifile.is_directory("./test")
+  |> result.unwrap(False)
+  |> should.be_true
 
   // Get a directory
   let response =
-    testing.get("/stuff/", [])
+    testing.get("/stuff/test", [])
     |> handler
   response.status
   |> should.equal(200)
