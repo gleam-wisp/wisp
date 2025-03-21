@@ -16,9 +16,6 @@ jobs:
           otp-version: "27.0"
           gleam-version: "1.6.2"
           rebar3-version: "3"
-          # elixir-version: "1.14.2"
-      - run: gleam format --check src test
-      - run: gleam deps download
       - run: gleam test
 
       - name: "Example: 00-hello-world"
@@ -64,3 +61,5 @@ jobs:
       - name: "Example: 10-working-with-files"
         run: gleam test
         working-directory: examples/10-working-with-files
+
+      - run: gleam format --check src test
