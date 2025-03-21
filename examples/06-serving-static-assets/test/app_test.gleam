@@ -1,6 +1,7 @@
 import app
 import app/router
 import app/web.{type Context, Context}
+import gleam/list
 import gleeunit
 import gleeunit/should
 import wisp/testing
@@ -38,7 +39,8 @@ pub fn get_stylesheet_test() {
   |> should.equal(200)
 
   response.headers
-  |> should.equal([#("content-type", "text/css; charset=utf-8")])
+  |> list.key_find("content-type")
+  |> should.equal(Ok("text/css; charset=utf-8"))
 }
 
 pub fn get_javascript_test() {
@@ -50,5 +52,6 @@ pub fn get_javascript_test() {
   |> should.equal(200)
 
   response.headers
-  |> should.equal([#("content-type", "text/javascript; charset=utf-8")])
+  |> list.key_find("content-type")
+  |> should.equal(Ok("text/javascript; charset=utf-8"))
 }
