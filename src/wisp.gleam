@@ -22,6 +22,7 @@ import gleam/result
 import gleam/string
 import gleam/string_tree.{type StringTree}
 import gleam/uri
+import houdini
 import logging
 import marceau
 import simplifile
@@ -308,130 +309,7 @@ pub fn string_body(response: Response, content: String) -> Response {
 /// ```
 ///
 pub fn escape_html(content: String) -> String {
-  let bits = <<content:utf8>>
-  let acc = do_escape_html(bits, 0, bits, [])
-
-  list.reverse(acc)
-  |> bit_array.concat
-  // We know the bit array produced by `do_escape_html` is still a valid utf8
-  // string so we coerce it without passing through the validation steps of
-  // `bit_array.to_string`.
-  |> coerce_bit_array_to_string
-}
-
-@external(erlang, "wisp_ffi", "coerce")
-fn coerce_bit_array_to_string(bit_array: BitArray) -> String
-
-// A possible way to escape chars would be to split the string into graphemes,
-// traverse those one by one and accumulate them back into a string escaping
-// ">", "<", etc. as we see them.
-//
-// However, we can be a lot more performant by working directly on the
-// `BitArray` representing a Gleam UTF-8 String.
-// This means that, instead of popping a grapheme at a time, we can work
-// directly on BitArray slices: this has the big advantage of making sure we
-// share as much as possible with the original string without having to build
-// a new one from scratch.
-//
-fn do_escape_html(
-  bin: BitArray,
-  skip: Int,
-  original: BitArray,
-  acc: List(BitArray),
-) -> List(BitArray) {
-  case bin {
-    // If we find a char to escape we just advance the `skip` counter so that
-    // it will be ignored in the following slice, then we append the escaped
-    // version to the accumulator.
-    <<"<":utf8, rest:bits>> -> {
-      let acc = [<<"&lt;":utf8>>, ..acc]
-      do_escape_html(rest, skip + 1, original, acc)
-    }
-
-    <<">":utf8, rest:bits>> -> {
-      let acc = [<<"&gt;":utf8>>, ..acc]
-      do_escape_html(rest, skip + 1, original, acc)
-    }
-
-    <<"&":utf8, rest:bits>> -> {
-      let acc = [<<"&amp;":utf8>>, ..acc]
-      do_escape_html(rest, skip + 1, original, acc)
-    }
-
-    // For any other bit that doesn't need to be escaped we go into an inner
-    // loop, consuming as much "non-escapable" chars as possible.
-    <<_char, rest:bits>> -> do_escape_html_regular(rest, skip, original, acc, 1)
-
-    <<>> -> acc
-
-    _ -> panic as "non byte aligned string, all strings should be byte aligned"
-  }
-}
-
-fn do_escape_html_regular(
-  bin: BitArray,
-  skip: Int,
-  original: BitArray,
-  acc: List(BitArray),
-  len: Int,
-) -> List(BitArray) {
-  // Remember, if we're here it means we've found a char that doesn't need to be
-  // escaped, so what we want to do is advance the `len` counter until we reach
-  // a char that _does_ need to be escaped and take the slice going from
-  // `skip` with size `len`.
-  //
-  // Imagine we're escaping this string: "abc<def&ghi" and we've reached 'd':
-  // ```
-  //    abc<def&ghi
-  //       ^ `skip` points here
-  // ```
-  // We're going to be increasing `len` until we reach the '&':
-  // ```
-  //    abc<def&ghi
-  //        ^^^ len will be 3 when we reach the '&' that needs escaping
-  // ```
-  // So we take the slice corresponding to "def".
-  //
-  case bin {
-    // If we reach a char that has to be escaped we append the slice starting
-    // from `skip` with size `len` and the escaped char.
-    // This is what allows us to share as much of the original string as
-    // possible: we only allocate a new BitArray for the escaped chars,
-    // everything else is just a slice of the original String.
-    <<"<":utf8, rest:bits>> -> {
-      let assert Ok(slice) = bit_array.slice(original, skip, len)
-      let acc = [<<"&lt;":utf8>>, slice, ..acc]
-      do_escape_html(rest, skip + len + 1, original, acc)
-    }
-
-    <<">":utf8, rest:bits>> -> {
-      let assert Ok(slice) = bit_array.slice(original, skip, len)
-      let acc = [<<"&gt;":utf8>>, slice, ..acc]
-      do_escape_html(rest, skip + len + 1, original, acc)
-    }
-
-    <<"&":utf8, rest:bits>> -> {
-      let assert Ok(slice) = bit_array.slice(original, skip, len)
-      let acc = [<<"&amp;":utf8>>, slice, ..acc]
-      do_escape_html(rest, skip + len + 1, original, acc)
-    }
-
-    // If a char doesn't need escaping we keep increasing the length of the
-    // slice we're going to take.
-    <<_char, rest:bits>> ->
-      do_escape_html_regular(rest, skip, original, acc, len + 1)
-
-    <<>> ->
-      case skip {
-        0 -> [original]
-        _ -> {
-          let assert Ok(slice) = bit_array.slice(original, skip, len)
-          [slice, ..acc]
-        }
-      }
-
-    _ -> panic as "non byte aligned string, all strings should be byte aligned"
-  }
+  houdini.escape(content)
 }
 
 /// Create an empty response with status code 405: Method Not Allowed. Use this
