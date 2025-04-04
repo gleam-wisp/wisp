@@ -1414,7 +1414,9 @@ fn handle_etag(
   let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
 
   case request.get_header(req, "if-none-match") {
-    Ok(old_etag) if old_etag == etag -> response(304)
+    Ok(old_etag) if old_etag == etag ->
+      response(304)
+      |> set_header("etag", etag)
     _ -> response.set_header(resp, "etag", etag)
   }
 }
