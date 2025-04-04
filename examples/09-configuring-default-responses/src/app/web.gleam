@@ -50,7 +50,7 @@ pub fn default_responses(handle_request: fn() -> wisp.Response) -> wisp.Response
       |> string_tree.from_string
       |> wisp.html_body(response, _)
 
-    // For other status codes redirect to the home page
-    _ -> wisp.redirect("/")
+    // For other status codes return the original response
+    _ -> response
   }
 }
