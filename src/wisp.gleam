@@ -175,14 +175,14 @@ pub fn file_download_from_memory(
 /// Create a HTML response.
 ///
 /// The body is expected to be valid HTML, though this is not validated.
-/// The `content-type` header will be set to `text/html`.
+/// The `content-type` header will be set to `text/html; charset=utf-8`.
 ///
 /// # Examples
 ///
 /// ```gleam
 /// let body = string_tree.from_string("<h1>Hello, Joe!</h1>")
 /// html_response(body, 200)
-/// // -> Response(200, [#("content-type", "text/html")], Text(body))
+/// // -> Response(200, [#("content-type", "text/html; charset=utf-8")], Text(body))
 /// ```
 ///
 pub fn html_response(html: StringTree, status: Int) -> Response {
