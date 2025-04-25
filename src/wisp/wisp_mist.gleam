@@ -84,14 +84,19 @@ fn mist_response(response: wisp.Response) -> HttpResponse(mist.ResponseData) {
     wisp.Empty -> mist.Bytes(bytes_tree.new())
     wisp.Text(text) -> mist.Bytes(bytes_tree.from_string_tree(text))
     wisp.Bytes(bytes) -> mist.Bytes(bytes)
-    wisp.File(path) -> mist_send_file(path)
+    wisp.File(path) -> mist_send_file(path, 0, option.None)
+    wisp.FileChunk(path, offset, limit) -> mist_send_file(path, offset, limit)
   }
   response
   |> response.set_body(body)
 }
 
-fn mist_send_file(path: String) -> mist.ResponseData {
-  case mist.send_file(path, offset: 0, limit: option.None) {
+fn mist_send_file(
+  path: String,
+  offset: Int,
+  limit: option.Option(Int),
+) -> mist.ResponseData {
+  case mist.send_file(path, offset:, limit:) {
     Ok(body) -> body
     Error(error) -> {
       wisp.log_error(string.inspect(error))
