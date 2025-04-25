@@ -9,7 +9,7 @@ import gleam/string
 import gleam/string_tree
 import gleam/uri
 import simplifile
-import wisp.{type Request, type Response, Bytes, Empty, File, Text}
+import wisp.{type Request, type Response, Bytes, Empty, File, FileChunk, Text}
 
 /// The default secret key base used for test requests.
 /// This should never be used outside of tests.
@@ -237,6 +237,11 @@ pub fn string_body(response: Response) -> String {
       let assert Ok(contents) = simplifile.read(path)
       contents
     }
+    FileChunk(path, offset, limit) -> {
+      let assert Ok(contents) = simplifile.read(path)
+      let length = limit |> option.unwrap(string.length(contents))
+      contents |> string.slice(offset, length)
+    }
   }
 }
 
@@ -255,6 +260,12 @@ pub fn bit_array_body(response: Response) -> BitArray {
     File(path) -> {
       let assert Ok(contents) = simplifile.read_bits(path)
       contents
+    }
+    FileChunk(path, offset, limit) -> {
+      let assert Ok(contents) = simplifile.read_bits(path)
+      let length = limit |> option.unwrap(bit_array.byte_size(contents))
+      let assert Ok(sliced) = contents |> bit_array.slice(offset, length)
+      sliced
     }
   }
 }
