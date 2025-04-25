@@ -54,6 +54,13 @@ pub type Body {
   /// safe to send large files this way.
   ///
   File(path: String)
+  /// A body of a chunk of the contents of a file.
+  ///
+  /// This will be sent efficiently using the `send_file` function of the
+  /// underlying HTTP server. The file will not be read into memory so it is
+  /// safe to send large files this way.
+  ///
+  FileChunk(path: String, offset: Int, limit: Option(Int))
   /// An empty body. This may be returned by the `require_*` middleware
   /// functions in the event of a failure, invalid request, or other situation
   /// in which the request cannot be processed.
@@ -1393,6 +1400,7 @@ pub fn serve_static(
               |> response.set_header("content-type", content_type)
               |> response.set_body(File(path))
               |> handle_etag(req, file_info)
+              |> handle_range_header(req, file_info, path)
             }
             _ -> handler()
           }
@@ -1401,6 +1409,110 @@ pub fn serve_static(
     }
     _, _ -> handler()
   }
+}
+
+type ValidRangeHeader {
+  ValidRangeHeader(offset: Int, limit: Option(Int))
+}
+
+fn parse_range_header(
+  range_header: String,
+  file_size: Int,
+) -> Result(ValidRangeHeader, Response) {
+  use #(offset, limit) <- result.try(
+    case range_header {
+      "bytes=" <> range -> {
+        use #(start_str, end_str) <- result.try(range |> string.split_once("-"))
+
+        case start_str, end_str {
+          // "range: bytes=-[tail]"
+          "", _ ->
+            int.parse(end_str)
+            |> result.map(fn(tail_offset) {
+              #(file_size - tail_offset, option.None)
+            })
+
+          // "range: bytes=[start]-"
+          _, "" ->
+            int.parse(start_str)
+            |> result.map(fn(offset) { #(offset, option.None) })
+
+          // "range: bytes=[start]-[end]"
+          _, _ -> {
+            use start <- result.try(int.parse(start_str))
+            use end <- result.try(int.parse(end_str))
+
+            Ok(#(start, option.Some(end - start + 1)))
+          }
+        }
+      }
+      _ -> Error(Nil)
+    }
+    |> result.replace_error(bad_request()),
+  )
+
+  let end_is_invalid =
+    limit
+    |> option.map(fn(end) { end < 0 || end >= file_size })
+    |> option.unwrap(False)
+
+  use <- bool.guard(
+    offset < 0 || offset >= file_size || end_is_invalid,
+    Error(
+      response(416)
+      |> response.prepend_header("range", "bytes=*"),
+    ),
+  )
+
+  Ok(ValidRangeHeader(offset:, limit:))
+}
+
+/// Checks for the `range` header and handles partial file reads.
+/// If the range header is present, it will set the `accept-ranges`, `content-range`, and `content-length` headers.
+///
+/// If the header isn't present, it returns the file without adding any additional headers.
+fn handle_range_header(
+  resp: Response,
+  req: Request,
+  file_info: simplifile.FileInfo,
+  path: String,
+) -> Response {
+  {
+    use range <- result.try(
+      request.get_header(req, "range") |> result.replace_error(resp),
+    )
+
+    use ValidRangeHeader(offset:, limit:) <- result.try(parse_range_header(
+      range,
+      file_info.size,
+    ))
+
+    let content_range = {
+      let end = case limit {
+        option.Some(l) -> { offset + l - 1 } |> int.to_string
+        option.None -> { file_info.size - 1 } |> int.max(0) |> int.to_string
+      }
+
+      "bytes "
+      <> int.to_string(offset)
+      <> "-"
+      <> end
+      <> "/"
+      <> int.to_string(file_info.size)
+    }
+
+    let content_length = case limit {
+      option.Some(l) -> int.to_string(l)
+      option.None -> int.to_string(file_info.size - offset)
+    }
+
+    response.Response(206, resp.headers, FileChunk(path, offset, limit))
+    |> response.set_header("content-length", content_length)
+    |> response.prepend_header("accept-ranges", "bytes")
+    |> response.prepend_header("content-range", content_range)
+    |> Ok
+  }
+  |> result.unwrap_both
 }
 
 /// Calculates etag for requested file and then checks for the request header `if-none-match`.
