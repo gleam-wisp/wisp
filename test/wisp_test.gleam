@@ -7,6 +7,7 @@ import gleam/http/request
 import gleam/http/response.{Response}
 import gleam/int
 import gleam/list
+import gleam/option
 import gleam/result
 import gleam/set
 import gleam/string
@@ -550,6 +551,83 @@ pub fn serve_static_etags_returns_304_test() {
   should.equal(response.status, 304)
   should.equal(response.headers, [#("etag", etag)])
   should.equal(response.body, wisp.Empty)
+}
+
+pub fn serve_static_range_request_test() {
+  let handler = fn(request) {
+    use <- wisp.serve_static(request, under: "/stuff", from: "./test")
+    wisp.ok()
+  }
+
+  let validate_content_range = fn(
+    response: response.Response(wisp.Body),
+    start: Int,
+    end: Int,
+    file_info: simplifile.FileInfo,
+  ) -> Nil {
+    let file_size = file_info.size
+    response.status
+    |> should.equal(206)
+
+    let headers =
+      response.headers
+      |> dict.from_list
+
+    headers
+    |> dict.get("accept-ranges")
+    |> should.equal(Ok("bytes"))
+
+    headers
+    |> dict.get("content-range")
+    |> should.equal(Ok(
+      "bytes "
+      <> int.to_string(start)
+      <> "-"
+      <> int.to_string(end)
+      <> "/"
+      <> int.to_string(file_size),
+    ))
+
+    let assert wisp.FileChunk(path, offset, limit) = response.body
+
+    path
+    |> should.equal("./test/fixture.txt")
+    offset |> should.equal(start)
+
+    case limit {
+      option.None -> {
+        end |> should.equal(file_size - 1)
+
+        headers
+        |> dict.get("content-length")
+        |> should.equal(Ok(int.to_string(file_size - start)))
+      }
+      option.Some(l) -> {
+        l |> should.equal(end - start + 1)
+
+        headers
+        |> dict.get("content-length")
+        |> should.equal(Ok(int.to_string(l)))
+      }
+    }
+  }
+
+  let assert Ok(file_info) = simplifile.file_info("test/fixture.txt")
+
+  testing.get("/stuff/fixture.txt", [])
+  |> testing.set_header("range", "bytes=0-")
+  |> handler
+  |> validate_content_range(0, file_info.size - 1, file_info)
+
+  testing.get("/stuff/fixture.txt", [])
+  |> testing.set_header("range", "bytes=2-10")
+  |> handler
+  |> validate_content_range(2, 10, file_info)
+
+  testing.get("/stuff/fixture.txt", [])
+  |> testing.set_header("range", "bytes=-4")
+  |> handler
+  |> validate_content_range(file_info.size - 4, file_info.size - 1, file_info)
 }
 
 pub fn temporary_file_test() {
