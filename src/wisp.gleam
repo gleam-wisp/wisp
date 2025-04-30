@@ -54,7 +54,7 @@ pub type Body {
   /// safe to send large files this way.
   ///
   File(path: String)
-  /// A body of a chunk of the contents of a file.
+  /// A body with a chunk of the contents of a file.
   ///
   /// This will be sent efficiently using the `send_file` function of the
   /// underlying HTTP server. The file will not be read into memory so it is
@@ -1415,6 +1415,8 @@ type ValidRangeHeader {
   ValidRangeHeader(offset: Int, limit: Option(Int))
 }
 
+/// Parses request range headers and validates that the range is in bounds of the file.
+/// If the range is out of bounds, it will return an error with a `416 Range Not Satisfiable` response.
 fn parse_range_header(
   range_header: String,
   file_size: Int,
@@ -1468,9 +1470,10 @@ fn parse_range_header(
 }
 
 /// Checks for the `range` header and handles partial file reads.
-/// If the range header is present, it will set the `accept-ranges`, `content-range`, and `content-length` headers.
+/// If the range request header is present, it will set the `accept-ranges`, `content-range`, and `content-length` response headers.
+/// If the raange request header has a range that is out of bounds of the file, it will respond with a `416 Range Not Satisfiable`.
 ///
-/// If the header isn't present, it returns the file without adding any additional headers.
+/// If the header isn't present, it returns the input response without changes.
 fn handle_range_header(
   resp: Response,
   req: Request,
