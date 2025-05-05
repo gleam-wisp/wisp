@@ -376,7 +376,7 @@ pub fn serve_static_test() {
     #("etag", etag),
   ])
   response.body
-  |> should.equal(wisp.File("./test/fixture.txt"))
+  |> should.equal(wisp.File("./test/fixture.txt", option.None, option.None))
 
   // Get a json file
   let response =
@@ -393,7 +393,7 @@ pub fn serve_static_test() {
     #("etag", etag),
   ])
   response.body
-  |> should.equal(wisp.File("./test/fixture.json"))
+  |> should.equal(wisp.File("./test/fixture.json", option.None, option.None))
 
   // Get some other file
   let response =
@@ -410,7 +410,7 @@ pub fn serve_static_test() {
     #("etag", etag),
   ])
   response.body
-  |> should.equal(wisp.File("./test/fixture.dat"))
+  |> should.equal(wisp.File("./test/fixture.dat", option.None, option.None))
 
   // Get something not handled by the static file server
   let response =
@@ -466,7 +466,7 @@ pub fn serve_static_under_has_no_trailing_slash_test() {
     #("etag", etag),
   ])
   response.body
-  |> should.equal(wisp.File("./test/fixture.txt"))
+  |> should.equal(wisp.File("./test/fixture.txt", option.None, option.None))
 }
 
 pub fn serve_static_from_has_no_trailing_slash_test() {
@@ -488,7 +488,7 @@ pub fn serve_static_from_has_no_trailing_slash_test() {
     #("etag", etag),
   ])
   response.body
-  |> should.equal(wisp.File("./test/fixture.txt"))
+  |> should.equal(wisp.File("./test/fixture.txt", option.None, option.None))
 }
 
 pub fn serve_static_not_found_test() {
@@ -531,7 +531,10 @@ pub fn serve_static_etags_returns_304_test() {
     #("content-type", "text/plain; charset=utf-8"),
     #("etag", etag),
   ])
-  should.equal(response.body, wisp.File("./test/fixture.txt"))
+  should.equal(
+    response.body,
+    wisp.File("./test/fixture.txt", option.None, option.None),
+  )
 
   // Get a text file with outdated if-none-match header
   let response =
@@ -543,7 +546,10 @@ pub fn serve_static_etags_returns_304_test() {
     #("content-type", "text/plain; charset=utf-8"),
     #("etag", etag),
   ])
-  should.equal(response.body, wisp.File("./test/fixture.txt"))
+  should.equal(
+    response.body,
+    wisp.File("./test/fixture.txt", option.None, option.None),
+  )
 
   // Get a text file with current etag in if-none-match header
   let response =
@@ -590,7 +596,8 @@ pub fn serve_static_range_request_test() {
       <> int.to_string(file_size),
     ))
 
-    let assert wisp.FileChunk(path, offset, limit) = response.body
+    let assert wisp.File(path:, offset: option.Some(offset), limit:) =
+      response.body
 
     path
     |> should.equal("./test/fixture.txt")
@@ -630,6 +637,13 @@ pub fn serve_static_range_request_test() {
   |> testing.set_header("range", "bytes=-4")
   |> handler
   |> validate_content_range(file_info.size - 4, file_info.size - 1, file_info)
+
+  let backwards_range_response =
+    testing.get("/stuff/fixture.txt", [])
+    |> testing.set_header("range", "bytes=6-4")
+    |> handler
+
+  backwards_range_response.status |> should.equal(416)
 }
 
 pub fn temporary_file_test() {

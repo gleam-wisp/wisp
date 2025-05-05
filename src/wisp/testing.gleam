@@ -9,7 +9,7 @@ import gleam/string
 import gleam/string_tree
 import gleam/uri
 import simplifile
-import wisp.{type Request, type Response, Bytes, Empty, File, FileChunk, Text}
+import wisp.{type Request, type Response, Bytes, Empty, File, Text}
 
 /// The default secret key base used for test requests.
 /// This should never be used outside of tests.
@@ -233,13 +233,15 @@ pub fn string_body(response: Response) -> String {
       let assert Ok(string) = bit_array.to_string(data)
       string
     }
-    File(path) -> {
+    File(path, option.None, option.None) -> {
       let assert Ok(contents) = simplifile.read(path)
       contents
     }
-    FileChunk(path, offset, limit) -> {
+    File(path:, offset:, limit:) -> {
       let assert Ok(contents) = simplifile.read(path)
       let length = limit |> option.unwrap(string.length(contents))
+      let offset = offset |> option.unwrap(0)
+
       contents |> string.slice(offset, length)
     }
   }
@@ -257,13 +259,15 @@ pub fn bit_array_body(response: Response) -> BitArray {
     Empty -> <<>>
     Bytes(tree) -> bytes_tree.to_bit_array(tree)
     Text(tree) -> bytes_tree.to_bit_array(bytes_tree.from_string_tree(tree))
-    File(path) -> {
+    File(path, option.None, option.None) -> {
       let assert Ok(contents) = simplifile.read_bits(path)
       contents
     }
-    FileChunk(path, offset, limit) -> {
+    File(path:, offset:, limit:) -> {
       let assert Ok(contents) = simplifile.read_bits(path)
       let length = limit |> option.unwrap(bit_array.byte_size(contents))
+      let offset = offset |> option.unwrap(0)
+
       let assert Ok(sliced) = contents |> bit_array.slice(offset, length)
       sliced
     }
