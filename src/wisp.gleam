@@ -1404,67 +1404,54 @@ pub fn serve_static(
   }
 }
 
-type ValidRangeHeader {
-  ValidRangeHeader(offset: Int, limit: Option(Int))
+pub type ParsedRangeHeader {
+  ParsedRangeHeader(offset: Int, limit: Option(Int))
 }
 
-/// Parses request range headers and validates that the range is in bounds of the file.
-/// If the range is out of bounds, it will return an error with a `416 Range Not Satisfiable` response.
-fn parse_range_header(
+/// Parses a request range header and expects the unit to be bytes. Will return
+/// an error if the header can't be parsed as a valid integer bytes range.
+/// If the header is requesting bytes from the end, the `offset` will be set to
+/// the negative byte amount that should be read from the end of the content.
+pub fn parse_range_header(
   range_header: String,
-  file_size: Int,
-) -> Result(ValidRangeHeader, Response) {
-  use #(offset, limit) <- result.try(
-    case range_header {
-      "bytes=" <> range -> {
-        use #(start_str, end_str) <- result.try(range |> string.split_once("-"))
+) -> Result(ParsedRangeHeader, Nil) {
+  case range_header {
+    "bytes=" <> range -> {
+      use #(start_str, end_str) <- result.try(range |> string.split_once("-"))
 
-        case start_str, end_str {
-          // "range: bytes=-[tail]"
-          "", _ ->
-            int.parse(end_str)
-            |> result.map(fn(tail_offset) {
-              #(file_size - tail_offset, option.None)
-            })
+      case start_str, end_str {
+        // "range: bytes=-[tail]"
+        "", _ ->
+          int.parse(end_str)
+          |> result.map(fn(tail_offset) {
+            ParsedRangeHeader(offset: -tail_offset, limit: option.None)
+          })
 
-          // "range: bytes=[start]-"
-          _, "" ->
-            int.parse(start_str)
-            |> result.map(fn(offset) { #(offset, option.None) })
+        // "range: bytes=[start]-"
+        _, "" ->
+          int.parse(start_str)
+          |> result.map(fn(offset) {
+            ParsedRangeHeader(offset:, limit: option.None)
+          })
 
-          // "range: bytes=[start]-[end]"
-          _, _ -> {
-            use start <- result.try(int.parse(start_str))
-            use end <- result.try(int.parse(end_str))
+        // "range: bytes=[start]-[end]"
+        _, _ -> {
+          use offset <- result.try(int.parse(start_str))
+          use end <- result.try(int.parse(end_str))
 
-            Ok(#(start, option.Some(end - start + 1)))
-          }
+          Ok(ParsedRangeHeader(offset:, limit: option.Some(end - offset + 1)))
         }
       }
-      _ -> Error(Nil)
     }
-    |> result.replace_error(bad_request()),
-  )
-
-  let end_is_invalid =
-    limit
-    |> option.map(fn(end) { end < 0 || end >= file_size })
-    |> option.unwrap(False)
-
-  use <- bool.guard(
-    offset < 0 || offset >= file_size || end_is_invalid,
-    Error(
-      response(416)
-      |> response.prepend_header("range", "bytes=*"),
-    ),
-  )
-
-  Ok(ValidRangeHeader(offset:, limit:))
+    _ -> Error(Nil)
+  }
 }
 
 /// Checks for the `range` header and handles partial file reads.
-/// If the range request header is present, it will set the `accept-ranges`, `content-range`, and `content-length` response headers.
-/// If the raange request header has a range that is out of bounds of the file, it will respond with a `416 Range Not Satisfiable`.
+/// If the range request header is present, it will set the `accept-ranges`,
+/// `content-range`, and `content-length` response headers. If the range
+/// request header has a range that is out of bounds of the file, it will
+/// respond with a `416 Range Not Satisfiable`.
 ///
 /// If the header isn't present, it returns the input response without changes.
 fn handle_range_header(
@@ -1478,10 +1465,28 @@ fn handle_range_header(
       request.get_header(req, "range") |> result.replace_error(resp),
     )
 
-    use ValidRangeHeader(offset:, limit:) <- result.try(parse_range_header(
-      range,
-      file_info.size,
-    ))
+    use ParsedRangeHeader(offset:, limit:) <- result.try(
+      parse_range_header(range)
+      |> result.replace_error(bad_request()),
+    )
+
+    let offset = case offset < 0 {
+      True -> file_info.size + offset
+      False -> offset
+    }
+
+    let end_is_invalid =
+      limit
+      |> option.map(fn(end) { end < 0 || end >= file_info.size || end < offset })
+      |> option.unwrap(False)
+
+    use <- bool.guard(
+      offset < 0 || offset >= file_info.size || end_is_invalid,
+      Error(
+        response(416)
+        |> response.prepend_header("range", "bytes=*"),
+      ),
+    )
 
     let content_range = {
       let end = case limit {
