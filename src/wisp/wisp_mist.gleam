@@ -84,8 +84,7 @@ fn mist_response(response: wisp.Response) -> HttpResponse(mist.ResponseData) {
     wisp.Empty -> mist.Bytes(bytes_tree.new())
     wisp.Text(text) -> mist.Bytes(bytes_tree.from_string_tree(text))
     wisp.Bytes(bytes) -> mist.Bytes(bytes)
-    wisp.File(path:, offset:, limit:) ->
-      mist_send_file(path, offset |> option.unwrap(0), limit)
+    wisp.File(path:, offset:, limit:) -> mist_send_file(path, offset, limit)
   }
   response
   |> response.set_body(body)
