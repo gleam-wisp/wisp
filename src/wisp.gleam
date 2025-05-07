@@ -1407,11 +1407,8 @@ pub fn serve_static(
 /// Represents the value of a `range` request header.
 /// If the header requests bytes from the end, the `offset` will be set to
 /// the negative byte amount that should be read from the end of the content.
-///
 /// As an example, `range: bytes=-64` would be represented by
-/// ```gleam
-/// ByteRange(offset: -64, limit: None)
-/// ```
+/// `ByteRange(offset: -64, limit: None)`
 pub type RangeHeader {
   ByteRange(offset: Int, limit: Option(Int))
 }
