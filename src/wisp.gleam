@@ -1393,7 +1393,7 @@ pub fn serve_static(
               |> response.set_header("content-type", content_type)
               |> response.set_body(File(path, 0, option.None))
               |> handle_etag(req, file_info)
-              |> handle_range_header(req, file_info, path)
+              |> handle_file_range_header(req, file_info, path)
             }
             _ -> handler()
           }
@@ -1404,17 +1404,21 @@ pub fn serve_static(
   }
 }
 
-pub type ParsedRangeHeader {
-  ParsedRangeHeader(offset: Int, limit: Option(Int))
+/// Represents the value of a `range` request header.
+/// If the header requests bytes from the end, the `offset` will be set to
+/// the negative byte amount that should be read from the end of the content.
+///
+/// As an example, `range: bytes=-64` would be represented by
+/// ```gleam
+/// ByteRange(offset: -64, limit: None)
+/// ```
+pub type RangeHeader {
+  ByteRange(offset: Int, limit: Option(Int))
 }
 
 /// Parses a request range header and expects the unit to be bytes. Will return
 /// an error if the header can't be parsed as a valid integer bytes range.
-/// If the header is requesting bytes from the end, the `offset` will be set to
-/// the negative byte amount that should be read from the end of the content.
-pub fn parse_range_header(
-  range_header: String,
-) -> Result(ParsedRangeHeader, Nil) {
+pub fn parse_range_header(range_header: String) -> Result(RangeHeader, Nil) {
   case range_header {
     "bytes=" <> range -> {
       use #(start_str, end_str) <- result.try(range |> string.split_once("-"))
@@ -1424,22 +1428,20 @@ pub fn parse_range_header(
         "", _ ->
           int.parse(end_str)
           |> result.map(fn(tail_offset) {
-            ParsedRangeHeader(offset: -tail_offset, limit: option.None)
+            ByteRange(offset: -tail_offset, limit: option.None)
           })
 
         // "range: bytes=[start]-"
         _, "" ->
           int.parse(start_str)
-          |> result.map(fn(offset) {
-            ParsedRangeHeader(offset:, limit: option.None)
-          })
+          |> result.map(fn(offset) { ByteRange(offset:, limit: option.None) })
 
         // "range: bytes=[start]-[end]"
         _, _ -> {
           use offset <- result.try(int.parse(start_str))
           use end <- result.try(int.parse(end_str))
 
-          Ok(ParsedRangeHeader(offset:, limit: option.Some(end - offset + 1)))
+          Ok(ByteRange(offset:, limit: option.Some(end - offset + 1)))
         }
       }
     }
@@ -1454,7 +1456,7 @@ pub fn parse_range_header(
 /// respond with a `416 Range Not Satisfiable`.
 ///
 /// If the header isn't present, it returns the input response without changes.
-fn handle_range_header(
+fn handle_file_range_header(
   resp: Response,
   req: Request,
   file_info: simplifile.FileInfo,
@@ -1465,7 +1467,7 @@ fn handle_range_header(
       request.get_header(req, "range") |> result.replace_error(resp),
     )
 
-    use ParsedRangeHeader(offset:, limit:) <- result.try(
+    use ByteRange(offset:, limit:) <- result.try(
       parse_range_header(range)
       |> result.replace_error(bad_request()),
     )
