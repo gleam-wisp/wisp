@@ -495,7 +495,7 @@ pub fn string_body_empty_test() {
 
 pub fn string_body_file_test() {
   wisp.ok()
-  |> response.set_body(wisp.File("test/fixture.txt", 0, option.None))
+  |> response.set_body(wisp.File("test/fixture.txt", option.None))
   |> testing.string_body
   |> should.equal("Hello, Joe!\n")
 }
@@ -516,7 +516,7 @@ pub fn bit_array_body_empty_test() {
 
 pub fn bit_array_body_file_test() {
   wisp.ok()
-  |> response.set_body(wisp.File("test/fixture.txt", 0, option.None))
+  |> response.set_body(wisp.File("test/fixture.txt", option.None))
   |> testing.bit_array_body
   |> should.equal(<<"Hello, Joe!\n":utf8>>)
 }
