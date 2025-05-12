@@ -53,7 +53,7 @@ pub type Body {
   /// underlying HTTP server. The file will not be read into memory so it is
   /// safe to send large files this way.
   ///
-  File(path: String, offset: Int, limit: Option(Int))
+  File(path: String, range: Option(Range))
   /// An empty body. This may be returned by the `require_*` middleware
   /// functions in the event of a failure, invalid request, or other situation
   /// in which the request cannot be processed.
@@ -87,8 +87,8 @@ pub fn response(status: Int) -> Response {
 ///
 /// ```gleam
 /// response(200)
-/// |> set_body(File("/tmp/myfile.txt"))
-/// // -> Response(200, [], File("/tmp/myfile.txt"))
+/// |> set_body(File("/tmp/myfile.txt", option.None))
+/// // -> Response(200, [], File("/tmp/myfile.txt", option.None))
 /// ```
 ///
 pub fn set_body(response: Response, body: Body) -> Response {
@@ -117,7 +117,7 @@ pub fn set_body(response: Response, body: Body) -> Response {
 /// // -> Response(
 /// //   200,
 /// //   [#("content-disposition", "attachment; filename=\"myfile.txt\"")],
-/// //   File("/tmp/myfile.txt"),
+/// //   File("/tmp/myfile.txt", option.None),
 /// // )
 /// ```
 ///
@@ -132,7 +132,7 @@ pub fn file_download(
     "content-disposition",
     "attachment; filename=\"" <> name <> "\"",
   )
-  |> response.set_body(File(path, 0, option.None))
+  |> response.set_body(File(path, option.None))
 }
 
 /// Send a file from memory as a file download.
@@ -154,7 +154,7 @@ pub fn file_download(
 /// // -> Response(
 /// //   200,
 /// //   [#("content-disposition", "attachment; filename=\"myfile.txt\"")],
-/// //   File("/tmp/myfile.txt"),
+/// //   File("/tmp/myfile.txt", option.None),
 /// // )
 /// ```
 ///
@@ -1391,7 +1391,7 @@ pub fn serve_static(
             simplifile.File -> {
               response.new(200)
               |> response.set_header("content-type", content_type)
-              |> response.set_body(File(path, 0, option.None))
+              |> response.set_body(File(path, option.None))
               |> handle_etag(req, file_info)
               |> handle_file_range_header(req, file_info, path)
             }
@@ -1408,14 +1408,14 @@ pub fn serve_static(
 /// If the header requests bytes from the end, the `offset` will be set to
 /// the negative byte amount that should be read from the end of the content.
 /// As an example, `range: bytes=-64` would be represented by
-/// `ByteRange(offset: -64, limit: None)`
-pub type RangeHeader {
-  ByteRange(offset: Int, limit: Option(Int))
+/// `Range(offset: -64, limit: None)`
+pub type Range {
+  Range(offset: Int, limit: Option(Int))
 }
 
 /// Parses a request range header and expects the unit to be bytes. Will return
 /// an error if the header can't be parsed as a valid integer bytes range.
-pub fn parse_range_header(range_header: String) -> Result(RangeHeader, Nil) {
+pub fn parse_range_header(range_header: String) -> Result(Range, Nil) {
   case range_header {
     "bytes=" <> range -> {
       use #(start_str, end_str) <- result.try(range |> string.split_once("-"))
@@ -1425,20 +1425,20 @@ pub fn parse_range_header(range_header: String) -> Result(RangeHeader, Nil) {
         "", _ ->
           int.parse(end_str)
           |> result.map(fn(tail_offset) {
-            ByteRange(offset: -tail_offset, limit: option.None)
+            Range(offset: -tail_offset, limit: option.None)
           })
 
         // "range: bytes=[start]-"
         _, "" ->
           int.parse(start_str)
-          |> result.map(fn(offset) { ByteRange(offset:, limit: option.None) })
+          |> result.map(fn(offset) { Range(offset:, limit: option.None) })
 
         // "range: bytes=[start]-[end]"
         _, _ -> {
           use offset <- result.try(int.parse(start_str))
           use end <- result.try(int.parse(end_str))
 
-          Ok(ByteRange(offset:, limit: option.Some(end - offset + 1)))
+          Ok(Range(offset:, limit: option.Some(end - offset + 1)))
         }
       }
     }
@@ -1460,27 +1460,29 @@ fn handle_file_range_header(
   path: String,
 ) -> Response {
   {
-    use range <- result.try(
+    use raw_range <- result.try(
       request.get_header(req, "range") |> result.replace_error(resp),
     )
 
-    use ByteRange(offset:, limit:) <- result.try(
-      parse_range_header(range)
+    use range <- result.try(
+      parse_range_header(raw_range)
       |> result.replace_error(bad_request()),
     )
 
-    let offset = case offset < 0 {
-      True -> file_info.size + offset
-      False -> offset
+    let range = case range.offset < 0 {
+      True -> Range(..range, offset: file_info.size + range.offset)
+      False -> range
     }
 
     let end_is_invalid =
-      limit
-      |> option.map(fn(end) { end < 0 || end >= file_info.size || end < offset })
+      range.limit
+      |> option.map(fn(end) {
+        end < 0 || end >= file_info.size || end < range.offset
+      })
       |> option.unwrap(False)
 
     use <- bool.guard(
-      offset < 0 || offset >= file_info.size || end_is_invalid,
+      range.offset < 0 || range.offset >= file_info.size || end_is_invalid,
       Error(
         response(416)
         |> response.prepend_header("range", "bytes=*"),
@@ -1488,25 +1490,25 @@ fn handle_file_range_header(
     )
 
     let content_range = {
-      let end = case limit {
-        option.Some(l) -> { offset + l - 1 } |> int.to_string
+      let end = case range.limit {
+        option.Some(l) -> { range.offset + l - 1 } |> int.to_string
         option.None -> { file_info.size - 1 } |> int.max(0) |> int.to_string
       }
 
       "bytes "
-      <> int.to_string(offset)
+      <> int.to_string(range.offset)
       <> "-"
       <> end
       <> "/"
       <> int.to_string(file_info.size)
     }
 
-    let content_length = case limit {
+    let content_length = case range.limit {
       option.Some(l) -> int.to_string(l)
-      option.None -> int.to_string(file_info.size - offset)
+      option.None -> int.to_string(file_info.size - range.offset)
     }
 
-    response.Response(206, resp.headers, File(path:, offset:, limit:))
+    response.Response(206, resp.headers, File(path:, range: option.Some(range)))
     |> response.set_header("content-length", content_length)
     |> response.prepend_header("accept-ranges", "bytes")
     |> response.prepend_header("content-range", content_range)
