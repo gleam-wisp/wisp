@@ -1,5 +1,5 @@
 import gleam/dict.{type Dict}
-import gleam/dynamic
+import gleam/dynamic/decode
 import gleam/json
 import gleam/list
 import gleam/result
@@ -24,7 +24,7 @@ pub fn disconnect(_connection: Connection) -> Nil {
 pub fn with_connection(root: String, f: fn(Connection) -> t) -> t {
   let connection = connect(root)
   let result = f(connection)
-  disconnect(connection)
+  let _ = disconnect(connection)
   result
 }
 
@@ -66,10 +66,10 @@ pub fn read(
     |> result.replace_error(Nil),
   )
 
-  let decoder = dynamic.dict(dynamic.string, dynamic.string)
+  let decoder = decode.dict(decode.string, decode.string)
 
   use data <- result.try(
-    json.decode(data, decoder)
+    json.parse(data, decoder)
     |> result.replace_error(Nil),
   )
 
