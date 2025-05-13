@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.7.0 - 2025-05-13
+
+- Updated for latest `gleam_stdlib`.
+
 ## v1.6.0 - 2025-03-21
 
 - Updated `serve_static` to generate etags for static assets.

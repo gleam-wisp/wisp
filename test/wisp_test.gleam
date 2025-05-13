@@ -1,7 +1,6 @@
 import exception
 import gleam/bit_array
 import gleam/crypto
-import gleam/dict
 import gleam/dynamic.{type Dynamic}
 import gleam/erlang
 import gleam/http
@@ -638,7 +637,12 @@ pub fn json_test() {
   |> request.set_header("content-type", "application/json")
   |> json_handler(fn(json) {
     json
-    |> should.equal(dynamic.from(dict.from_list([#("one", 1), #("two", 2)])))
+    |> should.equal(
+      dynamic.properties([
+        #(dynamic.string("one"), dynamic.int(1)),
+        #(dynamic.string("two"), dynamic.int(2)),
+      ]),
+    )
   })
   |> should.equal(wisp.ok())
 }

@@ -969,7 +969,7 @@ pub fn require_content_type(
 pub fn require_json(request: Request, next: fn(Dynamic) -> Response) -> Response {
   use <- require_content_type(request, "application/json")
   use body <- require_string_body(request)
-  use json <- or_400(json.decode(body, Ok))
+  use json <- or_400(json.parse(body, decode.dynamic))
   next(json)
 }
 
@@ -1249,7 +1249,7 @@ pub fn rescue_crashes(handler: fn() -> Response) -> Response {
       case decode.run(detail, atom_dict_decoder()) {
         Ok(details) -> {
           let c = atom.create_from_string("class")
-          log_error_dict(dict.insert(details, c, dynamic.from(kind)))
+          log_error_dict(dict.insert(details, c, error_kind_to_dynamic(kind)))
           Nil
         }
         Error(_) -> log_error(string.inspect(error))
@@ -1258,6 +1258,9 @@ pub fn rescue_crashes(handler: fn() -> Response) -> Response {
     }
   }
 }
+
+@external(erlang, "gleam@function", "identity")
+fn error_kind_to_dynamic(kind: ErrorKind) -> Dynamic
 
 fn atom_dict_decoder() -> decode.Decoder(Dict(Atom, Dynamic)) {
   let atom =
