@@ -1,6 +1,6 @@
 import app/web.{type Context}
 import gleam/dict
-import gleam/dynamic.{type Dynamic}
+import gleam/dynamic/decode
 import gleam/http.{Get, Post}
 import gleam/json
 import gleam/result.{try}
@@ -69,7 +69,11 @@ pub fn create_person(req: Request, ctx: Context) -> Response {
 
   let result = {
     // Decode the JSON into a Person record.
-    use person <- try(decode_person(json))
+    // In a real application we wouldn't throw away the errors.
+    use person <- try(
+      decode.run(json, person_decoder())
+      |> result.replace_error(Nil),
+    )
 
     // Save the person to the database.
     use id <- try(save_to_database(ctx.db, person))
@@ -110,19 +114,10 @@ pub fn read_person(ctx: Context, id: String) -> Response {
   }
 }
 
-fn decode_person(json: Dynamic) -> Result(Person, Nil) {
-  let decoder =
-    dynamic.decode2(
-      Person,
-      dynamic.field("name", dynamic.string),
-      dynamic.field("favourite-colour", dynamic.string),
-    )
-  let result = decoder(json)
-
-  // In this example we are not going to be reporting specific errors to the
-  // user, so we can discard the error and replace it with Nil.
-  result
-  |> result.replace_error(Nil)
+fn person_decoder() -> decode.Decoder(Person) {
+  use name <- decode.field("name", decode.string)
+  use favourite_colour <- decode.field("favourite-colour", decode.string)
+  decode.success(Person(name:, favourite_colour:))
 }
 
 /// Save a person to the database and return the id of the newly created record.
