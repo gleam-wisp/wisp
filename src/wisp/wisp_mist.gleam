@@ -78,14 +78,15 @@ fn mist_response(response: wisp.Response) -> HttpResponse(mist.ResponseData) {
     wisp.Empty -> mist.Bytes(bytes_tree.new())
     wisp.Text(text) -> mist.Bytes(bytes_tree.from_string_tree(text))
     wisp.Bytes(bytes) -> mist.Bytes(bytes)
-    wisp.File(path) -> mist_send_file(path)
+    wisp.File(path:, range:) ->
+      mist_send_file(path, range |> option.unwrap(wisp.Range(0, option.None)))
   }
   response
   |> response.set_body(body)
 }
 
-fn mist_send_file(path: String) -> mist.ResponseData {
-  case mist.send_file(path, offset: 0, limit: option.None) {
+fn mist_send_file(path: String, range: wisp.Range) -> mist.ResponseData {
+  case mist.send_file(path, offset: range.offset, limit: range.limit) {
     Ok(body) -> body
     Error(error) -> {
       wisp.log_error(string.inspect(error))
