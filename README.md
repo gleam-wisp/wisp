@@ -55,17 +55,17 @@ pub fn handle_request(request: Request) -> Response {
 The Wisp examples are a good place to start. They cover various scenarios and
 include comments and tests.
 
-- [Hello, World!](https://github.com/lpil/wisp/tree/main/examples/00-hello-world)
-- [Routing](https://github.com/lpil/wisp/tree/main/examples/01-routing)
-- [Working with form data](https://github.com/lpil/wisp/tree/main/examples/02-working-with-form-data)
-- [Working with JSON](https://github.com/lpil/wisp/tree/main/examples/03-working-with-json)
-- [Working with other formats](https://github.com/lpil/wisp/tree/main/examples/04-working-with-other-formats)
-- [Using a database](https://github.com/lpil/wisp/tree/main/examples/05-using-a-database)
-- [Serving static assets](https://github.com/lpil/wisp/tree/main/examples/06-serving-static-assets)
-- [Logging](https://github.com/lpil/wisp/tree/main/examples/07-logging)
-- [Working with cookies](https://github.com/lpil/wisp/tree/main/examples/08-working-with-cookies)
-- [Configuring default responses](https://github.com/lpil/wisp/tree/main/examples/09-configuring-default-responses)
-- [Working with files](https://github.com/lpil/wisp/tree/main/examples/10-working-with-files)
+- [Hello, World!](https://github.com/gleam-wisp/wisp/tree/main/examples/src/hello_world)
+- [Routing](https://github.com/gleam-wisp/wisp/tree/main/examples/src/routing)
+- [Working with form data](https://github.com/gleam-wisp/wisp/tree/main/examples/src/working_with_form_data)
+- [Working with JSON](https://github.com/gleam-wisp/wisp/tree/main/examples/src/working_with_json)
+- [Working with other formats](https://github.com/gleam-wisp/wisp/tree/main/examples/src/working_with_other_formats)
+- [Using a database](https://github.com/gleam-wisp/wisp/tree/main/examples/src/using_a_database)
+- [Serving static assets](https://github.com/gleam-wisp/wisp/tree/main/examples/src/serving_static_assets)
+- [Logging](https://github.com/gleam-wisp/wisp/tree/main/examples/src/logging)
+- [Working with cookies](https://github.com/gleam-wisp/wisp/tree/main/examples/src/working_with_cookies)
+- [Configuring default responses](https://github.com/gleam-wisp/wisp/tree/main/examples/src/configuring_default_responses)
+- [Working with files](https://github.com/gleam-wisp/wisp/tree/main/examples/src/working_with_files)
 
 API documentation is available on [HexDocs](https://hexdocs.pm/wisp/).
 
