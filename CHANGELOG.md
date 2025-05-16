@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.7.1 - 2025-05-16
+
+- Fixed a bug where the `etag` header may not always be set for static assets.
+
 ## v1.7.0 - 2025-05-13
 
 - Updated for latest `gleam_stdlib`.

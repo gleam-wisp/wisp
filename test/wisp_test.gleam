@@ -549,7 +549,7 @@ pub fn serve_static_etags_returns_304_test() {
     |> handler
 
   should.equal(response.status, 304)
-  should.equal(response.headers, [])
+  should.equal(response.headers, [#("etag", etag)])
   should.equal(response.body, wisp.Empty)
 }
 
