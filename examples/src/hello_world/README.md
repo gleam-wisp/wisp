@@ -1,8 +1,7 @@
 # Wisp Example: Hello, world!
 
 ```sh
-gleam run   # Run the server
-gleam test  # Run the tests
+gleam run -m hello_world  # Run the server
 ```
 
 This example shows a minimal Wisp application, it does nothing but respond with
@@ -34,6 +33,6 @@ middleware, and other functions that are used by the request handlers.
 This module contains the application's request handlers. Or "handler" in this
 case, as there's only one!
 
-### `app_test` module
+### Unit tests [examples/test/hello_world/](../../test/hello_world/)
 
 The tests for the application.

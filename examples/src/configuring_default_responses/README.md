@@ -1,8 +1,7 @@
 # Wisp Example: Configuring default responses
 
 ```sh
-gleam run   # Run the server
-gleam test  # Run the tests
+gleam run -m configuring_default_responses/app  # Run the server
 ```
 
 Wisp has a response body value called `Empty`, which is just that: an empty
@@ -15,7 +14,7 @@ You likely want your application to return a generic error page rather than an e
 This example is based off of the ["routing" example][routing] so read that first.
 The additions are detailed here and commented in the code.
 
-[routing]: https://github.com/lpil/wisp/tree/main/examples/src/routing
+[routing]: [examples/src/hello_world](./../routing/)
 
 ### `app/router` module
 
@@ -27,7 +26,7 @@ The `handle_request` function has been updated to return responses with the
 The `middleware` function has been updated to return default responses when an
 `wisp.Empty` response body is returned.
 
-### `app_test` module
+### Unit tests [examples/test/configuring_default_responses/](../../test/configuring_default_responses/)
 
 Tests have been added to test each of the .
 
