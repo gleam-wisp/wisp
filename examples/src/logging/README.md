@@ -1,8 +1,7 @@
 # Wisp Example: Logging
 
 ```sh
-gleam run   # Run the server
-gleam test  # Run the tests
+gleam run -m logging/app  # Run the server
 ```
 
 This example shows how to log messages using the BEAM logger.
@@ -10,7 +9,7 @@ This example shows how to log messages using the BEAM logger.
 This example is based off of the ["routing" example][routing], so read that
 one first. The additions are detailed here and commented in the code.
 
-[routing]: https://github.com/lpil/wisp/tree/main/examples/src/routing
+[routing]: [examples/src/hello_world](./../routing/)
 
 ### `app/router` module
 

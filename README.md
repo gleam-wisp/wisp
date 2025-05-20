@@ -52,20 +52,8 @@ pub fn handle_request(request: Request) -> Response {
 
 # Learning Wisp
 
-The Wisp examples are a good place to start. They cover various scenarios and
-include comments and tests.
-
-- [Hello, World!](https://github.com/gleam-wisp/wisp/tree/main/examples/src/hello_world)
-- [Routing](https://github.com/gleam-wisp/wisp/tree/main/examples/src/routing)
-- [Working with form data](https://github.com/gleam-wisp/wisp/tree/main/examples/src/working_with_form_data)
-- [Working with JSON](https://github.com/gleam-wisp/wisp/tree/main/examples/src/working_with_json)
-- [Working with other formats](https://github.com/gleam-wisp/wisp/tree/main/examples/src/working_with_other_formats)
-- [Using a database](https://github.com/gleam-wisp/wisp/tree/main/examples/src/using_a_database)
-- [Serving static assets](https://github.com/gleam-wisp/wisp/tree/main/examples/src/serving_static_assets)
-- [Logging](https://github.com/gleam-wisp/wisp/tree/main/examples/src/logging)
-- [Working with cookies](https://github.com/gleam-wisp/wisp/tree/main/examples/src/working_with_cookies)
-- [Configuring default responses](https://github.com/gleam-wisp/wisp/tree/main/examples/src/configuring_default_responses)
-- [Working with files](https://github.com/gleam-wisp/wisp/tree/main/examples/src/working_with_files)
+The [Wisp examples](./examples/) are a good place to start. They cover various
+scenarios and include comments and tests.
 
 API documentation is available on [HexDocs](https://hexdocs.pm/wisp/).
 
