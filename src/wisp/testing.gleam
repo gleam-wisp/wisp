@@ -233,9 +233,15 @@ pub fn string_body(response: Response) -> String {
       let assert Ok(string) = bit_array.to_string(data)
       string
     }
-    File(path) -> {
+    File(path:, range: None) -> {
       let assert Ok(contents) = simplifile.read(path)
       contents
+    }
+    File(path:, range: Some(range)) -> {
+      let assert Ok(contents) = simplifile.read(path)
+      let length = range.limit |> option.unwrap(string.length(contents))
+
+      contents |> string.slice(range.offset, length)
     }
   }
 }
@@ -252,9 +258,15 @@ pub fn bit_array_body(response: Response) -> BitArray {
     Empty -> <<>>
     Bytes(tree) -> bytes_tree.to_bit_array(tree)
     Text(tree) -> bytes_tree.to_bit_array(bytes_tree.from_string_tree(tree))
-    File(path) -> {
+    File(path:, range: None) -> {
       let assert Ok(contents) = simplifile.read_bits(path)
       contents
+    }
+    File(path:, range: Some(range)) -> {
+      let assert Ok(contents) = simplifile.read_bits(path)
+      let limit = range.limit |> option.unwrap(bit_array.byte_size(contents))
+      let assert Ok(sliced) = contents |> bit_array.slice(range.offset, limit)
+      sliced
     }
   }
 }
