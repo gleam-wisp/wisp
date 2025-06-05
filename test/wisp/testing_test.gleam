@@ -497,7 +497,7 @@ pub fn string_body_file_test() {
   wisp.ok()
   |> response.set_body(wisp.File("test/fixture.txt", option.None))
   |> testing.string_body
-  |> should.equal("Hello, Joe!\n")
+  |> should.equal("Hello, Joe! 👨‍👩‍👧‍👦\n")
 }
 
 pub fn string_body_text_test() {
@@ -518,7 +518,7 @@ pub fn bit_array_body_file_test() {
   wisp.ok()
   |> response.set_body(wisp.File("test/fixture.txt", option.None))
   |> testing.bit_array_body
-  |> should.equal(<<"Hello, Joe!\n":utf8>>)
+  |> should.equal(<<"Hello, Joe! 👨‍👩‍👧‍👦\n":utf8>>)
 }
 
 pub fn bit_array_body_text_test() {
