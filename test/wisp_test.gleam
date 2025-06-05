@@ -8,6 +8,7 @@ import gleam/http/request
 import gleam/http/response.{Response}
 import gleam/int
 import gleam/list
+import gleam/option
 import gleam/result
 import gleam/set
 import gleam/string
@@ -374,7 +375,7 @@ pub fn serve_static_test() {
     #("etag", etag),
   ])
   response.body
-  |> should.equal(wisp.File("./test/fixture.txt"))
+  |> should.equal(wisp.File("./test/fixture.txt", offset: 0, limit: option.None))
 
   // Get a json file
   let response =
@@ -391,7 +392,11 @@ pub fn serve_static_test() {
     #("etag", etag),
   ])
   response.body
-  |> should.equal(wisp.File("./test/fixture.json"))
+  |> should.equal(wisp.File(
+    "./test/fixture.json",
+    offset: 0,
+    limit: option.None,
+  ))
 
   // Get some other file
   let response =
@@ -408,7 +413,7 @@ pub fn serve_static_test() {
     #("etag", etag),
   ])
   response.body
-  |> should.equal(wisp.File("./test/fixture.dat"))
+  |> should.equal(wisp.File("./test/fixture.dat", offset: 0, limit: option.None))
 
   // Get something not handled by the static file server
   let response =
@@ -464,7 +469,7 @@ pub fn serve_static_under_has_no_trailing_slash_test() {
     #("etag", etag),
   ])
   response.body
-  |> should.equal(wisp.File("./test/fixture.txt"))
+  |> should.equal(wisp.File("./test/fixture.txt", offset: 0, limit: option.None))
 }
 
 pub fn serve_static_from_has_no_trailing_slash_test() {
@@ -486,7 +491,7 @@ pub fn serve_static_from_has_no_trailing_slash_test() {
     #("etag", etag),
   ])
   response.body
-  |> should.equal(wisp.File("./test/fixture.txt"))
+  |> should.equal(wisp.File("./test/fixture.txt", offset: 0, limit: option.None))
 }
 
 pub fn serve_static_not_found_test() {
@@ -529,7 +534,10 @@ pub fn serve_static_etags_returns_304_test() {
     #("content-type", "text/plain; charset=utf-8"),
     #("etag", etag),
   ])
-  should.equal(response.body, wisp.File("./test/fixture.txt"))
+  should.equal(
+    response.body,
+    wisp.File("./test/fixture.txt", offset: 0, limit: option.None),
+  )
 
   // Get a text file with outdated if-none-match header
   let response =
@@ -541,7 +549,10 @@ pub fn serve_static_etags_returns_304_test() {
     #("content-type", "text/plain; charset=utf-8"),
     #("etag", etag),
   ])
-  should.equal(response.body, wisp.File("./test/fixture.txt"))
+  should.equal(
+    response.body,
+    wisp.File("./test/fixture.txt", offset: 0, limit: option.None),
+  )
 
   // Get a text file with current etag in if-none-match header
   let response =
@@ -551,6 +562,97 @@ pub fn serve_static_etags_returns_304_test() {
   should.equal(response.status, 304)
   should.equal(response.headers, [#("etag", etag)])
   should.equal(response.body, wisp.Empty)
+}
+
+pub fn serve_static_range_request_test() {
+  let handler = fn(request) {
+    use <- wisp.serve_static(request, under: "/stuff", from: "./test")
+    wisp.ok()
+  }
+
+  let validate_content_range = fn(
+    response: response.Response(wisp.Body),
+    start: Int,
+    end: Int,
+    file_info: simplifile.FileInfo,
+  ) -> response.Response(wisp.Body) {
+    let file_size = file_info.size
+    response.status
+    |> should.equal(206)
+
+    let headers =
+      response.headers
+      |> dict.from_list
+
+    headers
+    |> dict.get("accept-ranges")
+    |> should.equal(Ok("bytes"))
+
+    headers
+    |> dict.get("content-range")
+    |> should.equal(Ok(
+      "bytes "
+      <> int.to_string(start)
+      <> "-"
+      <> int.to_string(end)
+      <> "/"
+      <> int.to_string(file_size),
+    ))
+
+    let assert wisp.File(path:, offset:, limit:) = response.body
+
+    path
+    |> should.equal("./test/fixture.txt")
+    offset |> should.equal(start)
+
+    case limit {
+      option.None -> {
+        end |> should.equal(file_size - 1)
+
+        headers
+        |> dict.get("content-length")
+        |> should.equal(Ok(int.to_string(file_size - start)))
+      }
+      option.Some(l) -> {
+        l |> should.equal(end - start + 1)
+
+        headers
+        |> dict.get("content-length")
+        |> should.equal(Ok(int.to_string(l)))
+      }
+    }
+    response
+  }
+
+  let assert Ok(file_info) = simplifile.file_info("test/fixture.txt")
+
+  testing.get("/stuff/fixture.txt", [])
+  |> testing.set_header("range", "bytes=0-")
+  |> handler
+  |> validate_content_range(0, file_info.size - 1, file_info)
+  |> testing.string_body
+  |> should.equal("Hello, Joe! 👨‍👩‍👧‍👦\n")
+
+  testing.get("/stuff/fixture.txt", [])
+  |> testing.set_header("range", "bytes=2-15")
+  |> handler
+  |> validate_content_range(2, 15, file_info)
+  |> testing.string_body
+  |> should.equal("llo, Joe! 👨")
+
+  testing.get("/stuff/fixture.txt", [])
+  |> testing.set_header("range", "bytes=-26")
+  |> handler
+  |> validate_content_range(file_info.size - 26, file_info.size - 1, file_info)
+  |> testing.string_body
+  |> should.equal("👨‍👩‍👧‍👦\n")
+
+  let backwards_range_response =
+    testing.get("/stuff/fixture.txt", [])
+    |> testing.set_header("range", "bytes=6-4")
+    |> handler
+
+  backwards_range_response.status |> should.equal(416)
 }
 
 pub fn temporary_file_test() {
