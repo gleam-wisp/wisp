@@ -53,7 +53,7 @@ pub type Body {
   /// underlying HTTP server. The file will not be read into memory so it is
   /// safe to send large files this way.
   ///
-  File(path: String, range: Option(Range))
+  File(path: String, offset: Int, limit: Option(Int))
   /// An empty body. This may be returned by the `require_*` middleware
   /// functions in the event of a failure, invalid request, or other situation
   /// in which the request cannot be processed.
@@ -132,7 +132,7 @@ pub fn file_download(
     "content-disposition",
     "attachment; filename=\"" <> name <> "\"",
   )
-  |> response.set_body(File(path, option.None))
+  |> response.set_body(File(path:, offset: 0, limit: option.None))
 }
 
 /// Send a file from memory as a file download.
@@ -1391,7 +1391,7 @@ pub fn serve_static(
             simplifile.File -> {
               response.new(200)
               |> response.set_header("content-type", content_type)
-              |> response.set_body(File(path, option.None))
+              |> response.set_body(File(path:, offset: 0, limit: option.None))
               |> handle_etag(req, file_info)
               |> handle_file_range_header(req, file_info, path)
             }
@@ -1508,7 +1508,11 @@ fn handle_file_range_header(
       option.None -> int.to_string(file_info.size - range.offset)
     }
 
-    response.Response(206, resp.headers, File(path:, range: option.Some(range)))
+    response.Response(
+      206,
+      resp.headers,
+      File(path:, offset: range.offset, limit: range.limit),
+    )
     |> response.set_header("content-length", content_length)
     |> response.prepend_header("accept-ranges", "bytes")
     |> response.prepend_header("content-range", content_range)
