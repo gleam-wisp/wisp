@@ -610,6 +610,7 @@ pub fn serve_static_range_request_test() {
         |> should.equal(Ok(int.to_string(l)))
       }
     }
+    response
   }
 
   let assert Ok(file_info) = simplifile.file_info("test/fixture.txt")
@@ -618,16 +619,22 @@ pub fn serve_static_range_request_test() {
   |> testing.set_header("range", "bytes=0-")
   |> handler
   |> validate_content_range(0, file_info.size - 1, file_info)
+  |> testing.string_body
+  |> should.equal("Hello, Joe! 👨‍👩‍👧‍👦\n")
 
   testing.get("/stuff/fixture.txt", [])
-  |> testing.set_header("range", "bytes=2-10")
+  |> testing.set_header("range", "bytes=2-15")
   |> handler
-  |> validate_content_range(2, 10, file_info)
+  |> validate_content_range(2, 15, file_info)
+  |> testing.string_body
+  |> should.equal("llo, Joe! 👨")
 
   testing.get("/stuff/fixture.txt", [])
-  |> testing.set_header("range", "bytes=-4")
+  |> testing.set_header("range", "bytes=-26")
   |> handler
-  |> validate_content_range(file_info.size - 4, file_info.size - 1, file_info)
+  |> validate_content_range(file_info.size - 26, file_info.size - 1, file_info)
+  |> testing.string_body
+  |> should.equal("👨‍👩‍👧‍👦\n")
 
   let backwards_range_response =
     testing.get("/stuff/fixture.txt", [])
