@@ -39,7 +39,7 @@ pub fn make_connection(
   )
 }
 
-type Reader =
+pub type Reader =
   fn(Int) -> Result(Read, Nil)
 
 pub type Read {

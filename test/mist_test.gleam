@@ -60,39 +60,80 @@ fn webserver() {
 }
 
 type Context {
-  Context(ws: wisp.WsCapability(Int, String))
+  Context(ws: wisp.WsCapability)
 }
 
 fn handle_req(req: wisp.Request, ctx: fn() -> Context) -> wisp.Response {
   let ctx = ctx()
   case wisp.path_segments(req) {
     ["test", "ws"] -> ws_handler(req, ctx)
+    ["test", "ws2"] -> ws_handler2(req, ctx)
     _ -> wisp.not_found()
   }
 }
 
-fn ws_handler(req: wisp.Request, ctx: Context) -> wisp.Response {
-  let on_init = fn(conn: wisp.WsConnection) {
-    let assert Ok(Nil) = "Hello, Joe!" |> wisp.WsSendText |> conn()
-    #(0, None)
-  }
-  let handler = fn(state: Int, conn: wisp.WsConnection, msg) {
-    case msg {
-      wisp.WsText(text) -> {
-        let assert Ok(Nil) = case text {
-          "ping" | "ping\n" -> "pong" |> wisp.WsSendText |> conn()
-          "count" -> state |> int.to_string |> wisp.WsSendText |> conn()
-          repeat -> repeat |> wisp.WsSendText |> conn()
-        }
-        actor.continue(state)
-      }
-      wisp.WsBinary(_binary) -> actor.continue(state)
-      wisp.WsClosed | wisp.WsShutdown -> actor.Stop(process.Normal)
-      wisp.WsCustom(_selector) -> actor.continue(state)
-    }
-  }
-  let on_close = fn(_state) { Nil }
+// Websocket handler
 
-  wisp.WsHandler(handler, on_init, on_close)
-  |> wisp.websocket(req, ctx.ws)
+fn ws_handler(_req: wisp.Request, ctx: Context) -> wisp.Response {
+  wisp.WsHandler(on_init: on_init, handler: handler) |> wisp.websocket(ctx.ws)
+}
+
+type State {
+  State(ws: wisp.WsConnection)
+}
+
+fn on_init(ws: wisp.WsConnection) -> #(State, process.Selector(String)) {
+  "Hello, Joe!" |> process.send(ws, _)
+  #(State(ws), process.new_selector())
+}
+
+fn handler(
+  msg: wisp.WsMessage,
+  state: State,
+) -> actor.Next(wisp.WsMessage, State) {
+  case msg {
+    wisp.WsText(text) -> {
+      case text {
+        "ping" | "ping\n" -> "pong" |> process.send(state.ws, _)
+        repeat -> repeat |> process.send(state.ws, _)
+      }
+      actor.continue(state)
+    }
+    wisp.WsCustom(_text) -> actor.continue(state)
+    wisp.WsClosed | wisp.WsShutdown -> actor.Stop(process.Normal)
+  }
+}
+
+// Different websocket handler with different state type
+
+fn ws_handler2(_req: wisp.Request, ctx: Context) -> wisp.Response {
+  wisp.WsHandler(on_init: on_init2, handler: handler2) |> wisp.websocket(ctx.ws)
+}
+
+type State2 {
+  State2(ws: wisp.WsConnection, count: Int)
+}
+
+fn on_init2(ws: wisp.WsConnection) -> #(State2, process.Selector(String)) {
+  #(State2(ws, 0), process.new_selector())
+}
+
+fn handler2(
+  msg: wisp.WsMessage,
+  state: State2,
+) -> actor.Next(wisp.WsMessage, State2) {
+  case msg {
+    wisp.WsText(text) -> {
+      let state = case text {
+        "count" | "count\n" -> {
+          state.count |> int.to_string |> process.send(state.ws, _)
+          state
+        }
+        _other -> State2(..state, count: state.count + 1)
+      }
+      actor.continue(state)
+    }
+    wisp.WsCustom(_text) -> actor.continue(state)
+    wisp.WsClosed | wisp.WsShutdown -> actor.Stop(process.Normal)
+  }
 }

@@ -1,4 +1,3 @@
-import app/websocket
 import wisp
 
 // We need to store the websocket capability provided by our server which we
@@ -7,7 +6,7 @@ import wisp
 // We will need to define in our capability our type for our websockets
 // state and the custom message type it will receive.
 pub type Context {
-  Context(ws: wisp.WsCapability(websocket.State, String))
+  Context(ws: wisp.WsCapability)
 }
 
 pub fn middleware(

@@ -62,10 +62,11 @@ pub type Body {
   /// in place of any with an empty body.
   ///
   Empty
-  /// Upgrades the socket to a websocket, is only used internally by the
-  /// web server and should not be called directly.
-  ///
-  Websocket(process.Selector(process.ProcessDown))
+  /// TODO: document, return the websocket actor startup, mist passes it its subject to forward events to/from
+  Websocket(
+    fn(process.Subject(String)) ->
+      Result(process.Subject(WsMessage), actor.StartError),
+  )
 }
 
 /// An alias for a HTTP response containing a `Body`.
@@ -1244,7 +1245,7 @@ fn multipart_body(
     }
 
     http.MoreRequiredForBody(chunk, parse) -> {
-      let parse = fn_with_bad_request_error(parse(_))
+      let parse = fn_with_bad_request_error(parse)
       let reader = BufferedReader(reader, <<>>)
       use data <- result.try(append(data, chunk))
       multipart_body(reader, parse, boundary, chunk_size, quota, append, data)
@@ -1889,13 +1890,13 @@ pub fn create_canned_connection(
 
 /// The messages received in a websocket handler.
 ///
-pub type WsMessage(a) {
+pub type WsMessage {
   /// A string message received from a websocket.
   ///
   WsText(String)
-  /// A binary data message received from a websocket.
+  /// A string mesasge receeived from another actor
   ///
-  WsBinary(BitArray)
+  WsCustom(String)
   /// A websocket closed message received from a websocket client disconnection.
   ///
   WsClosed
@@ -1903,11 +1904,6 @@ pub type WsMessage(a) {
   /// server-side.
   ///
   WsShutdown
-  /// A custom message type sent to the websocket handlers subject/selector
-  /// (created during `on_init`) from within the application by another
-  /// actor/process.
-  ///
-  WsCustom(a)
 }
 
 /// An active websocket connection used to send messages to the client
@@ -1915,8 +1911,8 @@ pub type WsMessage(a) {
 /// This connection is used from within a websocket handler function to
 /// send data to the client via `WsSendText` or `WsSendBinary`
 ///
-type WsConnection =
-  fn(WsSend) -> Result(Nil, WsError)
+pub type WsConnection =
+  process.Subject(String)
 
 /// A capability used to support websocket execution from a capable server.
 ///
@@ -1924,12 +1920,8 @@ type WsConnection =
 /// function. It is required to turn a http connection into an
 /// active websocket (`WsConnection`).
 ///
-pub type WsCapability(state, msg) {
-  WsCapability(
-    handler: fn(Request, WsHandler(state, msg)) -> Response,
-    ws: internal.WsCapability,
-  )
-}
+pub type WsCapability =
+  internal.WsCapability
 
 /// Configuration for a websockets creation and life-cycle.
 ///
@@ -1940,103 +1932,12 @@ pub type WsCapability(state, msg) {
 /// or received from the websocket and may take actions such as updating the state or
 /// communicating with other actors or functions.
 ///
-/// The `on_close` function takes the state and should run any cleanup actions
-/// such as notifying of disconnects to other actors.
-///
-/// # Example Basic
-///
-/// ```gleam
-/// fn websocket(req: Request, ws: WsCapability) -> Response {
-///   let state = 0
-///   let on_init = fn(_conn) { #(state, None) }
-///   let handler = fn(state, conn, msg) {
-///     case msg {
-///       wisp.WsText(text) -> {
-///         case text {
-///           "ping" -> "pong" |> wisp.WsSendText |> conn()
-///           _ -> Ok(Nil)
-///         }
-///         actor.continue(state)
-///       }
-///       _ -> actor.Stop(process.Normal)
-///     }
-///   }
-///   let on_close = fn(_state) { Nil }
-///
-///   wisp.WsHandler(handler, on_init, on_close)
-///   |> wisp.websocket(req, ws)
-/// }
-/// ```
-///
-///
-/// # Example with selector
-///
-/// Optionally, `on_init` can be provided a `selector` which is used to send
-/// messages to the handler function as `WsCustom` messages from inside the
-/// application
-///
-/// ```gleam
-/// type State {
-///   State(counter: Int, server: process.Subject(String))
-/// }
-///
-/// fn handler(state, conn, msg) {
-///   case msg {
-///     wisp.WsText(text) -> {
-///       case text {
-///         "ping" -> "pong" |> wisp.WsSendText |> conn()
-///         _ -> Ok(Nil)
-///       }
-///       actor.continue(state)
-///     }
-///     wisp.WsCustom(selector_msg) -> {
-///       selector_msg |> wisp.WsSendText |> conn()
-///       actor.continue(state)
-///     }
-///     _ -> actor.Stop(process.Normal)
-///   }
-/// }
-///
-/// fn on_init(conn, server) {
-///   let state = State(0, server)
-///   let subj = process.new_subject()
-///   let selector =
-///     process.new_selector() |> process.selecting(subj, function.identity)
-///   process.send(state.server, "connected")
-///   "Hello, Joe!" |> wisp.WsSendText |> conn()
-///   #(state, Some(selector))
-/// }
-///
-/// fn on_close(state) {
-///   process.send(state.server, "disconnected")
-///   Nil
-/// }
-///
-/// fn websocket(req, ws, server) -> Response {
-///   wisp.WsHandler(handler, on_init(_, server), on_close)
-///   |> wisp.websocket(req, ws)
-/// }
-/// ```
-///
-pub type WsHandler(state, msg) {
+/// TODO: rewrite examples
+pub type WsHandler(state) {
   WsHandler(
-    handler: fn(state, WsConnection, WsMessage(msg)) -> actor.Next(msg, state),
-    on_init: fn(WsConnection) -> #(state, Option(process.Selector(msg))),
-    on_close: fn(state) -> Nil,
+    on_init: fn(WsConnection) -> #(state, process.Selector(String)),
+    handler: fn(WsMessage, state) -> actor.Next(WsMessage, state),
   )
-}
-
-/// Build a message to send to an active websocket connection.
-///
-/// ```gleam
-/// "pong" |> wisp.WsSendText |> conn()
-/// ```
-///
-pub type WsSend {
-  /// A payload of unicode text.
-  WsSendText(text: String)
-  /// A payload of binary data.
-  WsSendBinary(binary: BitArray)
 }
 
 /// TODO: Placeholder error type, flesh out.
@@ -2055,15 +1956,25 @@ pub type WsError {
 /// client and requires a websocket capable web server such as mist which
 /// provides the `WsCapability` as part of its handler function.
 ///
-/// ```gleam
-/// wisp.WsHandler(handler, on_init, on_close) |> wisp.websocket(req, ws_capability)
-/// ```
-///
+/// TODO: redo examples
 pub fn websocket(
-  handler: WsHandler(state, msg),
-  req: Request,
-  capability: WsCapability(state, msg),
+  // _req just to make sure you have one?
+  handler: WsHandler(state),
+  _capability: WsCapability,
 ) -> Response {
-  let WsCapability(do_websocket, _) = capability
-  do_websocket(req, handler)
+  let actor = fn(socket: process.Subject(String)) {
+    actor.Spec(
+      init: fn() {
+        let #(state, selector) = handler.on_init(socket)
+        selector
+        |> process.map_selector(fn(value) { WsCustom(value) })
+        |> actor.Ready(state, _)
+      },
+      // TODO: what should this timeout be?
+      init_timeout: 1000,
+      loop: handler.handler,
+    )
+    |> actor.start_spec
+  }
+  HttpResponse(200, [], Websocket(actor))
 }

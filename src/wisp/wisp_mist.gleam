@@ -1,6 +1,7 @@
 import exception
 import gleam/bytes_builder
 import gleam/erlang/process
+import gleam/function
 import gleam/http/request.{type Request as HttpRequest}
 import gleam/http/response.{
   type Response as HttpResponse, Response as HttpResponse,
@@ -42,7 +43,7 @@ import wisp/internal
 /// ```
 ///
 pub fn handler(
-  handler: fn(wisp.Request, wisp.WsCapability(state, msg)) -> wisp.Response,
+  handler: fn(wisp.Request, wisp.WsCapability) -> wisp.Response,
   secret_key_base: String,
 ) -> fn(HttpRequest(mist.Connection)) -> HttpResponse(mist.ResponseData) {
   fn(request: HttpRequest(_)) {
@@ -55,16 +56,15 @@ pub fn handler(
       let assert Ok(_) = wisp.delete_temporary_files(request)
     })
 
-    let wscap =
-      fn(req: wisp.Request, wsh: wisp.WsHandler(a, b)) -> wisp.Response {
-        request.set_body(req, mist) |> websocket(wsh)
-      }
-      |> wisp.WsCapability(internal.WsCapability)
-
     let response =
       request
-      |> handler(wscap)
-      |> mist_response
+      |> handler(internal.WsCapability)
+
+    let response = case response {
+      HttpResponse(body: wisp.Websocket(subject), ..) ->
+        mist_websocket(request.set_body(request, mist), subject)
+      response -> response |> mist_response
+    }
 
     response
   }
@@ -97,7 +97,8 @@ fn mist_response(response: wisp.Response) -> HttpResponse(mist.ResponseData) {
     wisp.Text(text) -> mist.Bytes(bytes_builder.from_string_builder(text))
     wisp.Bytes(bytes) -> mist.Bytes(bytes)
     wisp.File(path) -> mist_send_file(path)
-    wisp.Websocket(x) -> mist.Websocket(x)
+    // TODO: This scenario isn't possible as we manually handle this response in handler
+    wisp.Websocket(..) -> panic as "TODO: shouldn't be possible"
   }
   response
   |> response.set_body(body)
@@ -118,84 +119,47 @@ fn mist_send_file(path: String) -> mist.ResponseData {
 // Websockets
 //
 
-/// Creates a websocket from a `wisp.WsHandler` type.
-///
-fn websocket(
-  req: HttpRequest(mist.Connection),
-  ws: wisp.WsHandler(a, b),
-) -> wisp.Response {
-  let handler = mist_ws_handler(ws)
-  let on_init = mist_ws_on_init(ws)
-  mist_websocket(req, handler, on_init, ws.on_close)
-}
-
-/// Converts a wisp websocket handler to a mist one.
-///
-fn mist_ws_handler(
-  ws: wisp.WsHandler(a, b),
-) -> fn(a, mist.WebsocketConnection, mist.WebsocketMessage(b)) ->
-  actor.Next(b, a) {
-  fn(state: a, conn: mist.WebsocketConnection, msg: mist.WebsocketMessage(b)) {
-    let msg = msg |> from_mist_websocket_message
-    let conn = fn(s) { send(s, conn) |> result.map_error(mist_ws_err) }
-    ws.handler(state, conn, msg)
-  }
-}
-
-/// Converts a wisp websocket init to a mist one.
-///
-fn mist_ws_on_init(
-  ws: wisp.WsHandler(a, b),
-) -> fn(mist.WebsocketConnection) -> #(a, Option(process.Selector(b))) {
-  fn(conn: mist.WebsocketConnection) {
-    let conn = fn(s) { send(s, conn) |> result.map_error(mist_ws_err) }
-    ws.on_init(conn)
-  }
-}
-
-/// Converts a wisp websocket to a mist one.
-///
 fn mist_websocket(
-  req: HttpRequest(mist.Connection),
-  handler handler: fn(a, mist.WebsocketConnection, mist.WebsocketMessage(b)) ->
-    actor.Next(b, a),
-  on_init on_init: fn(mist.WebsocketConnection) ->
-    #(a, Option(process.Selector(b))),
-  on_close on_close: fn(a) -> Nil,
-) -> wisp.Response {
-  let resp = mist.websocket(req, handler, on_init(_), on_close)
-  case resp.status, resp.body {
-    200, mist.Websocket(x) ->
-      wisp.ok()
-      |> wisp.set_body(wisp.Websocket(x))
-    400, _ -> wisp.bad_request()
-    _, _ -> wisp.internal_server_error()
+  request: HttpRequest(mist.Connection),
+  subj: fn(process.Subject(String)) ->
+    Result(process.Subject(wisp.WsMessage), actor.StartError),
+) -> HttpResponse(mist.ResponseData) {
+  let on_init = fn(_) {
+    let mist_ws = process.new_subject()
+    case subj(mist_ws) {
+      Ok(subj) -> {
+        let selector =
+          process.new_selector()
+          |> process.selecting(mist_ws, function.identity)
+          |> option.Some
+
+        #(subj, selector)
+      }
+      Error(_) -> todo as "failed to start wisp handler"
+    }
   }
+  let on_close = fn(state) { process.send(state, wisp.WsClosed) }
+  let handler = fn(state, conn, msg) {
+    // TODO: handle errors!
+    let assert Ok(_) = case msg {
+      mist.Custom(wisp) -> mist.send_text_frame(conn, wisp)
+      msg -> msg |> from_mist_websocket_message |> process.send(state, _) |> Ok
+    }
+    // TODO: handle stop!
+    actor.continue(state)
+  }
+  mist.websocket(request, handler, on_init, on_close)
 }
 
 /// Converts a mist websocket message to a wisp one.
 ///
-fn from_mist_websocket_message(
-  msg: mist.WebsocketMessage(a),
-) -> wisp.WsMessage(a) {
+fn from_mist_websocket_message(msg: mist.WebsocketMessage(a)) -> wisp.WsMessage {
   case msg {
     mist.Text(x) -> wisp.WsText(x)
-    mist.Binary(x) -> wisp.WsBinary(x)
+    mist.Binary(x) -> todo as "should we handle binary?"
     mist.Closed -> wisp.WsClosed
     mist.Shutdown -> wisp.WsShutdown
-    mist.Custom(x) -> wisp.WsCustom(x)
-  }
-}
-
-/// Sends data to a websocket connection using a `wisp.WsSend` type.
-///
-fn send(
-  send: wisp.WsSend,
-  conn: mist.WebsocketConnection,
-) -> Result(Nil, socket.SocketReason) {
-  case send {
-    wisp.WsSendText(text) -> mist.send_text_frame(conn, text)
-    wisp.WsSendBinary(binary) -> mist.send_binary_frame(conn, binary)
+    mist.Custom(_) -> todo as "we won't send mist.customs to wisp"
   }
 }
 
