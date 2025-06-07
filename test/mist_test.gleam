@@ -82,15 +82,22 @@ type State {
   State(ws: wisp.WsConnection)
 }
 
-fn on_init(ws: wisp.WsConnection) -> #(State, process.Selector(String)) {
+type Msg {
+  MsgA
+  MsgB
+}
+
+fn on_init(
+  ws: wisp.WsConnection,
+) -> #(State, process.Selector(wisp.WsMessage(Msg))) {
   "Hello, Joe!" |> process.send(ws, _)
   #(State(ws), process.new_selector())
 }
 
 fn handler(
-  msg: wisp.WsMessage,
+  msg: wisp.WsMessage(Msg),
   state: State,
-) -> actor.Next(wisp.WsMessage, State) {
+) -> actor.Next(wisp.WsMessage(Msg), State) {
   case msg {
     wisp.WsText(text) -> {
       case text {
@@ -99,7 +106,8 @@ fn handler(
       }
       actor.continue(state)
     }
-    wisp.WsCustom(_text) -> actor.continue(state)
+    wisp.WsCustom(MsgA) -> actor.continue(state)
+    wisp.WsCustom(MsgB) -> actor.continue(state)
     wisp.WsClosed | wisp.WsShutdown -> actor.Stop(process.Normal)
   }
 }
@@ -114,14 +122,16 @@ type State2 {
   State2(ws: wisp.WsConnection, count: Int)
 }
 
-fn on_init2(ws: wisp.WsConnection) -> #(State2, process.Selector(String)) {
+fn on_init2(
+  ws: wisp.WsConnection,
+) -> #(State2, process.Selector(wisp.WsMessage(Int))) {
   #(State2(ws, 0), process.new_selector())
 }
 
 fn handler2(
-  msg: wisp.WsMessage,
+  msg: wisp.WsMessage(Int),
   state: State2,
-) -> actor.Next(wisp.WsMessage, State2) {
+) -> actor.Next(wisp.WsMessage(Int), State2) {
   case msg {
     wisp.WsText(text) -> {
       let state = case text {
@@ -133,7 +143,8 @@ fn handler2(
       }
       actor.continue(state)
     }
-    wisp.WsCustom(_text) -> actor.continue(state)
+    wisp.WsCustom(0) -> actor.continue(State2(..state, count: 0))
+    wisp.WsCustom(_num) -> actor.continue(state)
     wisp.WsClosed | wisp.WsShutdown -> actor.Stop(process.Normal)
   }
 }

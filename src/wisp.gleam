@@ -8,6 +8,7 @@ import gleam/dynamic.{type Dynamic}
 import gleam/erlang
 import gleam/erlang/atom.{type Atom}
 import gleam/erlang/process
+import gleam/function
 import gleam/http.{type Method}
 import gleam/http/cookie
 import gleam/http/request.{type Request as HttpRequest}
@@ -65,7 +66,7 @@ pub type Body {
   /// TODO: document, return the websocket actor startup, mist passes it its subject to forward events to/from
   Websocket(
     fn(process.Subject(String)) ->
-      Result(process.Subject(WsMessage), actor.StartError),
+      Result(process.Subject(WsIntMessage), actor.StartError),
   )
 }
 
@@ -1890,13 +1891,29 @@ pub fn create_canned_connection(
 
 /// The messages received in a websocket handler.
 ///
-pub type WsMessage {
+pub type WsIntMessage {
+  /// A string message received from a websocket.
+  ///
+  WsIntText(String)
+  /// A string message sent to a websocket.
+  ///
+  WsIntCustom(String)
+  /// A websocket closed message received from a websocket client disconnection.
+  ///
+  WsIntClosed
+  /// A Shutdown request used to cleanly close a websocket connection on the
+  /// server-side.
+  ///
+  WsIntShutdown
+}
+
+pub type WsMessage(msg) {
   /// A string message received from a websocket.
   ///
   WsText(String)
   /// A string mesasge receeived from another actor
   ///
-  WsCustom(String)
+  WsCustom(msg)
   /// A websocket closed message received from a websocket client disconnection.
   ///
   WsClosed
@@ -1933,10 +1950,10 @@ pub type WsCapability =
 /// communicating with other actors or functions.
 ///
 /// TODO: rewrite examples
-pub type WsHandler(state) {
+pub type WsHandler(state, msg) {
   WsHandler(
-    on_init: fn(WsConnection) -> #(state, process.Selector(String)),
-    handler: fn(WsMessage, state) -> actor.Next(WsMessage, state),
+    on_init: fn(WsConnection) -> #(state, process.Selector(WsMessage(msg))),
+    handler: fn(WsMessage(msg), state) -> actor.Next(WsMessage(msg), state),
   )
 }
 
@@ -1959,22 +1976,66 @@ pub type WsError {
 /// TODO: redo examples
 pub fn websocket(
   // _req just to make sure you have one?
-  handler: WsHandler(state),
+  handler: WsHandler(state, msg),
   _capability: WsCapability,
 ) -> Response {
-  let actor = fn(socket: process.Subject(String)) {
+  let actor_proxy = fn(socket: process.Subject(String)) {
+    actor.Spec(
+      init: fn() { websocket_init(socket, handler) },
+      // TODO: what should this timeout be?
+      init_timeout: 1000,
+      loop: websocket_loop,
+    )
+    |> actor.start_spec
+  }
+  HttpResponse(200, [], Websocket(actor_proxy))
+}
+
+type AppConnection(msg) =
+  process.Subject(WsMessage(msg))
+
+type WsState(msg) {
+  WsState(websocket: WsConnection, app: AppConnection(msg))
+}
+
+fn websocket_init(
+  websocket: process.Subject(String),
+  handler: WsHandler(state, msg),
+) -> actor.InitResult(WsState(msg), WsIntMessage) {
+  let proxy = process.new_subject()
+
+  // app actor
+  let assert Ok(app) =
     actor.Spec(
       init: fn() {
-        let #(state, selector) = handler.on_init(socket)
-        selector
-        |> process.map_selector(fn(value) { WsCustom(value) })
-        |> actor.Ready(state, _)
+        let #(state, selector) = handler.on_init(proxy)
+        actor.Ready(state, selector)
       },
-      // TODO: what should this timeout be?
       init_timeout: 1000,
       loop: handler.handler,
     )
     |> actor.start_spec
+
+  let state = WsState(websocket, app)
+  process.new_selector()
+  |> process.selecting(proxy, function.identity)
+  |> process.map_selector(fn(value) { WsIntCustom(value) })
+  |> actor.Ready(state, _)
+}
+
+fn websocket_loop(
+  msg: WsIntMessage,
+  state: WsState(msg),
+) -> actor.Next(WsIntMessage, WsState(msg)) {
+  case msg {
+    WsIntText(text) -> {
+      process.send(state.app, WsText(text))
+      actor.continue(state)
+    }
+    WsIntCustom(text) -> {
+      process.send(state.websocket, text)
+      actor.continue(state)
+    }
+    WsIntClosed | WsIntShutdown -> todo
   }
-  HttpResponse(200, [], Websocket(actor))
 }

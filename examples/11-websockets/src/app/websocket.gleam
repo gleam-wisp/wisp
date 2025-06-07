@@ -22,7 +22,7 @@ pub fn ping_pong(_req: Request, ws: wisp.WsCapability) -> Response {
 // This handles the start-up of our actor. We need to initialize our default
 // state and create a process subject/selector for our application
 // to send messages to the websocket if required.
-fn on_init(conn: wisp.WsConnection) -> #(State, Selector(String)) {
+fn on_init(conn: wisp.WsConnection) -> #(State, Selector(wisp.WsMessage(Nil))) {
   // We send a message to let the client know it is successfully connected.
   "connected" |> process.send(conn, _)
   // Then we setup our state type with default values.
@@ -40,9 +40,9 @@ fn on_init(conn: wisp.WsConnection) -> #(State, Selector(String)) {
 //
 // Our handler will simply respond to any "ping" text message with a "pong" response.
 fn handler(
-  msg: wisp.WsMessage,
+  msg: wisp.WsMessage(Nil),
   state: State,
-) -> actor.Next(wisp.WsMessage, State) {
+) -> actor.Next(wisp.WsMessage(Nil), State) {
   // We need to handle the incoming messages to the websocket actor
   case msg {
     // Our client will only send text so this will be the primary message send from the client to the server
@@ -63,8 +63,8 @@ fn handler(
 
     // We can have another process or actor in our application send a message
     // to the websocket, which we immediately forward onto the client. 
-    wisp.WsCustom(text) -> {
-      text |> process.send(state.websocket, _)
+    wisp.WsCustom(Nil) -> {
+      //text |> process.send(state.websocket)
       actor.continue(state)
     }
 

@@ -122,7 +122,7 @@ fn mist_send_file(path: String) -> mist.ResponseData {
 fn mist_websocket(
   request: HttpRequest(mist.Connection),
   subj: fn(process.Subject(String)) ->
-    Result(process.Subject(wisp.WsMessage), actor.StartError),
+    Result(process.Subject(wisp.WsIntMessage), actor.StartError),
 ) -> HttpResponse(mist.ResponseData) {
   let on_init = fn(_) {
     let mist_ws = process.new_subject()
@@ -138,7 +138,7 @@ fn mist_websocket(
       Error(_) -> todo as "failed to start wisp handler"
     }
   }
-  let on_close = fn(state) { process.send(state, wisp.WsClosed) }
+  let on_close = fn(state) { process.send(state, wisp.WsIntClosed) }
   let handler = fn(state, conn, msg) {
     // TODO: handle errors!
     let assert Ok(_) = case msg {
@@ -153,12 +153,14 @@ fn mist_websocket(
 
 /// Converts a mist websocket message to a wisp one.
 ///
-fn from_mist_websocket_message(msg: mist.WebsocketMessage(a)) -> wisp.WsMessage {
+fn from_mist_websocket_message(
+  msg: mist.WebsocketMessage(a),
+) -> wisp.WsIntMessage {
   case msg {
-    mist.Text(x) -> wisp.WsText(x)
+    mist.Text(x) -> wisp.WsIntText(x)
     mist.Binary(x) -> todo as "should we handle binary?"
-    mist.Closed -> wisp.WsClosed
-    mist.Shutdown -> wisp.WsShutdown
+    mist.Closed -> wisp.WsIntClosed
+    mist.Shutdown -> wisp.WsIntShutdown
     mist.Custom(_) -> todo as "we won't send mist.customs to wisp"
   }
 }
