@@ -1936,7 +1936,7 @@ pub type WsCapability =
 /// TODO: rewrite examples
 pub type WsHandler(state, msg) {
   WsHandler(
-    on_init: fn(WsConnection) -> #(state, process.Selector(WsMessage(msg))),
+    on_init: fn(WsConnection) -> #(state, process.Selector(msg)),
     handler: fn(WsMessage(msg), state) -> actor.Next(WsMessage(msg), state),
   )
 }
@@ -1993,6 +1993,7 @@ fn websocket_init(
     actor.Spec(
       init: fn() {
         let #(state, selector) = handler.on_init(adapter)
+        let selector = selector |> process.map_selector(WsCustom)
         actor.Ready(state, selector)
       },
       init_timeout: 1000,
