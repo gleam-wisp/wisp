@@ -1,10 +1,7 @@
 import wisp
 
 // We need to store the websocket capability provided by our server which we
-// will use to create a websocket route. This provides the connection
-// information of the socket connection to be upgraded into a websocket.
-// We will need to define in our capability our type for our websockets
-// state and the custom message type it will receive.
+// will use to create a websocket route.
 pub type Context {
   Context(ws: wisp.WsCapability)
 }

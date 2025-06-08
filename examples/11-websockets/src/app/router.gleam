@@ -9,7 +9,7 @@ pub fn handle_request(req: Request, ctx: web.Context) -> Response {
 
   case wisp.path_segments(req) {
     [] -> home_page(req)
-    ["ws"] -> websocket.ping_pong(req, ctx.ws)
+    ["ws"] -> websocket.ping_counter(req, ctx.ws)
     _ -> wisp.not_found()
   }
 }
@@ -18,18 +18,17 @@ fn home_page(req: Request) -> Response {
   use <- wisp.require_method(req, Get)
 
   let html = string_builder.from_string(client)
-  wisp.ok()
-  |> wisp.html_body(html)
+  wisp.ok() |> wisp.html_body(html)
 }
 
 // Here we setup our index page as a websocket client This will connect to our
 // websocket and print anything that it receieves from the websocket (note:
 // unsafe as we do not escape the text). 
 // 
-// On first load we should see 'connected' and 'pong', as our server let us
+// On first load we should see 'connected' and 1, as our server let us
 // know we are connected in the `on_init` function and our client sents a
 // 'ping' message immediately upon connecting, from which the server responsed
-// 'pong'.
+// the count of pings receivied.
 // 
 // We can then press the 'send ping' button to send more messages, which will
 // add the response to the dom.
