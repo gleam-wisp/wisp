@@ -66,7 +66,7 @@ pub type Body {
   /// TODO: document, return the websocket actor startup, mist passes it its subject to forward events to/from
   Websocket(
     fn(process.Subject(String)) ->
-      Result(process.Subject(WsIntMessage), actor.StartError),
+      Result(process.Subject(WsMessage(String)), actor.StartError),
   )
 }
 
@@ -1891,22 +1891,6 @@ pub fn create_canned_connection(
 
 /// The messages received in a websocket handler.
 ///
-pub type WsIntMessage {
-  /// A string message received from a websocket.
-  ///
-  WsIntText(String)
-  /// A string message sent to a websocket.
-  ///
-  WsIntCustom(String)
-  /// A websocket closed message received from a websocket client disconnection.
-  ///
-  WsIntClosed
-  /// A Shutdown request used to cleanly close a websocket connection on the
-  /// server-side.
-  ///
-  WsIntShutdown
-}
-
 pub type WsMessage(msg) {
   /// A string message received from a websocket.
   ///
@@ -2001,14 +1985,14 @@ type WsState(msg) {
 fn websocket_init(
   websocket: process.Subject(String),
   handler: WsHandler(state, msg),
-) -> actor.InitResult(WsState(msg), WsIntMessage) {
-  let proxy = process.new_subject()
+) -> actor.InitResult(WsState(msg), WsMessage(String)) {
+  let adapter = process.new_subject()
 
   // app actor
   let assert Ok(app) =
     actor.Spec(
       init: fn() {
-        let #(state, selector) = handler.on_init(proxy)
+        let #(state, selector) = handler.on_init(adapter)
         actor.Ready(state, selector)
       },
       init_timeout: 1000,
@@ -2018,24 +2002,23 @@ fn websocket_init(
 
   let state = WsState(websocket, app)
   process.new_selector()
-  |> process.selecting(proxy, function.identity)
-  |> process.map_selector(fn(value) { WsIntCustom(value) })
+  |> process.selecting(adapter, WsCustom)
   |> actor.Ready(state, _)
 }
 
 fn websocket_loop(
-  msg: WsIntMessage,
+  msg: WsMessage(String),
   state: WsState(msg),
-) -> actor.Next(WsIntMessage, WsState(msg)) {
+) -> actor.Next(WsMessage(String), WsState(msg)) {
   case msg {
-    WsIntText(text) -> {
+    WsText(text) -> {
       process.send(state.app, WsText(text))
       actor.continue(state)
     }
-    WsIntCustom(text) -> {
+    WsCustom(text) -> {
       process.send(state.websocket, text)
       actor.continue(state)
     }
-    WsIntClosed | WsIntShutdown -> todo
+    WsClosed | WsShutdown -> todo
   }
 }
