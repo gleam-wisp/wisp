@@ -30,6 +30,12 @@ import wisp/internal
 ///   process.sleep_forever()
 /// }
 /// ```
+///
+/// The secret key base is used for signing and encryption. To be able to
+/// verify and decrypt messages you will need to use the same key each time
+/// your program is run. Keep this value secret! Malicious people with this
+/// value will likely be able to hack your application.
+///
 pub fn handler(
   handler: fn(wisp.Request) -> wisp.Response,
   secret_key_base: String,
