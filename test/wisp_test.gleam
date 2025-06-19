@@ -2,7 +2,6 @@ import exception
 import gleam/bit_array
 import gleam/crypto
 import gleam/dynamic.{type Dynamic}
-import gleam/erlang
 import gleam/http
 import gleam/http/request
 import gleam/http/response.{Response}
@@ -191,7 +190,7 @@ pub fn set_get_secret_key_base_test() {
   |> should.equal(valid)
 
   // Panics if the key is too short
-  erlang.rescue(fn() { wisp.set_secret_key_base(request, too_short) })
+  exception.rescue(fn() { wisp.set_secret_key_base(request, too_short) })
   |> should.be_error
 }
 

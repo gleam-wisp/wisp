@@ -6,7 +6,7 @@ import gleam/crypto
 import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
 import gleam/dynamic/decode
-import gleam/erlang
+import gleam/erlang/application
 import gleam/erlang/atom.{type Atom}
 import gleam/http.{type Method}
 import gleam/http/cookie
@@ -1248,7 +1248,7 @@ pub fn rescue_crashes(handler: fn() -> Response) -> Response {
       }
       case decode.run(detail, atom_dict_decoder()) {
         Ok(details) -> {
-          let c = atom.create_from_string("class")
+          let c = atom.create("class")
           log_error_dict(dict.insert(details, c, error_kind_to_dynamic(kind)))
           Nil
         }
@@ -1265,14 +1265,16 @@ fn error_kind_to_dynamic(kind: ErrorKind) -> Dynamic
 fn atom_dict_decoder() -> decode.Decoder(Dict(Atom, Dynamic)) {
   let atom =
     decode.new_primitive_decoder("Atom", fn(data) {
-      case atom.from_dynamic(data) {
+      case atom_from_dynamic(data) {
         Ok(atom) -> Ok(atom)
-        Error(_) -> Error(atom.create_from_string("nil"))
+        Error(_) -> Error(atom.create("nil"))
       }
     })
-  let dynamic = decode.new_primitive_decoder("Dynamic", Ok)
-  decode.dict(atom, dynamic)
+  decode.dict(atom, decode.dynamic)
 }
+
+@external(erlang, "wisp_ffi", "atom_from_dynamic")
+fn atom_from_dynamic(data: Dynamic) -> Result(Atom, Nil)
 
 type DoNotLeak
 
@@ -1500,7 +1502,7 @@ pub fn delete_temporary_files(
 /// // -> Ok("/some/location/my_app/priv")
 /// ```
 ///
-pub const priv_directory = erlang.priv_directory
+pub const priv_directory = application.priv_directory
 
 //
 // Logging
