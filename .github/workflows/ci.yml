@@ -14,9 +14,9 @@ jobs:
       - uses: erlef/setup-beam@v1
         with:
           otp-version: "27.0"
-          gleam-version: "1.9.1"
+          gleam-version: "1.11.0"
           rebar3-version: "3"
- 
+
       - name: Test Wisp
         run: gleam test
 
