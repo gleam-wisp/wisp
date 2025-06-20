@@ -3,9 +3,6 @@
 ## v1.8.0 - 2025-06-20
 
 - Updated for `gleam_erlang` v1.
-
-## v1.7.1 - 2025-05-16
-
 - Fixed a bug where the `etag` header may not always be set for static assets.
 
 ## v1.7.0 - 2025-05-13
