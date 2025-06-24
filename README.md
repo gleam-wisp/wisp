@@ -52,8 +52,9 @@ pub fn handle_request(request: Request) -> Response {
 
 # Learning Wisp
 
-The [Wisp examples](./examples/) are a good place to start. They cover various
-scenarios and include comments and tests.
+The [Wisp examples](https://github.com/gleam-wisp/wisp/tree/main/examples)
+are a good place to start. They cover various scenarios and include comments and
+tests.
 
 API documentation is available on [HexDocs](https://hexdocs.pm/wisp/).
 
