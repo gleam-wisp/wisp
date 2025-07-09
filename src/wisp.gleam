@@ -8,6 +8,7 @@ import gleam/dynamic.{type Dynamic}
 import gleam/dynamic/decode
 import gleam/erlang/application
 import gleam/erlang/atom.{type Atom}
+import gleam/erlang/process
 import gleam/http.{type Method}
 import gleam/http/cookie
 import gleam/http/request.{type Request as HttpRequest}
@@ -18,6 +19,7 @@ import gleam/int
 import gleam/json
 import gleam/list
 import gleam/option.{type Option}
+import gleam/otp/actor
 import gleam/result
 import gleam/string
 import gleam/string_tree.{type StringTree}
@@ -54,6 +56,13 @@ pub type Body {
   /// safe to send large files this way.
   ///
   File(path: String)
+  ///
+  ///
+  ///
+  ///
+  ///
+  ///
+  ServerSentEvent(fn() -> Result(actor.Started(Nil), actor.StartError))
   /// An empty body. This may be returned by the `require_*` middleware
   /// functions in the event of a failure, invalid request, or other situation
   /// in which the request cannot be processed.
@@ -1794,4 +1803,40 @@ pub fn create_canned_connection(
     },
     secret_key_base,
   )
+}
+
+/// An active SSE connection.
+pub type SSEConnection(message) =
+  process.Subject(message)
+
+pub type SSEHandler(state, message) {
+  SSEHandler(
+    on_init: fn(SSEConnection(message)) -> #(state, process.Selector(message)),
+    handler: fn(state, message) -> actor.Next(state, message),
+  )
+}
+
+pub type SSEError
+
+pub fn sse(handler: SSEHandler(state, message)) -> Response {
+  let actor_proxy = fn() { sse_init(handler) }
+  HttpResponse(200, [], ServerSentEvent(actor_proxy))
+}
+
+pub fn sse_init(handler: SSEHandler(state, message)) -> actor.StartResult(Nil) {
+  let result =
+    actor.new_with_initialiser(0, fn(adapter) {
+      let #(state, selector) = handler.on_init(adapter)
+
+      Ok(actor.selecting(actor.initialised(state), selector))
+    })
+    |> actor.on_message(handler.handler)
+    |> actor.start
+
+  result
+}
+
+pub fn sse_loop(message, state) -> actor.Next(SSEConnection(state), message) {
+  process.send(state, message)
+  actor.continue(state)
 }

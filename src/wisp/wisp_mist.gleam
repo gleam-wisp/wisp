@@ -82,6 +82,7 @@ fn wrap_mist_chunk(
 fn mist_response(response: wisp.Response) -> HttpResponse(mist.ResponseData) {
   let body = case response.body {
     wisp.Empty -> mist.Bytes(bytes_tree.new())
+    wisp.ServerSentEvent(_) -> mist.Bytes(bytes_tree.new())
     wisp.Text(text) -> mist.Bytes(bytes_tree.from_string_tree(text))
     wisp.Bytes(bytes) -> mist.Bytes(bytes)
     wisp.File(path) -> mist_send_file(path)

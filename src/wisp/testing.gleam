@@ -9,7 +9,9 @@ import gleam/string
 import gleam/string_tree
 import gleam/uri
 import simplifile
-import wisp.{type Request, type Response, Bytes, Empty, File, Text}
+import wisp.{
+  type Request, type Response, Bytes, Empty, File, ServerSentEvent, Text,
+}
 
 /// The default secret key base used for test requests.
 /// This should never be used outside of tests.
@@ -227,6 +229,7 @@ pub fn patch_json(
 pub fn string_body(response: Response) -> String {
   case response.body {
     Empty -> ""
+    ServerSentEvent(_) -> panic as "TODO: should never happen"
     Text(tree) -> string_tree.to_string(tree)
     Bytes(bytes) -> {
       let data = bytes_tree.to_bit_array(bytes)
@@ -251,6 +254,7 @@ pub fn bit_array_body(response: Response) -> BitArray {
   case response.body {
     Empty -> <<>>
     Bytes(tree) -> bytes_tree.to_bit_array(tree)
+    ServerSentEvent(_) -> panic as "TODO: should never happen"
     Text(tree) -> bytes_tree.to_bit_array(bytes_tree.from_string_tree(tree))
     File(path) -> {
       let assert Ok(contents) = simplifile.read_bits(path)
