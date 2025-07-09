@@ -30,10 +30,6 @@ import marceau
 import simplifile
 import wisp/internal
 
-pub type WispError {
-  SSENotSupported
-}
-
 //
 // Responses
 //
@@ -1808,17 +1804,14 @@ pub type SSEHandler(state, message) {
 }
 
 pub fn sse(
-  req: HttpRequest(internal.Connection),
+  req: HttpRequest(internal.SSEEnabledConnection),
   handler: SSEHandler(state, SSEMessage(message)),
-) -> Result(Response, WispError) {
-  use <- bool.guard(
-    when: !{ req.body |> internal.can_do_sse },
-    return: Error(SSENotSupported),
-  )
+) -> Response {
+  let _ = req.body
 
   let actor_proxy = fn(subj) { sse_init(subj, handler) }
 
-  Ok(HttpResponse(200, [], ServerSentEvent(actor_proxy)))
+  HttpResponse(200, [], ServerSentEvent(actor_proxy))
 }
 
 pub fn sse_init(
@@ -1857,7 +1850,6 @@ pub fn create_canned_connection(
     fn(_size) {
       Ok(internal.Chunk(body, fn(_size) { Ok(internal.ReadingFinished) }))
     },
-    [],
     secret_key_base,
   )
 }

@@ -46,9 +46,8 @@ pub fn handler(
     let mist = request.body
 
     let connection =
-      internal.make_connection(
+      internal.make_sse_enabled_connection(
         mist_body_reader(request),
-        [internal.sse_capability()],
         secret_key_base,
       )
     let request = request.set_body(request, connection)
