@@ -24,16 +24,6 @@ pub type Connection {
   )
 }
 
-pub type SSEEnabledConnection =
-  Connection
-
-pub fn make_sse_enabled_connection(
-  body_reader: Reader,
-  secret_key_base: String,
-) -> SSEEnabledConnection {
-  make_connection(body_reader, secret_key_base)
-}
-
 pub fn make_connection(
   body_reader: Reader,
   secret_key_base: String,

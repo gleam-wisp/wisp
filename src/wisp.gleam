@@ -1804,11 +1804,8 @@ pub type SSEHandler(state, message) {
 }
 
 pub fn sse(
-  req: HttpRequest(internal.SSEEnabledConnection),
   handler: SSEHandler(state, SSEMessage(message)),
 ) -> Response {
-  let _ = req.body
-
   let actor_proxy = fn(subj) { sse_init(subj, handler) }
 
   HttpResponse(200, [], ServerSentEvent(actor_proxy))
