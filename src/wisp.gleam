@@ -527,6 +527,9 @@ pub fn internal_server_error() -> Response {
 pub type Connection =
   internal.Connection
 
+pub type SSEEnabled =
+  internal.SSECapability
+
 type BufferedReader {
   BufferedReader(reader: internal.Reader, buffer: BitArray)
 }
@@ -1797,24 +1800,31 @@ pub type SSEError
 
 pub type SSEHandler(state, message) {
   SSEHandler(
-    on_init: fn(process.Subject(String)) -> #(state, process.Selector(message)),
+    on_init: fn(process.Subject(message)) -> #(state, process.Selector(message)),
     handler: fn(state, SSEMessage(message)) ->
       actor.Next(state, SSEMessage(message)),
   )
 }
 
 pub fn sse(
-  handler: SSEHandler(state, SSEMessage(message)),
+  _capability: SSEEnabled,
+  handler: SSEHandler(state, message),
 ) -> Response {
-  let actor_proxy = fn(subj) { sse_init(subj, handler) }
+  let actor_proxy = fn(subj) {
+    let assert Ok(actor.Started(_, a)) =
+      actor.new(subj)
+      |> actor.start
+
+    sse_init(a, handler)
+  }
 
   HttpResponse(200, [], ServerSentEvent(actor_proxy))
 }
 
 pub fn sse_init(
-  subj: process.Subject(String),
+  subj: process.Subject(message),
   handler: SSEHandler(state, message),
-) -> actor.StartResult(process.Subject(SSEMessage(String))) {
+) -> actor.StartResult(process.Subject(SSEMessage(message))) {
   let adapter = process.new_subject()
   actor.new_with_initialiser(1000, fn(_) {
     let #(state, selector) = handler.on_init(subj)

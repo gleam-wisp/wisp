@@ -2,7 +2,12 @@ import directories
 import gleam/bit_array
 import gleam/crypto
 import gleam/int
+import gleam/option
 import gleam/string
+
+pub opaque type SSECapability {
+  SSECapability
+}
 
 //
 // Requests
@@ -21,6 +26,7 @@ pub type Connection {
     read_chunk_size: Int,
     secret_key_base: String,
     temporary_directory: String,
+    sse_enabled: option.Option(SSECapability),
   )
 }
 
@@ -41,6 +47,7 @@ pub fn make_connection(
     read_chunk_size: 1_000_000,
     temporary_directory:,
     secret_key_base:,
+    sse_enabled: option.Some(SSECapability),
   )
 }
 

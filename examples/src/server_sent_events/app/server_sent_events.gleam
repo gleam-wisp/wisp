@@ -1,6 +1,8 @@
 import gleam/erlang/process
 import gleam/http.{Get}
+import gleam/option
 import gleam/otp/actor
+import gleam/string
 import gleam/string_tree
 import logging
 import repeatedly
@@ -41,50 +43,34 @@ pub fn home_page(req: Request) -> Response {
   |> wisp.html_body(html)
 }
 
-pub fn sse(req) -> Response {
+pub fn sse(req: Request) -> Response {
   use <- wisp.require_method(req, Get)
-  let handler = wisp.SSEHandler()
 
-  let assert Ok(response) = wisp.sse(req, handler)
+  let init = fn(subject) {
+    let selector = process.new_selector()
+    let repeater =
+      repeatedly.call(1000, Nil, fn(_state, _count) {
+        let now = system_time(Millisecond)
+        process.send(subject, Time(now))
+      })
+    let state = EventState(0, repeater)
+
+    #(state, selector)
+  }
+
+  let loop = fn(state: EventState, message: wisp.SSEMessage(Event)) {
+    logging.log(logging.Info, "Sent event: " <> string.inspect(message))
+    logging.log(logging.Info, "From state: " <> string.inspect(state))
+    actor.continue(state)
+  }
+
+  let handler = wisp.SSEHandler(on_init: init, handler: loop)
+
+  let assert option.Some(sse_enabled) = req.body.sse_enabled
+
+  let response = wisp.sse(sse_enabled, handler)
 
   response
-}
-
-fn init(subj) {
-  let subj = process.new_subject()
-  let monitor = process.monitor_process(process.self())
-  let selector =
-    process.new_selector()
-    |> process.selecting(subj, function.identity)
-    |> process.selecting_process_down(monitor, Down)
-  let repeater =
-    repeatedly.call(1000, Nil, fn(_state, _count) {
-      let now = system_time(Millisecond)
-      process.send(subj, Time(now))
-    })
-  actor.Ready(EventState(0, repeater), selector)
-}
-
-fn loop(message: Event, state: EventState) {
-  case message {
-    Time(value) -> {
-      let event = mist.event(string_builder.from_string(int.to_string(value)))
-      case mist.send_event(conn, event) {
-        Ok(_) -> {
-          logging.log(logging.Info, "Sent event: " <> string.inspect(event))
-          actor.continue(EventState(..state, count: state.count + 1))
-        }
-        Error(_) -> {
-          repeatedly.stop(state.repeater)
-          actor.Stop(process.Normal)
-        }
-      }
-    }
-    Down(_process_down) -> {
-      repeatedly.stop(state.repeater)
-      actor.Stop(process.Normal)
-    }
-  }
 }
 
 pub type EventState {

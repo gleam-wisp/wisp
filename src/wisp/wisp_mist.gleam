@@ -46,10 +46,7 @@ pub fn handler(
     let mist = request.body
 
     let connection =
-      internal.make_connection(
-        mist_body_reader(request),
-        secret_key_base,
-      )
+      internal.make_connection(mist_body_reader(request), secret_key_base)
     let request = request.set_body(request, connection)
 
     use <- exception.defer(fn() {

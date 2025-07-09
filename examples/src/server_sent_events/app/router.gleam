@@ -1,4 +1,3 @@
-import gleam/string_tree
 import server_sent_events/app/web
 import server_sent_events/app/server_sent_events
 import wisp.{type Request, type Response}
