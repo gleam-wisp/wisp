@@ -1,19 +1,9 @@
 import gleam/erlang/process
+import gleam/http.{Get}
 import gleam/otp/actor
 import gleam/string_tree
 import logging
 import repeatedly
-
-// import gleam/erlang/process
-// import gleam/function
-import gleam/http.{Get}
-
-// import gleam/http/request
-// import gleam/int
-// import gleam/otp/actor
-// import gleam/string
-// import logging
-// import repeatedly
 import wisp.{type Request, type Response}
 
 const index_html = "
@@ -56,7 +46,9 @@ pub fn sse(req) -> Response {
   let init = fn(a) { init }
   let handler = wisp.SSEHandler(init, loop)
 
-  wisp.sse(handler)
+  let assert Ok(response) = wisp.sse(req, handler)
+
+  response
 }
 
 fn init(subj) {

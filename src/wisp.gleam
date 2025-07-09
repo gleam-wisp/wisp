@@ -30,6 +30,14 @@ import marceau
 import simplifile
 import wisp/internal
 
+pub type Capability {
+  SSE
+}
+
+pub type WispError {
+  SSENotSupported
+}
+
 //
 // Responses
 //
@@ -56,11 +64,10 @@ pub type Body {
   /// safe to send large files this way.
   ///
   File(path: String)
+  /// A body which is a stream of server-sent events.
   ///
-  ///
-  ///
-  ///
-  ///
+  /// The body is a function which will be called to start the stream. The
+  /// function returns an `actor.Started` or `actor.StartError` result.
   ///
   ServerSentEvent(fn() -> Result(actor.Started(Nil), actor.StartError))
   /// An empty body. This may be returned by the `require_*` middleware
@@ -1784,6 +1791,56 @@ pub fn get_cookie(
 }
 
 //
+// Server-Sent Events
+//
+
+/// An active SSE connection.
+pub type SSEConnection(message) =
+  process.Subject(message)
+
+pub type SSEHandler(state, message) {
+  SSEHandler(
+    on_init: fn(SSEConnection(message)) -> #(state, process.Selector(message)),
+    handler: fn(state, message) -> actor.Next(state, message),
+  )
+}
+
+pub type SSEError
+
+pub fn sse(
+  req: HttpRequest(internal.Connection),
+  handler: SSEHandler(state, message),
+) -> Result(Response, WispError) {
+  let continue =
+    req.body.capabilities
+    |> internal.can_do_sse
+  let actor_proxy = fn() { sse_init(handler) }
+
+  case continue {
+    False -> Error(SSENotSupported)
+    True -> Ok(HttpResponse(200, [], ServerSentEvent(actor_proxy)))
+  }
+}
+
+fn sse_init(handler: SSEHandler(state, message)) -> actor.StartResult(Nil) {
+  let result =
+    actor.new_with_initialiser(0, fn(adapter) {
+      let #(state, selector) = handler.on_init(adapter)
+
+      Ok(actor.selecting(actor.initialised(state), selector))
+    })
+    |> actor.on_message(handler.handler)
+    |> actor.start
+
+  result
+}
+
+pub fn sse_loop(message, state) -> actor.Next(SSEConnection(state), message) {
+  process.send(state, message)
+  actor.continue(state)
+}
+
+//
 // Testing
 //
 
@@ -1801,42 +1858,7 @@ pub fn create_canned_connection(
     fn(_size) {
       Ok(internal.Chunk(body, fn(_size) { Ok(internal.ReadingFinished) }))
     },
+    [],
     secret_key_base,
   )
-}
-
-/// An active SSE connection.
-pub type SSEConnection(message) =
-  process.Subject(message)
-
-pub type SSEHandler(state, message) {
-  SSEHandler(
-    on_init: fn(SSEConnection(message)) -> #(state, process.Selector(message)),
-    handler: fn(state, message) -> actor.Next(state, message),
-  )
-}
-
-pub type SSEError
-
-pub fn sse(handler: SSEHandler(state, message)) -> Response {
-  let actor_proxy = fn() { sse_init(handler) }
-  HttpResponse(200, [], ServerSentEvent(actor_proxy))
-}
-
-pub fn sse_init(handler: SSEHandler(state, message)) -> actor.StartResult(Nil) {
-  let result =
-    actor.new_with_initialiser(0, fn(adapter) {
-      let #(state, selector) = handler.on_init(adapter)
-
-      Ok(actor.selecting(actor.initialised(state), selector))
-    })
-    |> actor.on_message(handler.handler)
-    |> actor.start
-
-  result
-}
-
-pub fn sse_loop(message, state) -> actor.Next(SSEConnection(state), message) {
-  process.send(state, message)
-  actor.continue(state)
 }

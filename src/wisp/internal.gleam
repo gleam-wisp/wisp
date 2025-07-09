@@ -2,9 +2,25 @@ import directories
 import gleam/bit_array
 import gleam/crypto
 import gleam/int
+import gleam/set
 import gleam/string
 
-// HELPERS
+//
+// Configuration
+//
+
+pub opaque type Capability {
+  SSE
+}
+
+pub fn sse_capability() -> List(Capability) {
+  [SSE]
+}
+
+pub fn can_do_sse(capabilities: List(Capability)) -> Bool {
+  set.from_list(capabilities)
+  |> set.contains(SSE)
+}
 
 //
 // Requests
@@ -23,11 +39,13 @@ pub type Connection {
     read_chunk_size: Int,
     secret_key_base: String,
     temporary_directory: String,
+    capabilities: List(Capability),
   )
 }
 
 pub fn make_connection(
   body_reader: Reader,
+  capabilities: List(Capability),
   secret_key_base: String,
 ) -> Connection {
   // Fallback to current working directory when no valid tmp directory exists
@@ -41,8 +59,9 @@ pub fn make_connection(
     max_body_size: 8_000_000,
     max_files_size: 32_000_000,
     read_chunk_size: 1_000_000,
-    temporary_directory: temporary_directory,
-    secret_key_base: secret_key_base,
+    temporary_directory:,
+    secret_key_base:,
+    capabilities:,
   )
 }
 

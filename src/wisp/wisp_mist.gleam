@@ -1,7 +1,9 @@
 import exception
 import gleam/bytes_tree
+import gleam/erlang/process
 import gleam/http/request.{type Request as HttpRequest}
 import gleam/http/response.{type Response as HttpResponse}
+import gleam/list
 import gleam/option
 import gleam/result
 import gleam/string
@@ -41,8 +43,13 @@ pub fn handler(
   secret_key_base: String,
 ) -> fn(HttpRequest(mist.Connection)) -> HttpResponse(mist.ResponseData) {
   fn(request: HttpRequest(_)) {
+    let mist: mist.Connection = request.body
     let connection =
-      internal.make_connection(mist_body_reader(request), secret_key_base)
+      internal.make_connection(
+        mist_body_reader(request),
+        internal.sse_capability(),
+        secret_key_base,
+      )
     let request = request.set_body(request, connection)
 
     use <- exception.defer(fn() {
@@ -82,7 +89,7 @@ fn wrap_mist_chunk(
 fn mist_response(response: wisp.Response) -> HttpResponse(mist.ResponseData) {
   let body = case response.body {
     wisp.Empty -> mist.Bytes(bytes_tree.new())
-    wisp.ServerSentEvent(_) -> mist.Bytes(bytes_tree.new())
+    wisp.ServerSentEvent(process) -> todo
     wisp.Text(text) -> mist.Bytes(bytes_tree.from_string_tree(text))
     wisp.Bytes(bytes) -> mist.Bytes(bytes)
     wisp.File(path) -> mist_send_file(path)
