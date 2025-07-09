@@ -3,8 +3,8 @@ import gleam/bytes_tree
 import gleam/erlang/process
 import gleam/http/request.{type Request as HttpRequest}
 import gleam/http/response.{type Response as HttpResponse}
-import gleam/list
 import gleam/option
+import gleam/otp/actor
 import gleam/result
 import gleam/string
 import mist
@@ -43,11 +43,12 @@ pub fn handler(
   secret_key_base: String,
 ) -> fn(HttpRequest(mist.Connection)) -> HttpResponse(mist.ResponseData) {
   fn(request: HttpRequest(_)) {
-    let mist: mist.Connection = request.body
+    let mist = request.body
+
     let connection =
       internal.make_connection(
         mist_body_reader(request),
-        internal.sse_capability(),
+        [internal.sse_capability()],
         secret_key_base,
       )
     let request = request.set_body(request, connection)
@@ -59,7 +60,12 @@ pub fn handler(
     let response =
       request
       |> handler
-      |> mist_response
+
+    let response = case response {
+      response.Response(_, _, body: wisp.ServerSentEvent(subject)) ->
+        mist_server_sent_event(request.set_body(request, mist), subject)
+      response -> mist_response(response)
+    }
 
     response
   }
@@ -89,10 +95,10 @@ fn wrap_mist_chunk(
 fn mist_response(response: wisp.Response) -> HttpResponse(mist.ResponseData) {
   let body = case response.body {
     wisp.Empty -> mist.Bytes(bytes_tree.new())
-    wisp.ServerSentEvent(process) -> todo
     wisp.Text(text) -> mist.Bytes(bytes_tree.from_string_tree(text))
     wisp.Bytes(bytes) -> mist.Bytes(bytes)
     wisp.File(path) -> mist_send_file(path)
+    wisp.ServerSentEvent(_) -> panic as "todo: should not happen probably"
   }
   response
   |> response.set_body(body)
@@ -107,4 +113,27 @@ fn mist_send_file(path: String) -> mist.ResponseData {
       mist.Bytes(bytes_tree.new())
     }
   }
+}
+
+//
+// Server Sent Events
+//
+
+fn mist_server_sent_event(
+  request,
+  subject: fn(process.Subject(String)) ->
+    actor.StartResult(process.Subject(wisp.SSEMessage(String))),
+) {
+  let on_init = fn(_) {
+    let mist_sse = process.new_subject()
+    case subject(mist_sse) {
+      Ok(subject) -> Ok(actor.initialised(subject))
+      Error(_) -> todo as "failed to start wisp handler"
+    }
+  }
+  let handler = fn(state, message, connection) {
+    let _ = mist.send_event(connection, message)
+    actor.continue(state)
+  }
+  mist.server_sent_events(request, response.new(200), on_init, handler)
 }

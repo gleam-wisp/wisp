@@ -3,6 +3,7 @@ import gleam/bytes_tree
 import gleam/crypto
 import gleam/http
 import gleam/http/request
+import gleam/int
 import gleam/json.{type Json}
 import gleam/option.{None, Some}
 import gleam/string
@@ -229,7 +230,7 @@ pub fn patch_json(
 pub fn string_body(response: Response) -> String {
   case response.body {
     Empty -> ""
-    ServerSentEvent(_) -> panic as "TODO: should never happen"
+    ServerSentEvent(_) -> ""
     Text(tree) -> string_tree.to_string(tree)
     Bytes(bytes) -> {
       let data = bytes_tree.to_bit_array(bytes)
@@ -253,14 +254,40 @@ pub fn string_body(response: Response) -> String {
 pub fn bit_array_body(response: Response) -> BitArray {
   case response.body {
     Empty -> <<>>
+    ServerSentEvent(_) -> <<>>
     Bytes(tree) -> bytes_tree.to_bit_array(tree)
-    ServerSentEvent(_) -> panic as "TODO: should never happen"
     Text(tree) -> bytes_tree.to_bit_array(bytes_tree.from_string_tree(tree))
     File(path) -> {
       let assert Ok(contents) = simplifile.read_bits(path)
       contents
     }
   }
+}
+
+/// Create a Server Sent Event String Response
+pub fn server_sent_event_string(
+  id: String,
+  event: String,
+  retry: Int,
+  data: String,
+) -> String {
+  let retry = int.to_string(retry)
+
+  let message =
+    "event: "
+    <> event
+    <> "\n"
+    <> "id: "
+    <> id
+    <> "\n"
+    <> "retry: "
+    <> retry
+    <> "\n"
+    <> "data: "
+    <> data
+    <> "\n\n"
+
+  message
 }
 
 /// Set a header on a request.

@@ -13,12 +13,12 @@ pub opaque type Capability {
   SSE
 }
 
-pub fn sse_capability() -> List(Capability) {
-  [SSE]
+pub fn sse_capability() -> Capability {
+  SSE
 }
 
-pub fn can_do_sse(capabilities: List(Capability)) -> Bool {
-  set.from_list(capabilities)
+pub fn can_do_sse(connection: Connection) -> Bool {
+  set.from_list(connection.capabilities)
   |> set.contains(SSE)
 }
 

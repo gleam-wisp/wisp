@@ -43,8 +43,7 @@ pub fn home_page(req: Request) -> Response {
 
 pub fn sse(req) -> Response {
   use <- wisp.require_method(req, Get)
-  let init = fn(a) { init }
-  let handler = wisp.SSEHandler(init, loop)
+  let handler = wisp.SSEHandler()
 
   let assert Ok(response) = wisp.sse(req, handler)
 
@@ -52,17 +51,40 @@ pub fn sse(req) -> Response {
 }
 
 fn init(subj) {
+  let subj = process.new_subject()
+  let monitor = process.monitor_process(process.self())
+  let selector =
+    process.new_selector()
+    |> process.selecting(subj, function.identity)
+    |> process.selecting_process_down(monitor, Down)
   let repeater =
     repeatedly.call(1000, Nil, fn(_state, _count) {
       let now = system_time(Millisecond)
       process.send(subj, Time(now))
     })
-
-  repeater
+  actor.Ready(EventState(0, repeater), selector)
 }
 
 fn loop(message: Event, state: EventState) {
-  todo
+  case message {
+    Time(value) -> {
+      let event = mist.event(string_builder.from_string(int.to_string(value)))
+      case mist.send_event(conn, event) {
+        Ok(_) -> {
+          logging.log(logging.Info, "Sent event: " <> string.inspect(event))
+          actor.continue(EventState(..state, count: state.count + 1))
+        }
+        Error(_) -> {
+          repeatedly.stop(state.repeater)
+          actor.Stop(process.Normal)
+        }
+      }
+    }
+    Down(_process_down) -> {
+      repeatedly.stop(state.repeater)
+      actor.Stop(process.Normal)
+    }
+  }
 }
 
 pub type EventState {
