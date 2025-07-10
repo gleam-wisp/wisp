@@ -230,7 +230,7 @@ pub fn patch_json(
 pub fn string_body(response: Response) -> String {
   case response.body {
     Empty -> ""
-    ServerSentEvent(_) -> ""
+    ServerSentEvent(_, _) -> ""
     Text(tree) -> string_tree.to_string(tree)
     Bytes(bytes) -> {
       let data = bytes_tree.to_bit_array(bytes)
@@ -254,7 +254,7 @@ pub fn string_body(response: Response) -> String {
 pub fn bit_array_body(response: Response) -> BitArray {
   case response.body {
     Empty -> <<>>
-    ServerSentEvent(_) -> <<>>
+    ServerSentEvent(_, _) -> <<>>
     Bytes(tree) -> bytes_tree.to_bit_array(tree)
     Text(tree) -> bytes_tree.to_bit_array(bytes_tree.from_string_tree(tree))
     File(path) -> {

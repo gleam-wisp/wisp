@@ -58,8 +58,8 @@ pub fn handler(
       |> handler
 
     let response = case response {
-      response.Response(_, _, body: wisp.ServerSentEvent(subject)) ->
-        mist_server_sent_event(request.set_body(request, mist), subject)
+      response.Response(_, _, body: wisp.ServerSentEvent(init, loop)) ->
+        mist_server_sent_event(request.set_body(request, mist), init, loop)
       response -> mist_response(response)
     }
 
@@ -94,7 +94,7 @@ fn mist_response(response: wisp.Response) -> HttpResponse(mist.ResponseData) {
     wisp.Text(text) -> mist.Bytes(bytes_tree.from_string_tree(text))
     wisp.Bytes(bytes) -> mist.Bytes(bytes)
     wisp.File(path) -> mist_send_file(path)
-    wisp.ServerSentEvent(_) -> panic as "todo: should not happen probably"
+    wisp.ServerSentEvent(_, _) -> panic as "todo: should not happen probably"
   }
   response
   |> response.set_body(body)
@@ -117,19 +117,20 @@ fn mist_send_file(path: String) -> mist.ResponseData {
 
 fn mist_server_sent_event(
   request,
-  subject: fn(process.Subject(String)) ->
-    actor.StartResult(process.Subject(wisp.SSEMessage(String))),
+  init: fn(process.Subject(wisp.SSEMessage)) ->
+    Result(
+      actor.Initialised(
+        wisp.SSEState,
+        wisp.SSEMessage,
+        process.Subject(wisp.SSEMessage),
+      ),
+      String,
+    ),
+  loop: fn(wisp.SSEState, wisp.SSEMessage) ->
+    actor.Next(wisp.SSEState, wisp.SSEMessage),
 ) {
-  let on_init = fn(_) {
-    let mist_sse = process.new_subject()
-    case subject(mist_sse) {
-      Ok(subject) -> Ok(actor.initialised(subject))
-      Error(_) -> todo as "failed to start wisp handler"
-    }
-  }
-  let handler = fn(state, message, connection) {
-    let _ = mist.send_event(connection, message)
-    actor.continue(state)
-  }
+  let on_init = fn(subject) { init(subject) }
+  let handler = fn(state, message, _) { loop(state, message) }
+
   mist.server_sent_events(request, response.new(200), on_init, handler)
 }

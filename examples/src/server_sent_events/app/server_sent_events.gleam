@@ -47,24 +47,20 @@ pub fn sse(req: Request) -> Response {
   use <- wisp.require_method(req, Get)
 
   let init = fn(subject) {
-    let selector = process.new_selector()
-    let repeater =
-      repeatedly.call(1000, Nil, fn(_state, _count) {
-        let now = system_time(Millisecond)
-        process.send(subject, Time(now))
-      })
-    let state = EventState(0, repeater)
+    let initialised =
+      actor.initialised(wisp.SSEState)
+      |> actor.returning(subject)
 
-    #(state, selector)
+    Ok(initialised)
   }
 
-  let loop = fn(state: EventState, message: wisp.SSEMessage(Event)) {
+  let loop = fn(state: wisp.SSEState, message: wisp.SSEMessage) {
     logging.log(logging.Info, "Sent event: " <> string.inspect(message))
     logging.log(logging.Info, "From state: " <> string.inspect(state))
     actor.continue(state)
   }
 
-  let handler = wisp.SSEHandler(on_init: init, handler: loop)
+  let handler = wisp.SSEHandler(init:, loop:)
 
   let assert option.Some(sse_enabled) = req.body.sse_enabled
 

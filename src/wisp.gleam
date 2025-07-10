@@ -62,8 +62,8 @@ pub type Body {
   /// function returns an `actor.Started` or `actor.StartError` result.
   ///
   ServerSentEvent(
-    fn(process.Subject(String)) ->
-      actor.StartResult(process.Subject(SSEMessage(String))),
+    on_init: fn(process.Subject(SSEMessage)) -> OnInit,
+    loop: fn(SSEState, SSEMessage) -> actor.Next(SSEState, SSEMessage),
   )
   /// functions in the event of a failure, invalid request, or other situation
   /// in which the request cannot be processed.
@@ -74,8 +74,19 @@ pub type Body {
   Empty
 }
 
-pub type SSEMessage(message) {
-  SSEMessage(message)
+pub type OnInit =
+      Result(
+        actor.Initialised(SSEState, SSEMessage, process.Subject(SSEMessage)),
+        String,
+      )
+
+
+pub type SSEMessage {
+  SSEMessage
+}
+
+pub type SSEState {
+  SSEState
 }
 
 /// An alias for a HTTP response containing a `Body`.
@@ -1798,45 +1809,15 @@ pub fn get_cookie(
 /// An active SSE connection.
 pub type SSEError
 
-pub type SSEHandler(state, message) {
+pub type SSEHandler {
   SSEHandler(
-    on_init: fn(process.Subject(message)) -> #(state, process.Selector(message)),
-    handler: fn(state, SSEMessage(message)) ->
-      actor.Next(state, SSEMessage(message)),
+    init: fn(process.Subject(SSEMessage)) -> OnInit,
+    loop: fn(SSEState, SSEMessage) -> actor.Next(SSEState, SSEMessage),
   )
 }
 
-pub fn sse(
-  _capability: SSEEnabled,
-  handler: SSEHandler(state, message),
-) -> Response {
-  let actor_proxy = fn(subj) {
-    let assert Ok(actor.Started(_, a)) =
-      actor.new(subj)
-      |> actor.start
-
-    sse_init(a, handler)
-  }
-
-  HttpResponse(200, [], ServerSentEvent(actor_proxy))
-}
-
-pub fn sse_init(
-  subj: process.Subject(message),
-  handler: SSEHandler(state, message),
-) -> actor.StartResult(process.Subject(SSEMessage(message))) {
-  let adapter = process.new_subject()
-  actor.new_with_initialiser(1000, fn(_) {
-    let #(state, selector) = handler.on_init(subj)
-
-    Ok(
-      actor.initialised(state)
-      |> actor.selecting(selector |> process.map_selector(SSEMessage))
-      |> actor.returning(adapter),
-    )
-  })
-  |> actor.on_message(handler.handler)
-  |> actor.start
+pub fn sse(_capability: SSEEnabled, handler: SSEHandler) -> Response {
+  HttpResponse(200, [], ServerSentEvent(handler.init, handler.loop))
 }
 
 //
