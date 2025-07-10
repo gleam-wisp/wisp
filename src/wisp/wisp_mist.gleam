@@ -7,6 +7,7 @@ import gleam/option
 import gleam/otp/actor
 import gleam/result
 import gleam/string
+import gleam/string_tree
 import mist
 import wisp
 import wisp/internal
@@ -115,22 +116,28 @@ fn mist_send_file(path: String) -> mist.ResponseData {
 // Server Sent Events
 //
 
-fn mist_server_sent_event(
-  request,
-  init: fn(process.Subject(wisp.SSEMessage)) ->
-    Result(
-      actor.Initialised(
-        wisp.SSEState,
-        wisp.SSEMessage,
-        process.Subject(wisp.SSEMessage),
-      ),
-      String,
-    ),
-  loop: fn(wisp.SSEState, wisp.SSEMessage) ->
-    actor.Next(wisp.SSEState, wisp.SSEMessage),
-) {
+fn mist_server_sent_event(request, init, loop) {
   let on_init = fn(subject) { init(subject) }
-  let handler = fn(state, message, _) { loop(state, message) }
+
+  let handler = fn(state, message, connection) {
+    loop(state, message, fn(message) { mist_send_event(connection, message) })
+  }
 
   mist.server_sent_events(request, response.new(200), on_init, handler)
+}
+
+fn mist_send_event(connection, event) {
+  let wisp.SSEMessage(data, event, id, retry) = event
+  let mist_event = mist.event(string_tree.from_string(data))
+  event |> option.map(fn(name) { mist.event_name(mist_event, name) })
+  id |> option.map(fn(id) { mist.event_id(mist_event, id) })
+  retry
+  |> option.map(fn(retry) { mist.event_retry(mist_event, retry) })
+
+  let result = mist.send_event(connection, mist_event)
+
+  case result {
+    Ok(_) -> Ok(Nil)
+    Error(_) -> Error(wisp.UnexpectedSSEError)
+  }
 }

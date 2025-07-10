@@ -38,6 +38,7 @@ gleam_crypto = { version = ">= 1.5.0 and < 2.0.0" }
 gleam_erlang = { version = ">= 1.0.0 and < 2.0.0" }
 gleam_http = { version = ">= 4.0.0 and < 5.0.0" }
 gleam_json = { version = ">= 3.0.1 and < 4.0.0" }
+gleam_otp = { version = ">= 1.0.0 and < 2.0.0" }
 gleam_stdlib = { version = ">= 0.60.0 and < 1.0.0" }
 gleeunit = { version = "~> 1.0" }
 gsv = { version = ">= 3.0.2 and < 4.0.0" }

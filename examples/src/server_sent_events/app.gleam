@@ -1,8 +1,10 @@
 import gleam/erlang/process
-import hello_world/app/router
+import server_sent_events/app/router
 import mist
 import wisp
 import wisp/wisp_mist
+
+pub type Context
 
 pub fn main() {
   wisp.configure_logger()

@@ -63,7 +63,8 @@ pub type Body {
   ///
   ServerSentEvent(
     on_init: fn(process.Subject(SSEMessage)) -> OnInit,
-    loop: fn(SSEState, SSEMessage) -> actor.Next(SSEState, SSEMessage),
+    loop: fn(SSEState, SSEMessage, SendEvent) ->
+      actor.Next(SSEState, SSEMessage),
   )
   /// functions in the event of a failure, invalid request, or other situation
   /// in which the request cannot be processed.
@@ -75,14 +76,18 @@ pub type Body {
 }
 
 pub type OnInit =
-      Result(
-        actor.Initialised(SSEState, SSEMessage, process.Subject(SSEMessage)),
-        String,
-      )
-
+  Result(
+    actor.Initialised(SSEState, SSEMessage, process.Subject(SSEMessage)),
+    String,
+  )
 
 pub type SSEMessage {
-  SSEMessage
+  SSEMessage(
+    data: String,
+    event: Option(String),
+    id: Option(String),
+    retry: Option(Int),
+  )
 }
 
 pub type SSEState {
@@ -1806,18 +1811,28 @@ pub fn get_cookie(
 // Server-Sent Events
 //
 
-/// An active SSE connection.
-pub type SSEError
+pub type SSEError {
+  UnexpectedSSEError
+}
 
 pub type SSEHandler {
   SSEHandler(
     init: fn(process.Subject(SSEMessage)) -> OnInit,
-    loop: fn(SSEState, SSEMessage) -> actor.Next(SSEState, SSEMessage),
+    loop: fn(SSEState, SSEMessage, SendEvent) ->
+      actor.Next(SSEState, SSEMessage),
   )
 }
 
-pub fn sse(_capability: SSEEnabled, handler: SSEHandler) -> Response {
-  HttpResponse(200, [], ServerSentEvent(handler.init, handler.loop))
+pub type SendEvent =
+  fn(SSEMessage) -> Result(Nil, SSEError)
+
+pub fn sse(request: Request, handler: SSEHandler) -> Result(Response, String) {
+  use <- bool.guard(
+    when: option.is_none(request.body.sse_enabled),
+    return: Error("SSE not enabled"),
+  )
+
+  Ok(HttpResponse(200, [], ServerSentEvent(handler.init, handler.loop)))
 }
 
 //

@@ -1,10 +1,9 @@
 import gleam/erlang/process
 import gleam/http.{Get}
+import gleam/int
 import gleam/option
 import gleam/otp/actor
-import gleam/string
 import gleam/string_tree
-import logging
 import repeatedly
 import wisp.{type Request, type Response}
 
@@ -16,7 +15,7 @@ const index_html = "
     <div id='time'></div>
     <script>
       const clock = document.getElementById(\"time\")
-      const eventz = new EventSource(\"/clock\")
+      const eventz = new EventSource(\"/sse\")
       eventz.onmessage = (e) => {
         console.log(\"got a message\", e)
         const theTime = new Date(parseInt(e.data))
@@ -47,6 +46,19 @@ pub fn sse(req: Request) -> Response {
   use <- wisp.require_method(req, Get)
 
   let init = fn(subject) {
+    let _ =
+      repeatedly.call(1000, Nil, fn(_state, _count) {
+        process.send(
+          subject,
+          wisp.SSEMessage(
+            int.to_string(system_time(Millisecond)),
+            option.None,
+            option.None,
+            option.None,
+          ),
+        )
+      })
+
     let initialised =
       actor.initialised(wisp.SSEState)
       |> actor.returning(subject)
@@ -54,17 +66,14 @@ pub fn sse(req: Request) -> Response {
     Ok(initialised)
   }
 
-  let loop = fn(state: wisp.SSEState, message: wisp.SSEMessage) {
-    logging.log(logging.Info, "Sent event: " <> string.inspect(message))
-    logging.log(logging.Info, "From state: " <> string.inspect(state))
+  let loop = fn(state, message, send) {
+    send(message)
     actor.continue(state)
   }
 
   let handler = wisp.SSEHandler(init:, loop:)
 
-  let assert option.Some(sse_enabled) = req.body.sse_enabled
-
-  let response = wisp.sse(sse_enabled, handler)
+  let assert Ok(response) = wisp.sse(req, handler)
 
   response
 }
