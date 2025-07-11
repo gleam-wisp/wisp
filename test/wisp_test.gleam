@@ -13,11 +13,11 @@ import gleam/set
 import gleam/string
 import gleam/string_tree
 import gleeunit
-import gleeunit/should
+import helper
 import simplifile
 import wisp
 import wisp/internal
-import wisp/testing
+import wisp/simulate
 
 pub fn main() {
   wisp.configure_logger()
@@ -48,104 +48,76 @@ fn static_file_handler(request: wisp.Request) -> wisp.Response {
 }
 
 pub fn ok_test() {
-  wisp.ok()
-  |> should.equal(Response(200, [], wisp.Empty))
+  assert wisp.ok() == Response(200, [], wisp.Empty)
 }
 
 pub fn created_test() {
-  wisp.created()
-  |> should.equal(Response(201, [], wisp.Empty))
+  assert wisp.created() == Response(201, [], wisp.Empty)
 }
 
 pub fn accepted_test() {
-  wisp.accepted()
-  |> should.equal(Response(202, [], wisp.Empty))
+  assert wisp.accepted() == Response(202, [], wisp.Empty)
 }
 
 pub fn no_content_test() {
-  wisp.no_content()
-  |> should.equal(Response(204, [], wisp.Empty))
+  assert wisp.no_content() == Response(204, [], wisp.Empty)
 }
 
 pub fn redirect_test() {
-  wisp.redirect(to: "https://example.com/wibble")
-  |> should.equal(Response(
-    303,
-    [#("location", "https://example.com/wibble")],
-    wisp.Empty,
-  ))
+  assert wisp.redirect(to: "https://example.com/wibble")
+    == Response(303, [#("location", "https://example.com/wibble")], wisp.Empty)
 }
 
 pub fn moved_permanently_test() {
-  wisp.moved_permanently(to: "https://example.com/wobble")
-  |> should.equal(Response(
-    308,
-    [#("location", "https://example.com/wobble")],
-    wisp.Empty,
-  ))
+  assert wisp.moved_permanently(to: "https://example.com/wobble")
+    == Response(308, [#("location", "https://example.com/wobble")], wisp.Empty)
 }
 
 pub fn internal_server_error_test() {
-  wisp.internal_server_error()
-  |> should.equal(Response(500, [], wisp.Empty))
+  assert wisp.internal_server_error() == Response(500, [], wisp.Empty)
 }
 
 pub fn entity_too_large_test() {
-  wisp.entity_too_large()
-  |> should.equal(Response(413, [], wisp.Empty))
+  assert wisp.entity_too_large() == Response(413, [], wisp.Empty)
 }
 
 pub fn bad_request_test() {
-  wisp.bad_request()
-  |> should.equal(Response(400, [], wisp.Empty))
+  assert wisp.bad_request() == Response(400, [], wisp.Empty)
 }
 
 pub fn not_found_test() {
-  wisp.not_found()
-  |> should.equal(Response(404, [], wisp.Empty))
+  assert wisp.not_found() == Response(404, [], wisp.Empty)
 }
 
 pub fn method_not_allowed_test() {
-  wisp.method_not_allowed([http.Get, http.Patch, http.Delete])
-  |> should.equal(Response(405, [#("allow", "DELETE, GET, PATCH")], wisp.Empty))
+  assert wisp.method_not_allowed([http.Get, http.Patch, http.Delete])
+    == Response(405, [#("allow", "DELETE, GET, PATCH")], wisp.Empty)
 }
 
 pub fn unsupported_media_type_test() {
-  wisp.unsupported_media_type(accept: ["application/json", "text/plain"])
-  |> should.equal(Response(
-    415,
-    [#("accept", "application/json, text/plain")],
-    wisp.Empty,
-  ))
+  assert wisp.unsupported_media_type(accept: ["application/json", "text/plain"])
+    == Response(415, [#("accept", "application/json, text/plain")], wisp.Empty)
 }
 
 pub fn unprocessable_entity_test() {
-  wisp.unprocessable_entity()
-  |> should.equal(Response(422, [], wisp.Empty))
+  assert wisp.unprocessable_entity() == Response(422, [], wisp.Empty)
 }
 
 pub fn json_response_test() {
   let body = string_tree.from_string("{\"one\":1,\"two\":2}")
   let response = wisp.json_response(body, 201)
-  response.status
-  |> should.equal(201)
-  response.headers
-  |> should.equal([#("content-type", "application/json; charset=utf-8")])
-  response
-  |> testing.string_body
-  |> should.equal("{\"one\":1,\"two\":2}")
+  assert response.status == 201
+  assert response.headers
+    == [#("content-type", "application/json; charset=utf-8")]
+  assert simulate.read_body(response) == "{\"one\":1,\"two\":2}"
 }
 
 pub fn html_response_test() {
   let body = string_tree.from_string("Hello, world!")
   let response = wisp.html_response(body, 200)
-  response.status
-  |> should.equal(200)
-  response.headers
-  |> should.equal([#("content-type", "text/html; charset=utf-8")])
-  response
-  |> testing.string_body
-  |> should.equal("Hello, world!")
+  assert response.status == 200
+  assert response.headers == [#("content-type", "text/html; charset=utf-8")]
+  assert simulate.read_body(response) == "Hello, world!"
 }
 
 pub fn html_body_test() {
@@ -153,97 +125,85 @@ pub fn html_body_test() {
   let response =
     wisp.method_not_allowed([http.Get])
     |> wisp.html_body(body)
-  response.status
-  |> should.equal(405)
-  response.headers
-  |> should.equal([
-    #("allow", "GET"),
-    #("content-type", "text/html; charset=utf-8"),
-  ])
-  response
-  |> testing.string_body
-  |> should.equal("Hello, world!")
+  assert response.status == 405
+  assert response.headers
+    == [
+      #("allow", "GET"),
+      #("content-type", "text/html; charset=utf-8"),
+    ]
+  assert simulate.read_body(response) == "Hello, world!"
 }
 
 pub fn random_string_test() {
   let count = 10_000
   let new = fn(_) {
     let random = wisp.random_string(64)
-    string.length(random)
-    |> should.equal(64)
+    assert string.length(random) == 64
     random
   }
 
-  list.repeat(Nil, count)
-  |> list.map(new)
-  |> set.from_list
-  |> set.size
-  |> should.equal(count)
+  assert list.repeat(Nil, count)
+    |> list.map(new)
+    |> set.from_list
+    |> set.size
+    == count
 }
 
 pub fn set_get_secret_key_base_test() {
-  let request = testing.get("/", [])
+  let request = simulate.request(http.Get, "/")
   let valid = wisp.random_string(64)
   let too_short = wisp.random_string(63)
 
-  request
-  |> wisp.get_secret_key_base
-  |> should.equal(testing.default_secret_key_base)
+  assert wisp.get_secret_key_base(request) == simulate.default_secret_key_base
 
-  request
-  |> wisp.set_secret_key_base(valid)
-  |> wisp.get_secret_key_base
-  |> should.equal(valid)
+  assert request
+    |> wisp.set_secret_key_base(valid)
+    |> wisp.get_secret_key_base
+    == valid
 
   // Panics if the key is too short
-  exception.rescue(fn() { wisp.set_secret_key_base(request, too_short) })
-  |> should.be_error
+  let assert Error(_) =
+    exception.rescue(fn() { wisp.set_secret_key_base(request, too_short) })
 }
 
 pub fn set_get_max_body_size_test() {
-  let request = testing.get("/", [])
+  let request = simulate.request(http.Get, "/")
 
-  request
-  |> wisp.get_max_body_size
-  |> should.equal(8_000_000)
+  assert wisp.get_max_body_size(request) == 8_000_000
 
-  request
-  |> wisp.set_max_body_size(10)
-  |> wisp.get_max_body_size
-  |> should.equal(10)
+  assert request
+    |> wisp.set_max_body_size(10)
+    |> wisp.get_max_body_size
+    == 10
 }
 
 pub fn set_get_max_files_size_test() {
-  let request = testing.get("/", [])
+  let request = simulate.request(http.Get, "/")
 
-  request
-  |> wisp.get_max_files_size
-  |> should.equal(32_000_000)
+  assert wisp.get_max_files_size(request) == 32_000_000
 
-  request
-  |> wisp.set_max_files_size(10)
-  |> wisp.get_max_files_size
-  |> should.equal(10)
+  assert request
+    |> wisp.set_max_files_size(10)
+    |> wisp.get_max_files_size
+    == 10
 }
 
 pub fn set_get_read_chunk_size_test() {
-  let request = testing.get("/", [])
+  let request = simulate.request(http.Get, "/")
 
-  request
-  |> wisp.get_read_chunk_size
-  |> should.equal(1_000_000)
+  assert wisp.get_read_chunk_size(request) == 1_000_000
 
-  request
-  |> wisp.set_read_chunk_size(10)
-  |> wisp.get_read_chunk_size
-  |> should.equal(10)
+  assert request
+    |> wisp.set_read_chunk_size(10)
+    |> wisp.get_read_chunk_size
+    == 10
 }
 
 pub fn path_segments_test() {
-  request.new()
-  |> request.set_path("/one/two/three")
-  |> wisp.path_segments
-  |> should.equal(["one", "two", "three"])
+  assert request.new()
+    |> request.set_path("/one/two/three")
+    |> wisp.path_segments
+    == ["one", "two", "three"]
 }
 
 pub fn method_override_test() {
@@ -254,9 +214,7 @@ pub fn method_override_test() {
     request.new()
     |> request.set_method(method)
     |> request.set_query([#("_method", http.method_to_string(method))])
-  request
-  |> wisp.method_override
-  |> should.equal(request.set_method(request, method))
+  assert wisp.method_override(request) == request.set_method(request, method)
 }
 
 pub fn method_override_unacceptable_unoriginal_method_test() {
@@ -276,9 +234,7 @@ pub fn method_override_unacceptable_unoriginal_method_test() {
     request.new()
     |> request.set_method(method)
     |> request.set_query([#("_method", "DELETE")])
-  request
-  |> wisp.method_override
-  |> should.equal(request)
+  assert wisp.method_override(request) == request
 }
 
 pub fn method_override_unacceptable_target_method_test() {
@@ -296,66 +252,67 @@ pub fn method_override_unacceptable_target_method_test() {
     request.new()
     |> request.set_method(http.Post)
     |> request.set_query([#("_method", http.method_to_string(method))])
-  request
-  |> wisp.method_override
-  |> should.equal(request)
+  assert wisp.method_override(request) == request
 }
 
 pub fn require_method_test() {
-  {
+  let response = {
     let request = request.new()
     use <- wisp.require_method(request, http.Get)
     wisp.ok()
   }
-  |> should.equal(wisp.ok())
+
+  assert response == wisp.ok()
 }
 
 pub fn require_method_invalid_test() {
-  {
+  let response = {
     let request = request.set_method(request.new(), http.Post)
     use <- wisp.require_method(request, http.Get)
     panic as "should be unreachable"
   }
-  |> should.equal(wisp.method_not_allowed([http.Get]))
+  assert response == wisp.method_not_allowed([http.Get])
 }
 
 pub fn require_string_body_test() {
-  {
-    let request = testing.post("/", [], "Hello, Joe!")
+  let response = {
+    let request =
+      simulate.request(http.Post, "/")
+      |> simulate.string_body("Hello, Joe!")
     use body <- wisp.require_string_body(request)
-    body
-    |> should.equal("Hello, Joe!")
+    assert body == "Hello, Joe!"
     wisp.accepted()
   }
-  |> should.equal(wisp.accepted())
+  assert response == wisp.accepted()
 }
 
 pub fn require_string_body_invalid_test() {
-  {
-    let request = testing.request(http.Post, "/", [], <<254>>)
+  let response = {
+    let request =
+      simulate.request(http.Post, "/")
+      |> simulate.bit_array_body(<<254>>)
     use _ <- wisp.require_string_body(request)
     panic as "should be unreachable"
   }
-  |> should.equal(wisp.bad_request())
+  assert response == wisp.bad_request()
 }
 
 pub fn rescue_crashes_error_test() {
-  wisp.set_logger_level(wisp.CriticalLevel)
-  use <- exception.defer(fn() { wisp.set_logger_level(wisp.InfoLevel) })
+  use <- helper.disable_logger()
 
-  {
+  let response = {
     use <- wisp.rescue_crashes
     panic as "we need to crash to test the middleware"
   }
-  |> should.equal(wisp.internal_server_error())
+  assert response == wisp.internal_server_error()
 }
 
 pub fn rescue_crashes_ok_test() {
-  {
+  let response = {
     use <- wisp.rescue_crashes
     wisp.ok()
   }
-  |> should.equal(wisp.ok())
+  assert response == wisp.ok()
 }
 
 pub fn serve_static_test() {
@@ -366,69 +323,59 @@ pub fn serve_static_test() {
 
   // Get a text file
   let response =
-    testing.get("/stuff/test/fixture.txt", [])
+    simulate.request(http.Get, "/stuff/test/fixture.txt")
     |> handler
   let assert Ok(file_info) = simplifile.file_info("test/fixture.txt")
   let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
 
-  response.status
-  |> should.equal(200)
-  response.headers
-  |> should.equal([
-    #("content-type", "text/plain; charset=utf-8"),
-    #("etag", etag),
-  ])
-  response.body
-  |> should.equal(wisp.File("./test/fixture.txt", offset: 0, limit: option.None))
+  assert response.status == 200
+  assert response.headers
+    == [
+      #("content-type", "text/plain; charset=utf-8"),
+      #("etag", etag),
+    ]
+  assert response.body
+    == wisp.File("./test/fixture.txt", offset: 0, limit: option.None)
 
   // Get a json file
   let response =
-    testing.get("/stuff/test/fixture.json", [])
+    simulate.request(http.Get, "/stuff/test/fixture.json")
     |> handler
   let assert Ok(file_info) = simplifile.file_info("test/fixture.json")
   let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
 
-  response.status
-  |> should.equal(200)
-  response.headers
-  |> should.equal([
-    #("content-type", "application/json; charset=utf-8"),
-    #("etag", etag),
-  ])
-  response.body
-  |> should.equal(wisp.File(
-    "./test/fixture.json",
-    offset: 0,
-    limit: option.None,
-  ))
+  assert response.status == 200
+  assert response.headers
+    == [
+      #("content-type", "application/json; charset=utf-8"),
+      #("etag", etag),
+    ]
+  assert response.body
+    == wisp.File("./test/fixture.json", offset: 0, limit: option.None)
 
   // Get some other file
   let response =
-    testing.get("/stuff/test/fixture.dat", [])
+    simulate.request(http.Get, "/stuff/test/fixture.dat")
     |> handler
   let assert Ok(file_info) = simplifile.file_info("test/fixture.dat")
   let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
 
-  response.status
-  |> should.equal(200)
-  response.headers
-  |> should.equal([
-    #("content-type", "application/octet-stream"),
-    #("etag", etag),
-  ])
-  response.body
-  |> should.equal(wisp.File("./test/fixture.dat", offset: 0, limit: option.None))
+  assert response.status == 200
+  assert response.headers
+    == [
+      #("content-type", "application/octet-stream"),
+      #("etag", etag),
+    ]
+  assert response.body
+    == wisp.File("./test/fixture.dat", offset: 0, limit: option.None)
 
   // Get something not handled by the static file server
   let response =
-    testing.get("/stuff/this-does-not-exist", [])
+    simulate.request(http.Get, "/stuff/this-does-not-exist")
     |> handler
-  response.status
-  |> should.equal(200)
-  response.headers
-  |> should.equal([])
-  response.body
-  |> should.equal(wisp.Empty)
+  assert response.status == 200
+  assert response.headers == []
+  assert response.body == wisp.Empty
 }
 
 pub fn serve_static_directory_request_test() {
@@ -437,26 +384,21 @@ pub fn serve_static_directory_request_test() {
     wisp.ok()
   }
 
-  // confirm test directory is a directory
-  simplifile.is_directory("./test")
-  |> result.unwrap(False)
-  |> should.be_true
+  assert // confirm test directory is a directory
+  result.unwrap(simplifile.is_directory("./test"), False)
 
   // Get a directory
   let response =
-    testing.get("/stuff/test", [])
+    simulate.request(http.Get, "/stuff/test")
     |> handler
-  response.status
-  |> should.equal(200)
-  response.headers
-  |> should.equal([])
-  response.body
-  |> should.equal(wisp.Empty)
+  assert response.status == 200
+  assert response.headers == []
+  assert response.body == wisp.Empty
 }
 
 pub fn serve_static_under_has_no_trailing_slash_test() {
   let request =
-    testing.get("/", [])
+    simulate.request(http.Get, "/")
     |> request.set_path("/stuff/test/fixture.txt")
   let response = {
     use <- wisp.serve_static(request, under: "stuff", from: "./")
@@ -465,20 +407,19 @@ pub fn serve_static_under_has_no_trailing_slash_test() {
   let assert Ok(file_info) = simplifile.file_info("test/fixture.txt")
   let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
 
-  response.status
-  |> should.equal(200)
-  response.headers
-  |> should.equal([
-    #("content-type", "text/plain; charset=utf-8"),
-    #("etag", etag),
-  ])
-  response.body
-  |> should.equal(wisp.File("./test/fixture.txt", offset: 0, limit: option.None))
+  assert response.status == 200
+  assert response.headers
+    == [
+      #("content-type", "text/plain; charset=utf-8"),
+      #("etag", etag),
+    ]
+  assert response.body
+    == wisp.File("./test/fixture.txt", offset: 0, limit: option.None)
 }
 
 pub fn serve_static_from_has_no_trailing_slash_test() {
   let request =
-    testing.get("/", [])
+    simulate.request(http.Get, "/")
     |> request.set_path("/stuff/test/fixture.txt")
   let response = {
     use <- wisp.serve_static(request, under: "stuff", from: ".")
@@ -487,37 +428,36 @@ pub fn serve_static_from_has_no_trailing_slash_test() {
   let assert Ok(file_info) = simplifile.file_info("test/fixture.txt")
   let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
 
-  response.status
-  |> should.equal(200)
-  response.headers
-  |> should.equal([
-    #("content-type", "text/plain; charset=utf-8"),
-    #("etag", etag),
-  ])
-  response.body
-  |> should.equal(wisp.File("./test/fixture.txt", offset: 0, limit: option.None))
+  assert response.status == 200
+  assert response.headers
+    == [
+      #("content-type", "text/plain; charset=utf-8"),
+      #("etag", etag),
+    ]
+  assert response.body
+    == wisp.File("./test/fixture.txt", offset: 0, limit: option.None)
 }
 
 pub fn serve_static_not_found_test() {
   let request =
-    testing.get("/", [])
+    simulate.request(http.Get, "/")
     |> request.set_path("/stuff/credit_card_details.txt")
-  {
-    use <- wisp.serve_static(request, under: "/stuff", from: "./")
-    wisp.ok()
-  }
-  |> should.equal(wisp.ok())
+  assert {
+      use <- wisp.serve_static(request, under: "/stuff", from: "./")
+      wisp.ok()
+    }
+    == wisp.ok()
 }
 
 pub fn serve_static_go_up_test() {
   let request =
-    testing.get("/", [])
+    simulate.request(http.Get, "/")
     |> request.set_path("/../test/fixture.txt")
-  {
-    use <- wisp.serve_static(request, under: "/stuff", from: "./src/")
-    wisp.ok()
-  }
-  |> should.equal(wisp.ok())
+  assert {
+      use <- wisp.serve_static(request, under: "/stuff", from: "./src/")
+      wisp.ok()
+    }
+    == wisp.ok()
 }
 
 pub fn serve_static_etags_returns_304_test() {
@@ -528,50 +468,50 @@ pub fn serve_static_etags_returns_304_test() {
 
   // Get a text file without any headers
   let response =
-    testing.get("/stuff/test/fixture.txt", [])
+    simulate.request(http.Get, "/stuff/test/fixture.txt")
     |> handler
   let assert Ok(file_info) = simplifile.file_info("test/fixture.txt")
   let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
 
-  should.equal(response.status, 200)
-  should.equal(response.headers, [
-    #("content-type", "text/plain; charset=utf-8"),
-    #("etag", etag),
-  ])
-  should.equal(
-    response.body,
-    wisp.File("./test/fixture.txt", offset: 0, limit: option.None),
-  )
+  assert response.status == 200
+  assert response.headers
+    == [
+      #("content-type", "text/plain; charset=utf-8"),
+      #("etag", etag),
+    ]
+  assert response.body
+    == wisp.File("./test/fixture.txt", offset: 0, limit: option.None)
 
   // Get a text file with outdated if-none-match header
   let response =
-    testing.get("/stuff/test/fixture.txt", [#("if-none-match", "invalid-etag")])
+    simulate.request(http.Get, "/stuff/test/fixture.txt")
+    |> simulate.header("if-none-match", "invalid-etag")
     |> handler
 
-  should.equal(response.status, 200)
-  should.equal(response.headers, [
-    #("content-type", "text/plain; charset=utf-8"),
-    #("etag", etag),
-  ])
-  should.equal(
-    response.body,
-    wisp.File("./test/fixture.txt", offset: 0, limit: option.None),
-  )
+  assert response.status == 200
+  assert response.headers
+    == [
+      #("content-type", "text/plain; charset=utf-8"),
+      #("etag", etag),
+    ]
+  assert response.body
+    == wisp.File("./test/fixture.txt", offset: 0, limit: option.None)
 
   // Get a text file with current etag in if-none-match header
   let response =
-    testing.get("/stuff/test/fixture.txt", [#("if-none-match", etag)])
+    simulate.request(http.Get, "/stuff/test/fixture.txt")
+    |> simulate.header("if-none-match", etag)
     |> handler
 
-  should.equal(response.status, 304)
-  should.equal(response.headers, [#("etag", etag)])
-  should.equal(response.body, wisp.Empty)
+  assert response.status == 304
+  assert response.headers == [#("etag", etag)]
+  assert response.body == wisp.Empty
 }
 
 pub fn serve_static_range_start_test() {
   let response =
-    testing.get("/fixture.txt", [])
-    |> testing.set_header("range", "bytes=2-")
+    simulate.request(http.Get, "/fixture.txt")
+    |> simulate.header("range", "bytes=2-")
     |> static_file_handler
 
   assert response.status == 206
@@ -584,13 +524,13 @@ pub fn serve_static_range_start_test() {
       #("accept-ranges", "bytes"),
       #("content-range", "bytes 2-37/38"),
     ]
-  assert testing.string_body(response) == "llo, Joe! 👨‍👩‍👧‍👦\n"
+  assert simulate.read_body(response) == "llo, Joe! 👨‍👩‍👧‍👦\n"
 }
 
 pub fn serve_static_range_start_limit_test() {
   let response =
-    testing.get("/fixture.txt", [])
-    |> testing.set_header("range", "bytes=2-15")
+    simulate.request(http.Get, "/fixture.txt")
+    |> simulate.header("range", "bytes=2-15")
     |> static_file_handler
 
   assert response.status == 206
@@ -603,13 +543,13 @@ pub fn serve_static_range_start_limit_test() {
       #("accept-ranges", "bytes"),
       #("content-range", "bytes 2-15/38"),
     ]
-  assert testing.string_body(response) == "llo, Joe! 👨"
+  assert simulate.read_body(response) == "llo, Joe! 👨"
 }
 
 pub fn serve_static_range_negative_test() {
   let response =
-    testing.get("/fixture.txt", [])
-    |> testing.set_header("range", "bytes=-26")
+    simulate.request(http.Get, "/fixture.txt")
+    |> simulate.header("range", "bytes=-26")
     |> static_file_handler
 
   assert response.status == 206
@@ -622,13 +562,13 @@ pub fn serve_static_range_negative_test() {
       #("accept-ranges", "bytes"),
       #("content-range", "bytes 12-37/38"),
     ]
-  assert testing.string_body(response) == "👨‍👩‍👧‍👦\n"
+  assert simulate.read_body(response) == "👨‍👩‍👧‍👦\n"
 }
 
 pub fn serve_static_range_limit_larger_than_content_test() {
   let response =
-    testing.get("/fixture.txt", [])
-    |> testing.set_header("range", "bytes=2-100")
+    simulate.request(http.Get, "/fixture.txt")
+    |> simulate.header("range", "bytes=2-100")
     |> static_file_handler
   assert response.status == 416
 }
@@ -636,8 +576,8 @@ pub fn serve_static_range_limit_larger_than_content_test() {
 pub fn serve_static_range_header_invalid_test() {
   // The range values are is backwards
   let response =
-    testing.get("/fixture.txt", [])
-    |> testing.set_header("range", "bytes=6-4")
+    simulate.request(http.Get, "/fixture.txt")
+    |> simulate.header("range", "bytes=6-4")
     |> static_file_handler
 
   assert response.status == 416
@@ -645,24 +585,22 @@ pub fn serve_static_range_header_invalid_test() {
 
 pub fn temporary_file_test() {
   // Create tmp files for a first request
-  let request1 = testing.get("/", [])
+  let request1 = simulate.request(http.Get, "/")
   let assert Ok(request1_file1) = wisp.new_temporary_file(request1)
   let assert Ok(request1_file2) = wisp.new_temporary_file(request1)
 
-  // The files exist
-  request1_file1
-  |> should.not_equal(request1_file2)
+  assert // The files exist
+    request1_file1 != request1_file2
   let assert Ok(_) = simplifile.read(request1_file1)
   let assert Ok(_) = simplifile.read(request1_file2)
 
   // Create tmp files for a second request
-  let request2 = testing.get("/", [])
+  let request2 = simulate.request(http.Get, "/")
   let assert Ok(request2_file1) = wisp.new_temporary_file(request2)
   let assert Ok(request2_file2) = wisp.new_temporary_file(request2)
 
-  // The files exist
-  request2_file1
-  |> should.not_equal(request1_file2)
+  assert // The files exist
+    request2_file1 != request1_file2
   let assert Ok(_) = simplifile.read(request2_file1)
   let assert Ok(_) = simplifile.read(request2_file2)
 
@@ -686,118 +624,130 @@ pub fn temporary_file_test() {
 }
 
 pub fn require_content_type_test() {
-  {
-    let request = testing.get("/", [#("content-type", "text/plain")])
+  let response = {
+    let request =
+      simulate.request(http.Get, "/")
+      |> simulate.header("content-type", "text/plain")
     use <- wisp.require_content_type(request, "text/plain")
     wisp.ok()
   }
-  |> should.equal(wisp.ok())
+  assert response == wisp.ok()
 }
 
 pub fn require_content_type_charset_test() {
-  {
+  let response = {
     let request =
-      testing.get("/", [#("content-type", "text/plain; charset=utf-8")])
+      simulate.request(http.Get, "/")
+      |> simulate.header("content-type", "text/plain; charset=utf-8")
     use <- wisp.require_content_type(request, "text/plain")
     wisp.ok()
   }
-  |> should.equal(wisp.ok())
+  assert response == wisp.ok()
 }
 
 pub fn require_content_type_missing_test() {
-  {
-    let request = testing.get("/", [])
+  let response = {
+    let request = simulate.request(http.Get, "/")
     use <- wisp.require_content_type(request, "text/plain")
     wisp.ok()
   }
-  |> should.equal(wisp.unsupported_media_type(["text/plain"]))
+  assert response == wisp.unsupported_media_type(["text/plain"])
 }
 
 pub fn require_content_type_invalid_test() {
-  {
-    let request = testing.get("/", [#("content-type", "text/plain")])
+  let response = {
+    let request =
+      simulate.request(http.Get, "/")
+      |> simulate.header("content-type", "text/plain")
     use <- wisp.require_content_type(request, "text/html")
     panic as "should be unreachable"
   }
-  |> should.equal(wisp.unsupported_media_type(["text/html"]))
+  assert response == wisp.unsupported_media_type(["text/html"])
 }
 
 pub fn json_test() {
-  testing.post("/", [], "{\"one\":1,\"two\":2}")
-  |> request.set_header("content-type", "application/json")
-  |> json_handler(fn(json) {
-    json
-    |> should.equal(
-      dynamic.properties([
-        #(dynamic.string("one"), dynamic.int(1)),
-        #(dynamic.string("two"), dynamic.int(2)),
-      ]),
-    )
-  })
-  |> should.equal(wisp.ok())
+  assert simulate.request(http.Post, "/")
+    |> simulate.string_body("{\"one\":1,\"two\":2}")
+    |> request.set_header("content-type", "application/json")
+    |> json_handler(fn(json) {
+      assert json
+        == dynamic.properties([
+          #(dynamic.string("one"), dynamic.int(1)),
+          #(dynamic.string("two"), dynamic.int(2)),
+        ])
+    })
+    == wisp.ok()
 }
 
 pub fn json_wrong_content_type_test() {
-  testing.post("/", [], "{\"one\":1,\"two\":2}")
-  |> request.set_header("content-type", "text/plain")
-  |> json_handler(fn(_) { panic as "should be unreachable" })
-  |> should.equal(wisp.unsupported_media_type(["application/json"]))
+  assert simulate.request(http.Post, "/")
+    |> simulate.string_body("{\"one\":1,\"two\":2}")
+    |> request.set_header("content-type", "text/plain")
+    |> json_handler(fn(_) { panic as "should be unreachable" })
+    == wisp.unsupported_media_type(["application/json"])
 }
 
 pub fn json_no_content_type_test() {
-  testing.post("/", [], "{\"one\":1,\"two\":2}")
-  |> json_handler(fn(_) { panic as "should be unreachable" })
-  |> should.equal(wisp.unsupported_media_type(["application/json"]))
+  assert json_handler(
+      simulate.request(http.Post, "/")
+        |> simulate.string_body("{\"one\":1,\"two\":2}"),
+      fn(_) { panic as "should be unreachable" },
+    )
+    == wisp.unsupported_media_type(["application/json"])
 }
 
 pub fn json_too_big_test() {
-  testing.post("/", [], "{\"one\":1,\"two\":2}")
-  |> wisp.set_max_body_size(1)
-  |> request.set_header("content-type", "application/json")
-  |> json_handler(fn(_) { panic as "should be unreachable" })
-  |> should.equal(Response(413, [], wisp.Empty))
+  assert simulate.request(http.Post, "/")
+    |> simulate.string_body("{\"one\":1,\"two\":2}")
+    |> wisp.set_max_body_size(1)
+    |> request.set_header("content-type", "application/json")
+    |> json_handler(fn(_) { panic as "should be unreachable" })
+    == Response(413, [], wisp.Empty)
 }
 
 pub fn json_syntax_error_test() {
-  testing.post("/", [], "{\"one\":1,\"two\":2")
-  |> request.set_header("content-type", "application/json")
-  |> json_handler(fn(_) { panic as "should be unreachable" })
-  |> should.equal(Response(400, [], wisp.Empty))
+  assert simulate.request(http.Post, "/")
+    |> simulate.string_body("{\"one\":")
+    |> request.set_header("content-type", "application/json")
+    |> json_handler(fn(_) { panic as "should be unreachable" })
+    == Response(400, [], wisp.Empty)
 }
 
 pub fn urlencoded_form_test() {
-  testing.post("/", [], "one=1&two=2")
-  |> request.set_header("content-type", "application/x-www-form-urlencoded")
-  |> form_handler(fn(form) {
-    form
-    |> should.equal(wisp.FormData([#("one", "1"), #("two", "2")], []))
-  })
-  |> should.equal(wisp.ok())
+  assert simulate.request(http.Post, "/")
+    |> simulate.string_body("one=1&two=2")
+    |> request.set_header("content-type", "application/x-www-form-urlencoded")
+    |> form_handler(fn(form) {
+      assert form == wisp.FormData([#("one", "1"), #("two", "2")], [])
+    })
+    == wisp.ok()
 }
 
 pub fn urlencoded_form_with_charset_test() {
-  testing.post("/", [], "one=1&two=2")
-  |> request.set_header(
-    "content-type",
-    "application/x-www-form-urlencoded; charset=UTF-8",
-  )
-  |> form_handler(fn(form) {
-    form
-    |> should.equal(wisp.FormData([#("one", "1"), #("two", "2")], []))
-  })
-  |> should.equal(wisp.ok())
+  assert simulate.request(http.Post, "/")
+    |> simulate.string_body("one=1&two=2")
+    |> request.set_header(
+      "content-type",
+      "application/x-www-form-urlencoded; charset=UTF-8",
+    )
+    |> form_handler(fn(form) {
+      assert form == wisp.FormData([#("one", "1"), #("two", "2")], [])
+    })
+    == wisp.ok()
 }
 
 pub fn urlencoded_too_big_form_test() {
-  testing.post("/", [], "12")
-  |> request.set_header("content-type", "application/x-www-form-urlencoded")
-  |> wisp.set_max_body_size(1)
-  |> form_handler(fn(_) { panic as "should be unreachable" })
-  |> should.equal(Response(413, [], wisp.Empty))
+  assert simulate.request(http.Post, "/")
+    |> simulate.string_body("12")
+    |> request.set_header("content-type", "application/x-www-form-urlencoded")
+    |> wisp.set_max_body_size(1)
+    |> form_handler(fn(_) { panic as "should be unreachable" })
+    == Response(413, [], wisp.Empty)
 }
 
 pub fn multipart_form_test() {
-  "--theboundary\r
+  let data =
+    "--theboundary\r
 Content-Disposition: form-data; name=\"one\"\r
 \r
 1\r
@@ -807,73 +757,81 @@ Content-Disposition: form-data; name=\"two\"\r
 2\r
 --theboundary--\r
 "
-  |> testing.post("/", [], _)
-  |> request.set_header(
-    "content-type",
-    "multipart/form-data; boundary=theboundary",
-  )
-  |> form_handler(fn(form) {
-    form
-    |> should.equal(wisp.FormData([#("one", "1"), #("two", "2")], []))
-  })
-  |> should.equal(wisp.ok())
+  assert simulate.request(http.Post, "/")
+    |> simulate.string_body(data)
+    |> request.set_header(
+      "content-type",
+      "multipart/form-data; boundary=theboundary",
+    )
+    |> form_handler(fn(form) {
+      assert form == wisp.FormData([#("one", "1"), #("two", "2")], [])
+    })
+    == wisp.ok()
 }
 
 pub fn multipart_form_too_big_test() {
-  "--theboundary\r
+  let data =
+    "--theboundary\r
 Content-Disposition: form-data; name=\"one\"\r
 \r
 1\r
 --theboundary--\r
 "
-  |> testing.post("/", [], _)
-  |> wisp.set_max_body_size(1)
-  |> request.set_header(
-    "content-type",
-    "multipart/form-data; boundary=theboundary",
-  )
-  |> form_handler(fn(_) { panic as "should be unreachable" })
-  |> should.equal(Response(413, [], wisp.Empty))
+  assert simulate.request(http.Post, "/")
+    |> wisp.set_max_body_size(1)
+    |> simulate.string_body(data)
+    |> request.set_header(
+      "content-type",
+      "multipart/form-data; boundary=theboundary",
+    )
+    |> wisp.set_max_body_size(1)
+    |> form_handler(fn(_) { panic as "should be unreachable" })
+    == Response(413, [], wisp.Empty)
 }
 
 pub fn multipart_form_no_boundary_test() {
-  "--theboundary\r
+  let data =
+    "--theboundary\r
 Content-Disposition: form-data; name=\"one\"\r
 \r
 1\r
 --theboundary--\r
 "
-  |> testing.post("/", [], _)
-  |> request.set_header("content-type", "multipart/form-data")
-  |> form_handler(fn(_) { panic as "should be unreachable" })
-  |> should.equal(Response(400, [], wisp.Empty))
+  assert simulate.request(http.Post, "/")
+    |> simulate.string_body(data)
+    |> request.set_header("content-type", "multipart/form-data")
+    |> form_handler(fn(_) { panic as "should be unreachable" })
+    == Response(400, [], wisp.Empty)
 }
 
 pub fn multipart_form_invalid_format_test() {
-  "--theboundary\r\n--theboundary--\r\n"
-  |> testing.post("/", [], _)
-  |> request.set_header(
-    "content-type",
-    "multipart/form-data; boundary=theboundary",
-  )
-  |> form_handler(fn(_) { panic as "should be unreachable" })
-  |> should.equal(Response(400, [], wisp.Empty))
+  let data = "--theboundary\r\n--theboundary--\r\n"
+  assert simulate.request(http.Post, "/")
+    |> simulate.string_body(data)
+    |> request.set_header(
+      "content-type",
+      "multipart/form-data; boundary=theboundary",
+    )
+    |> form_handler(fn(_) { panic as "should be unreachable" })
+    == Response(400, [], wisp.Empty)
 }
 
 pub fn form_unknown_content_type_test() {
-  "one=1&two=2"
-  |> testing.post("/", [], _)
-  |> request.set_header("content-type", "text/form")
-  |> form_handler(fn(_) { panic as "should be unreachable" })
-  |> should.equal(Response(
-    415,
-    [#("accept", "application/x-www-form-urlencoded, multipart/form-data")],
-    wisp.Empty,
-  ))
+  let data = "one=1&two=2"
+  assert simulate.request(http.Post, "/")
+    |> simulate.string_body(data)
+    |> request.set_header("content-type", "text/form")
+    |> form_handler(fn(_) { panic as "should be unreachable" })
+    == Response(
+      415,
+      [#("accept", "application/x-www-form-urlencoded, multipart/form-data")],
+      wisp.Empty,
+    )
 }
 
 pub fn multipart_form_with_files_test() {
-  "--theboundary\r
+  let data =
+    "--theboundary\r
 Content-Disposition: form-data; name=\"one\"\r
 \r
 1\r
@@ -883,22 +841,24 @@ Content-Disposition: form-data; name=\"two\"; filename=\"file.txt\"\r
 file contents\r
 --theboundary--\r
 "
-  |> testing.post("/", [], _)
-  |> request.set_header(
-    "content-type",
-    "multipart/form-data; boundary=theboundary",
-  )
-  |> form_handler(fn(form) {
-    let assert [#("one", "1")] = form.values
-    let assert [#("two", wisp.UploadedFile("file.txt", path))] = form.files
-    let assert Ok("file contents") = simplifile.read(path)
-  })
-  |> should.equal(wisp.ok())
+  assert simulate.request(http.Post, "/")
+    |> simulate.string_body(data)
+    |> request.set_header(
+      "content-type",
+      "multipart/form-data; boundary=theboundary",
+    )
+    |> form_handler(fn(form) {
+      let assert [#("one", "1")] = form.values
+      let assert [#("two", wisp.UploadedFile("file.txt", path))] = form.files
+      let assert Ok("file contents") = simplifile.read(path)
+    })
+    == wisp.ok()
 }
 
 pub fn multipart_form_files_too_big_test() {
   let testcase = fn(limit, callback) {
-    "--theboundary\r
+    let data =
+      "--theboundary\r
 Content-Disposition: form-data; name=\"two\"; filename=\"file.txt\"\r
 \r
 12\r
@@ -912,7 +872,8 @@ Content-Disposition: form-data; name=\"two\"; filename=\"another.txt\"\r
 34\r
 --theboundary--\r
 "
-    |> testing.post("/", [], _)
+    simulate.request(http.Post, "/")
+    |> simulate.string_body(data)
     |> wisp.set_max_files_size(limit)
     |> request.set_header(
       "content-type",
@@ -921,17 +882,16 @@ Content-Disposition: form-data; name=\"two\"; filename=\"another.txt\"\r
     |> form_handler(callback)
   }
 
-  testcase(1, fn(_) { panic as "should be unreachable for limit of 1" })
-  |> should.equal(Response(413, [], wisp.Empty))
+  assert testcase(1, fn(_) { panic as "should be unreachable for limit of 1" })
+    == Response(413, [], wisp.Empty)
 
-  testcase(2, fn(_) { panic as "should be unreachable for limit of 2" })
-  |> should.equal(Response(413, [], wisp.Empty))
+  assert testcase(2, fn(_) { panic as "should be unreachable for limit of 2" })
+    == Response(413, [], wisp.Empty)
 
-  testcase(3, fn(_) { panic as "should be unreachable for limit of 3" })
-  |> should.equal(Response(413, [], wisp.Empty))
+  assert testcase(3, fn(_) { panic as "should be unreachable for limit of 3" })
+    == Response(413, [], wisp.Empty)
 
-  testcase(4, fn(_) { Nil })
-  |> should.equal(Response(200, [], wisp.Empty))
+  assert testcase(4, fn(_) { Nil }) == Response(200, [], wisp.Empty)
 }
 
 pub fn handle_head_test() {
@@ -939,39 +899,39 @@ pub fn handle_head_test() {
     use request <- wisp.handle_head(request)
     use <- wisp.require_method(request, http.Get)
 
-    list.key_find(request.headers, "x-original-method")
-    |> should.equal(header)
+    assert list.key_find(request.headers, "x-original-method") == header
 
     string_tree.from_string("Hello!")
     |> wisp.html_response(201)
   }
 
-  testing.get("/", [])
-  |> request.set_method(http.Get)
-  |> handler(Error(Nil))
-  |> should.equal(Response(
-    201,
-    [#("content-type", "text/html; charset=utf-8")],
-    wisp.Text(string_tree.from_string("Hello!")),
-  ))
+  assert simulate.request(http.Get, "/")
+    |> request.set_method(http.Get)
+    |> handler(Error(Nil))
+    == Response(
+      201,
+      [#("content-type", "text/html; charset=utf-8")],
+      wisp.Text(string_tree.from_string("Hello!")),
+    )
 
-  testing.get("/", [])
-  |> request.set_method(http.Head)
-  |> handler(Ok("HEAD"))
-  |> should.equal(Response(
-    201,
-    [#("content-type", "text/html; charset=utf-8")],
-    wisp.Text(string_tree.from_string("Hello!")),
-  ))
+  assert simulate.request(http.Get, "/")
+    |> request.set_method(http.Head)
+    |> handler(Ok("HEAD"))
+    == Response(
+      201,
+      [#("content-type", "text/html; charset=utf-8")],
+      wisp.Text(string_tree.from_string("Hello!")),
+    )
 
-  testing.get("/", [])
-  |> request.set_method(http.Post)
-  |> handler(Error(Nil))
-  |> should.equal(Response(405, [#("allow", "GET")], wisp.Empty))
+  assert simulate.request(http.Get, "/")
+    |> request.set_method(http.Post)
+    |> handler(Error(Nil))
+    == Response(405, [#("allow", "GET")], wisp.Empty)
 }
 
 pub fn multipart_form_fields_are_sorted_test() {
-  "--theboundary\r
+  let data =
+    "--theboundary\r
 Content-Disposition: form-data; name=\"xx\"\r
 \r
 XX\r
@@ -997,46 +957,48 @@ Content-Disposition: form-data; name=\"bb\"; filename=\"file.txt\"\r
 BB\r
 --theboundary--\r
 "
-  |> testing.post("/", [], _)
-  |> request.set_header(
-    "content-type",
-    "multipart/form-data; boundary=theboundary",
-  )
-  |> form_handler(fn(form) {
-    // Fields are sorted by name.
-    let assert [#("xx", "XX"), #("yy", "YY"), #("zz", "ZZ")] = form.values
-    let assert [
-      #("aa", wisp.UploadedFile("file.txt", path_a)),
-      #("bb", wisp.UploadedFile("file.txt", path_b)),
-      #("cc", wisp.UploadedFile("file.txt", path_c)),
-    ] = form.files
-    let assert Ok("AA") = simplifile.read(path_a)
-    let assert Ok("BB") = simplifile.read(path_b)
-    let assert Ok("CC") = simplifile.read(path_c)
-  })
-  |> should.equal(wisp.ok())
+  assert simulate.request(http.Post, "/")
+    |> simulate.string_body(data)
+    |> request.set_header(
+      "content-type",
+      "multipart/form-data; boundary=theboundary",
+    )
+    |> form_handler(fn(form) {
+      // Fields are sorted by name.
+      let assert [#("xx", "XX"), #("yy", "YY"), #("zz", "ZZ")] = form.values
+      let assert [
+        #("aa", wisp.UploadedFile("file.txt", path_a)),
+        #("bb", wisp.UploadedFile("file.txt", path_b)),
+        #("cc", wisp.UploadedFile("file.txt", path_c)),
+      ] = form.files
+      let assert Ok("AA") = simplifile.read(path_a)
+      let assert Ok("BB") = simplifile.read(path_b)
+      let assert Ok("CC") = simplifile.read(path_c)
+    })
+    == wisp.ok()
 }
 
 pub fn urlencoded_form_fields_are_sorted_test() {
-  "xx=XX&zz=ZZ&yy=YY&cc=CC&aa=AA&bb=BB"
-  |> testing.post("/", [], _)
-  |> request.set_header("content-type", "application/x-www-form-urlencoded")
-  |> form_handler(fn(form) {
-    // Fields are sorted by name.
-    let assert [
-      #("aa", "AA"),
-      #("bb", "BB"),
-      #("cc", "CC"),
-      #("xx", "XX"),
-      #("yy", "YY"),
-      #("zz", "ZZ"),
-    ] = form.values
-  })
-  |> should.equal(wisp.ok())
+  let data = "xx=XX&zz=ZZ&yy=YY&cc=CC&aa=AA&bb=BB"
+  assert simulate.request(http.Post, "/")
+    |> simulate.string_body(data)
+    |> request.set_header("content-type", "application/x-www-form-urlencoded")
+    |> form_handler(fn(form) {
+      // Fields are sorted by name.
+      let assert [
+        #("aa", "AA"),
+        #("bb", "BB"),
+        #("cc", "CC"),
+        #("xx", "XX"),
+        #("yy", "YY"),
+        #("zz", "ZZ"),
+      ] = form.values
+    })
+    == wisp.ok()
 }
 
 pub fn message_signing_test() {
-  let request = testing.get("/", [])
+  let request = simulate.request(http.Get, "/")
   let request1 = wisp.set_secret_key_base(request, wisp.random_string(64))
   let request2 = wisp.set_secret_key_base(request, wisp.random_string(64))
 
@@ -1055,61 +1017,51 @@ pub fn create_canned_connection_test() {
   let connection = wisp.create_canned_connection(<<"Hello!":utf8>>, secret)
   let request = request.set_body(request.new(), connection)
 
-  request
-  |> wisp.get_secret_key_base
-  |> should.equal(secret)
+  assert wisp.get_secret_key_base(request) == secret
 
-  request
-  |> wisp.read_body_to_bitstring
-  |> should.equal(Ok(<<"Hello!":utf8>>))
+  assert wisp.read_body_bits(request) == Ok(<<"Hello!":utf8>>)
 }
 
 pub fn escape_html_test() {
-  "<script>alert('&');</script>"
-  |> wisp.escape_html
-  |> should.equal("&lt;script&gt;alert(&#39;&amp;&#39;);&lt;/script&gt;")
+  assert wisp.escape_html("<script>alert('&');</script>")
+    == "&lt;script&gt;alert(&#39;&amp;&#39;);&lt;/script&gt;"
 }
 
 pub fn set_header_test() {
-  wisp.ok()
-  |> wisp.set_header("accept", "application/json")
-  |> wisp.set_header("accept", "text/plain")
-  |> wisp.set_header("content-type", "text/html")
-  |> should.equal(Response(
-    200,
-    [#("accept", "text/plain"), #("content-type", "text/html")],
-    wisp.Empty,
-  ))
+  assert wisp.ok()
+    |> wisp.set_header("accept", "application/json")
+    |> wisp.set_header("accept", "text/plain")
+    |> wisp.set_header("content-type", "text/html")
+    == Response(
+      200,
+      [#("accept", "text/plain"), #("content-type", "text/html")],
+      wisp.Empty,
+    )
 }
 
 pub fn string_body_test() {
-  wisp.ok()
-  |> wisp.string_body("Hello, world!")
-  |> should.equal(Response(
-    200,
-    [],
-    wisp.Text(string_tree.from_string("Hello, world!")),
-  ))
+  assert wisp.string_body(wisp.ok(), "Hello, world!")
+    == Response(200, [], wisp.Text(string_tree.from_string("Hello, world!")))
 }
 
 pub fn string_tree_body_test() {
-  wisp.ok()
-  |> wisp.string_tree_body(string_tree.from_string("Hello, world!"))
-  |> should.equal(Response(
-    200,
-    [],
-    wisp.Text(string_tree.from_string("Hello, world!")),
-  ))
+  assert wisp.string_tree_body(
+      wisp.ok(),
+      string_tree.from_string("Hello, world!"),
+    )
+    == Response(200, [], wisp.Text(string_tree.from_string("Hello, world!")))
 }
 
 pub fn json_body_test() {
-  wisp.ok()
-  |> wisp.json_body(string_tree.from_string("{\"one\":1,\"two\":2}"))
-  |> should.equal(Response(
-    200,
-    [#("content-type", "application/json; charset=utf-8")],
-    wisp.Text(string_tree.from_string("{\"one\":1,\"two\":2}")),
-  ))
+  assert wisp.json_body(
+      wisp.ok(),
+      string_tree.from_string("{\"one\":1,\"two\":2}"),
+    )
+    == Response(
+      200,
+      [#("content-type", "application/json; charset=utf-8")],
+      wisp.Text(string_tree.from_string("{\"one\":1,\"two\":2}")),
+    )
 }
 
 pub fn priv_directory_test() {
@@ -1126,64 +1078,91 @@ pub fn priv_directory_test() {
 }
 
 pub fn set_cookie_plain_test() {
-  let req = testing.get("/", [])
+  let req = simulate.request(http.Get, "/")
   let response =
     wisp.ok()
     |> wisp.set_cookie(req, "id", "123", wisp.PlainText, 60 * 60 * 24 * 365)
     |> wisp.set_cookie(req, "flash", "hi-there", wisp.PlainText, 60)
 
-  response.headers
-  |> should.equal([
-    #(
-      "set-cookie",
-      "flash=aGktdGhlcmU; Max-Age=60; Path=/; Secure; HttpOnly; SameSite=Lax",
-    ),
-    #(
-      "set-cookie",
-      "id=MTIz; Max-Age=31536000; Path=/; Secure; HttpOnly; SameSite=Lax",
-    ),
-  ])
+  assert response.headers
+    == [
+      #(
+        "set-cookie",
+        "flash=aGktdGhlcmU; Max-Age=60; Path=/; Secure; HttpOnly; SameSite=Lax",
+      ),
+      #(
+        "set-cookie",
+        "id=MTIz; Max-Age=31536000; Path=/; Secure; HttpOnly; SameSite=Lax",
+      ),
+    ]
 }
 
 pub fn set_cookie_signed_test() {
-  let req = testing.get("/", [])
+  let req = simulate.request(http.Get, "/")
   let response =
     wisp.ok()
     |> wisp.set_cookie(req, "id", "123", wisp.Signed, 60 * 60 * 24 * 365)
     |> wisp.set_cookie(req, "flash", "hi-there", wisp.Signed, 60)
 
-  response.headers
-  |> should.equal([
-    #(
-      "set-cookie",
-      "flash=SFM1MTI.aGktdGhlcmU.uWUWvrAleKQ2jsWcU97HzGgPqtLjjUgl4oe40-RPJ5qRRcE_soXPacgmaHTLxK3xZbOJ5DOTIRMI0szD4Re7wA; Max-Age=60; Path=/; Secure; HttpOnly; SameSite=Lax",
-    ),
-    #(
-      "set-cookie",
-      "id=SFM1MTI.MTIz.LT5VxVwopQ7VhZ3OzF6Pgy3sfIIQaiUH5anHXNRt6o3taBMfCNBQskZ-EIkodchsPGSu_AJrAHjMfYPV7D5ogg; Max-Age=31536000; Path=/; Secure; HttpOnly; SameSite=Lax",
-    ),
-  ])
+  assert response.headers
+    == [
+      #(
+        "set-cookie",
+        "flash=SFM1MTI.aGktdGhlcmU.uWUWvrAleKQ2jsWcU97HzGgPqtLjjUgl4oe40-RPJ5qRRcE_soXPacgmaHTLxK3xZbOJ5DOTIRMI0szD4Re7wA; Max-Age=60; Path=/; Secure; HttpOnly; SameSite=Lax",
+      ),
+      #(
+        "set-cookie",
+        "id=SFM1MTI.MTIz.LT5VxVwopQ7VhZ3OzF6Pgy3sfIIQaiUH5anHXNRt6o3taBMfCNBQskZ-EIkodchsPGSu_AJrAHjMfYPV7D5ogg; Max-Age=31536000; Path=/; Secure; HttpOnly; SameSite=Lax",
+      ),
+    ]
 }
 
 /// If the scheme is HTTP and the `x-forwarded-proto` header is not set then
 /// the `Secure` attribute is not set.
-pub fn set_cookie_http_test() {
-  let req = testing.get("/", [])
-  let req = request.Request(..req, scheme: http.Http)
+pub fn set_cookie_http_localhost_test() {
+  let req = simulate.request(http.Get, "/")
+  let req = request.Request(..req, scheme: http.Http, host: "localhost")
   let response =
     wisp.ok()
     |> wisp.set_cookie(req, "id", "123", wisp.PlainText, 60)
+  assert response.headers
+    == [
+      #("set-cookie", "id=MTIz; Max-Age=60; Path=/; HttpOnly; SameSite=Lax"),
+    ]
+}
 
-  response.headers
-  |> should.equal([
-    #("set-cookie", "id=MTIz; Max-Age=60; Path=/; HttpOnly; SameSite=Lax"),
-  ])
+/// If the scheme is HTTP and the `x-forwarded-proto` header is not set then
+/// the `Secure` attribute is not set.
+pub fn set_cookie_http_localhost_ip4_test() {
+  let req = simulate.request(http.Get, "/")
+  let req = request.Request(..req, scheme: http.Http, host: "127.0.0.1")
+  let response =
+    wisp.ok()
+    |> wisp.set_cookie(req, "id", "123", wisp.PlainText, 60)
+  assert response.headers
+    == [
+      #("set-cookie", "id=MTIz; Max-Age=60; Path=/; HttpOnly; SameSite=Lax"),
+    ]
+}
+
+/// If the scheme is HTTP and the `x-forwarded-proto` header is not set then
+/// the `Secure` attribute is not set.
+pub fn set_cookie_http_localhost_ip6_test() {
+  let req = simulate.request(http.Get, "/")
+  let req = request.Request(..req, scheme: http.Http, host: "[::1]")
+  let response =
+    wisp.ok()
+    |> wisp.set_cookie(req, "id", "123", wisp.PlainText, 60)
+  assert response.headers
+    == [
+      #("set-cookie", "id=MTIz; Max-Age=60; Path=/; HttpOnly; SameSite=Lax"),
+    ]
 }
 
 /// If the scheme is HTTP but the `x-forwarded-proto` header is set then the
 /// `Secure` attribute is set, regardless of what the header value is.
 pub fn set_cookie_http_forwarded_test() {
-  let req = testing.get("/", [])
+  let req = simulate.request(http.Get, "/")
   let req =
     request.Request(..req, scheme: http.Http)
     |> request.set_header("x-forwarded-proto", "http")
@@ -1191,59 +1170,44 @@ pub fn set_cookie_http_forwarded_test() {
     wisp.ok()
     |> wisp.set_cookie(req, "id", "123", wisp.PlainText, 60)
 
-  response.headers
-  |> should.equal([
-    #(
-      "set-cookie",
-      "id=MTIz; Max-Age=60; Path=/; Secure; HttpOnly; SameSite=Lax",
-    ),
-  ])
+  assert response.headers
+    == [
+      #(
+        "set-cookie",
+        "id=MTIz; Max-Age=60; Path=/; Secure; HttpOnly; SameSite=Lax",
+      ),
+    ]
 }
 
 pub fn get_cookie_test() {
-  let request =
-    testing.get("/", [
+  let cookies =
+    string.concat([
       // Plain text
-      #("cookie", "plain=MTIz"),
+      "plain=MTIz",
+      ";",
       // Signed
-      #(
-        "cookie",
-        "signed=SFM1MTI.aGktdGhlcmU.uWUWvrAleKQ2jsWcU97HzGgPqtLjjUgl4oe40-RPJ5qRRcE_soXPacgmaHTLxK3xZbOJ5DOTIRMI0szD4Re7wA",
-      ),
+      "signed=SFM1MTI.aGktdGhlcmU.uWUWvrAleKQ2jsWcU97HzGgPqtLjjUgl4oe40-RPJ5qRRcE_soXPacgmaHTLxK3xZbOJ5DOTIRMI0szD4Re7wA",
+      ";",
       // Signed but tampered with
-      #(
-        "cookie",
-        "signed-and-tampered-with=SFM1MTI.aGktdGhlcmU.uWUWvrAleKQ2jsWcU97HzGgPqtLjjUgl4oe40-RPJ5qRRcE_soXPacgmaHTLxK3xZbOJ5DOTIRMI0szD4Re7wAA",
-      ),
+      "signed-and-tampered-with=SFM1MTI.aGktdGhlcmU.uWUWvrAleKQ2jsWcU97HzGgPqtLjjUgl4oe40-RPJ5qRRcE_soXPacgmaHTLxK3xZbOJ5DOTIRMI0szD4Re7wAA",
     ])
+  let request =
+    simulate.request(http.Get, "/")
+    |> simulate.header("cookie", cookies)
 
-  request
-  |> wisp.get_cookie("plain", wisp.PlainText)
-  |> should.equal(Ok("123"))
-  request
-  |> wisp.get_cookie("plain", wisp.Signed)
-  |> should.equal(Error(Nil))
+  assert wisp.get_cookie(request, "plain", wisp.PlainText) == Ok("123")
+  assert wisp.get_cookie(request, "plain", wisp.Signed) == Error(Nil)
 
-  request
-  |> wisp.get_cookie("signed", wisp.PlainText)
-  |> should.equal(Error(Nil))
-  request
-  |> wisp.get_cookie("signed", wisp.Signed)
-  |> should.equal(Ok("hi-there"))
+  assert wisp.get_cookie(request, "signed", wisp.PlainText) == Error(Nil)
+  assert wisp.get_cookie(request, "signed", wisp.Signed) == Ok("hi-there")
 
-  request
-  |> wisp.get_cookie("signed-and-tampered-with", wisp.PlainText)
-  |> should.equal(Error(Nil))
-  request
-  |> wisp.get_cookie("signed-and-tampered-with", wisp.Signed)
-  |> should.equal(Error(Nil))
+  assert wisp.get_cookie(request, "signed-and-tampered-with", wisp.PlainText)
+    == Error(Nil)
+  assert wisp.get_cookie(request, "signed-and-tampered-with", wisp.Signed)
+    == Error(Nil)
 
-  request
-  |> wisp.get_cookie("unknown", wisp.PlainText)
-  |> should.equal(Error(Nil))
-  request
-  |> wisp.get_cookie("unknown", wisp.Signed)
-  |> should.equal(Error(Nil))
+  assert wisp.get_cookie(request, "unknown", wisp.PlainText) == Error(Nil)
+  assert wisp.get_cookie(request, "unknown", wisp.Signed) == Error(Nil)
 }
 
 // Let's roundtrip signing and verification a bunch of times to have confidence
@@ -1253,27 +1217,28 @@ pub fn cookie_sign_roundtrip_test() {
   let message =
     <<int.to_string(int.random(1_000_000_000_000_000)):utf8>>
     |> bit_array.base64_encode(True)
-  let req = testing.get("/", [])
+  let req = simulate.request(http.Get, "/")
   let signed = wisp.sign_message(req, <<message:utf8>>, crypto.Sha512)
-  let req = testing.get("/", [#("cookie", "message=" <> signed)])
+  let req =
+    simulate.request(http.Get, "/")
+    |> simulate.header("cookie", "message=" <> signed)
   let assert Ok(out) = wisp.get_cookie(req, "message", wisp.Signed)
-  out
-  |> should.equal(message)
+  assert out == message
 }
 
 pub fn get_query_test() {
-  testing.get("/wibble?wobble=1&wubble=2&wobble=3&wabble", [])
-  |> wisp.get_query
-  |> should.equal([
-    #("wobble", "1"),
-    #("wubble", "2"),
-    #("wobble", "3"),
-    #("wabble", ""),
-  ])
+  assert simulate.request(http.Get, "/wibble?wobble=1&wubble=2&wobble=3&wabble")
+    |> wisp.get_query
+    == [
+      #("wobble", "1"),
+      #("wubble", "2"),
+      #("wobble", "3"),
+      #("wabble", ""),
+    ]
 }
 
 pub fn get_query_no_query_test() {
-  testing.get("/wibble", [])
-  |> wisp.get_query
-  |> should.equal([])
+  assert simulate.request(http.Get, "/wibble")
+    |> wisp.get_query
+    == []
 }

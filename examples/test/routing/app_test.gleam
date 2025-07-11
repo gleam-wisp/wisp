@@ -1,4 +1,3 @@
-import gleeunit/should
 import routing/app/router
 import wisp/testing
 
@@ -6,65 +5,52 @@ pub fn get_home_page_test() {
   let request = testing.get("/", [])
   let response = router.handle_request(request)
 
-  response.status
-  |> should.equal(200)
+  assert response.status == 200
 
-  response.headers
-  |> should.equal([#("content-type", "text/html; charset=utf-8")])
+  assert response.headers == [#("content-type", "text/html; charset=utf-8")]
 
-  response
-  |> testing.string_body
-  |> should.equal("Hello, Joe!")
+  assert testing.string_body(response) == "Hello, Joe!"
 }
 
 pub fn post_home_page_test() {
   let request = testing.post("/", [], "a body")
   let response = router.handle_request(request)
-  response.status
-  |> should.equal(405)
+  assert response.status == 405
 }
 
 pub fn page_not_found_test() {
   let request = testing.get("/nothing-here", [])
   let response = router.handle_request(request)
-  response.status
-  |> should.equal(404)
+  assert response.status == 404
 }
 
 pub fn get_comments_test() {
   let request = testing.get("/comments", [])
   let response = router.handle_request(request)
-  response.status
-  |> should.equal(200)
+  assert response.status == 200
 }
 
 pub fn post_comments_test() {
   let request = testing.post("/comments", [], "")
   let response = router.handle_request(request)
-  response.status
-  |> should.equal(201)
+  assert response.status == 201
 }
 
 pub fn delete_comments_test() {
   let request = testing.delete("/comments", [], "")
   let response = router.handle_request(request)
-  response.status
-  |> should.equal(405)
+  assert response.status == 405
 }
 
 pub fn get_comment_test() {
   let request = testing.get("/comments/123", [])
   let response = router.handle_request(request)
-  response.status
-  |> should.equal(200)
-  response
-  |> testing.string_body
-  |> should.equal("Comment with id 123")
+  assert response.status == 200
+  assert testing.string_body(response) == "Comment with id 123"
 }
 
 pub fn delete_comment_test() {
   let request = testing.delete("/comments/123", [], "")
   let response = router.handle_request(request)
-  response.status
-  |> should.equal(405)
+  assert response.status == 405
 }
