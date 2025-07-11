@@ -10,7 +10,7 @@ import wisp.{type Request}
 const index_html = "
 <!DOCTYPE html>
 <html lang=\"en\">
-  <head><title>serverSentEventszz</title></head>
+  <head><title>ServerSentEvents</title></head>
   <body>
     <div id='time'></div>
     <script>

@@ -1828,13 +1828,17 @@ pub fn get_cookie(
 // Server-Sent Events
 //
 
+/// An error which occurs when sending a server-sent event.
 pub type SSEError {
   UnexpectedSSEError
 }
 
+/// Send a SSEEvent
 pub type SendEvent =
   fn(SSEEvent) -> Result(Nil, SSEError)
 
+
+/// Initialise a server-sent event actor
 pub fn sse(
   request: Request,
   init: Init(state, message, data),
@@ -1848,18 +1852,22 @@ pub fn sse(
   Ok(HttpResponse(200, [], ServerSentEvent(init, loop)))
 }
 
+/// Initialise an actor
 pub type Init(state, message, return) =
   fn(process.Subject(message)) ->
     Result(actor.Initialised(state, message, return), String)
 
+/// Process an event coming from an actor
 pub type Loop(state, message) =
   fn(state, message, fn(SSEEvent) -> Result(Nil, SSEError)) ->
     actor.Next(state, message)
 
-pub type SSEMessage {
-  SSEMessage
-}
-
+/// A server-sent event represented in Gleam.
+///
+/// See the [Mozzilla SSE documentation][1] for more information.
+///
+/// [1]: https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events
+///
 pub type SSEEvent {
   SSEEvent(
     data: String,
@@ -1867,10 +1875,6 @@ pub type SSEEvent {
     id: Option(String),
     retry: Option(Int),
   )
-}
-
-pub type SSEState {
-  SSEState
 }
 
 //
