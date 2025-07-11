@@ -61,11 +61,7 @@ pub type Body {
   /// The body is a function which will be called to start the stream. The
   /// function returns an `actor.Started` or `actor.StartError` result.
   ///
-  ServerSentEvent(
-    on_init: fn(process.Subject(SSEMessage)) -> OnInit,
-    loop: fn(SSEState, SSEMessage, SendEvent) ->
-      actor.Next(SSEState, SSEMessage),
-  )
+  ServerSentEvent(Init(SSEState, SSEMessage, process.Subject(SSEMessage)))
   /// functions in the event of a failure, invalid request, or other situation
   /// in which the request cannot be processed.
   ///
@@ -73,25 +69,6 @@ pub type Body {
   /// in place of any with an empty body.
   ///
   Empty
-}
-
-pub type OnInit =
-  Result(
-    actor.Initialised(SSEState, SSEMessage, process.Subject(SSEMessage)),
-    String,
-  )
-
-pub type SSEMessage {
-  SSEMessage(
-    data: String,
-    event: Option(String),
-    id: Option(String),
-    retry: Option(Int),
-  )
-}
-
-pub type SSEState {
-  SSEState
 }
 
 /// An alias for a HTTP response containing a `Body`.
@@ -1815,24 +1792,40 @@ pub type SSEError {
   UnexpectedSSEError
 }
 
-pub type SSEHandler {
-  SSEHandler(
-    init: fn(process.Subject(SSEMessage)) -> OnInit,
-    loop: fn(SSEState, SSEMessage, SendEvent) ->
-      actor.Next(SSEState, SSEMessage),
-  )
-}
-
 pub type SendEvent =
   fn(SSEMessage) -> Result(Nil, SSEError)
 
-pub fn sse(request: Request, handler: SSEHandler) -> Result(Response, String) {
+pub fn sse(
+  request: Request,
+  init: Init(SSEState, SSEMessage, process.Subject(SSEMessage)),
+  loop: Loop(SSEState, SSEMessage),
+) -> Result(Response, String) {
   use <- bool.guard(
     when: option.is_none(request.body.sse_enabled),
     return: Error("SSE not enabled"),
   )
 
-  Ok(HttpResponse(200, [], ServerSentEvent(handler.init, handler.loop)))
+  Ok(HttpResponse(200, [], ServerSentEvent(init)))
+}
+
+pub type Init(state, message, return) =
+  fn(process.Subject(message)) ->
+    Result(actor.Initialised(state, message, return), String)
+
+pub type Loop(state, message) =
+  fn(state, message) -> actor.Next(state, message)
+
+pub type SSEMessage {
+  SSEMessage(
+    data: String,
+    event: Option(String),
+    id: Option(String),
+    retry: Option(Int),
+  )
+}
+
+pub type SSEState {
+  SSEState
 }
 
 //

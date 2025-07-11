@@ -46,7 +46,7 @@ pub fn sse(req: Request) -> Response {
   use <- wisp.require_method(req, Get)
 
   let init = fn(subject) {
-    let _ =
+    let repeater =
       repeatedly.call(1000, Nil, fn(_state, _count) {
         process.send(
           subject,
@@ -66,14 +66,11 @@ pub fn sse(req: Request) -> Response {
     Ok(initialised)
   }
 
-  let loop = fn(state, message, send) {
-    send(message)
+  let loop = fn(state, message) {
     actor.continue(state)
   }
 
-  let handler = wisp.SSEHandler(init:, loop:)
-
-  let assert Ok(response) = wisp.sse(req, handler)
+  let assert Ok(response) = wisp.sse(req, init, loop)
 
   response
 }

@@ -1,6 +1,7 @@
 import exception
 import gleam/bytes_tree
 import gleam/erlang/process
+import gleam/function
 import gleam/http/request.{type Request as HttpRequest}
 import gleam/http/response.{type Response as HttpResponse}
 import gleam/option
@@ -59,8 +60,8 @@ pub fn handler(
       |> handler
 
     let response = case response {
-      response.Response(_, _, body: wisp.ServerSentEvent(init, loop)) ->
-        mist_server_sent_event(request.set_body(request, mist), init, loop)
+      response.Response(_, _, body: wisp.ServerSentEvent(subject)) ->
+        mist_server_sent_event(request.set_body(request, mist), subject)
       response -> mist_response(response)
     }
 
@@ -95,7 +96,7 @@ fn mist_response(response: wisp.Response) -> HttpResponse(mist.ResponseData) {
     wisp.Text(text) -> mist.Bytes(bytes_tree.from_string_tree(text))
     wisp.Bytes(bytes) -> mist.Bytes(bytes)
     wisp.File(path) -> mist_send_file(path)
-    wisp.ServerSentEvent(_, _) -> panic as "todo: should not happen probably"
+    wisp.ServerSentEvent(_) -> panic as "todo: should not happen probably"
   }
   response
   |> response.set_body(body)
@@ -116,17 +117,18 @@ fn mist_send_file(path: String) -> mist.ResponseData {
 // Server Sent Events
 //
 
-fn mist_server_sent_event(request, init, loop) {
-  let on_init = fn(subject) { init(subject) }
+fn mist_server_sent_event(request, subject) {
+  let on_init = fn(subj) { subject(subj) }
 
   let handler = fn(state, message, connection) {
-    loop(state, message, fn(message) { mist_send_event(connection, message) })
+    let _ = mist_send_event(connection, message)
+    actor.continue(state)
   }
 
   mist.server_sent_events(request, response.new(200), on_init, handler)
 }
 
-fn mist_send_event(connection, event) {
+pub fn mist_send_event(connection, event) {
   let wisp.SSEMessage(data, event, id, retry) = event
   let mist_event = mist.event(string_tree.from_string(data))
   event |> option.map(fn(name) { mist.event_name(mist_event, name) })
