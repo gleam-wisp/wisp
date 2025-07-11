@@ -10,7 +10,7 @@ gleam_erlang = ">= 1.0.0 and < 2.0.0"
 gleam_http = ">= 4.0.0 and < 5.0.0"
 gleam_json = ">= 3.0.1 and < 4.0.0"
 gleam_crypto = ">= 1.5.0 and < 2.0.0"
-gsv = ">= 3.0.2 and < 4.0.0"
+gsv = ">= 4.0.0 and < 5.0.0"
 tiny_database = { path = "utilities/tiny_database" }
 
 [dev-dependencies]

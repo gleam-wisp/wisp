@@ -1,6 +1,5 @@
 import gleam/dict
 import gleeunit
-import gleeunit/should
 import tiny_database
 
 pub fn main() {
@@ -17,10 +16,8 @@ pub fn insert_read_test() {
   let assert Ok(id) = tiny_database.insert(connection, data)
 
   let assert Ok(read) = tiny_database.read(connection, id)
-  read
-  |> should.equal(data)
+  assert read == data
 
   let assert Ok([single]) = tiny_database.list(connection)
-  single
-  |> should.equal(id)
+  assert single == id
 }

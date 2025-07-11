@@ -1,56 +1,49 @@
 import gleam/string
-import gleeunit/should
 import wisp/testing
 import working_with_files/app/router
 
 pub fn home_test() {
   let response = router.handle_request(testing.get("/", []))
 
-  response.status
-  |> should.equal(200)
+  assert response.status == 200
 
-  response.headers
-  |> should.equal([#("content-type", "text/html; charset=utf-8")])
+  assert response.headers == [#("content-type", "text/html; charset=utf-8")]
 
-  response
-  |> testing.string_body
-  |> string.contains("<form method")
-  |> should.equal(True)
+  assert response
+    |> testing.string_body
+    |> string.contains("<form method")
+    == True
 }
 
 pub fn file_from_disc_test() {
   let response = router.handle_request(testing.get("/file-from-disc", []))
 
-  response.status
-  |> should.equal(200)
+  assert response.status == 200
 
-  response.headers
-  |> should.equal([
-    #("content-type", "text/markdown"),
-    #("content-disposition", "attachment; filename=\"hello.md\""),
-  ])
+  assert response.headers
+    == [
+      #("content-type", "text/markdown"),
+      #("content-disposition", "attachment; filename=\"hello.md\""),
+    ]
 
-  response
-  |> testing.string_body
-  |> string.starts_with("name = \"examples\"")
-  |> should.equal(True)
+  assert response
+    |> testing.string_body
+    |> string.starts_with("name = \"examples\"")
+    == True
 }
 
 pub fn file_from_memory_test() {
   let response = router.handle_request(testing.get("/file-from-memory", []))
 
-  response.status
-  |> should.equal(200)
+  assert response.status == 200
 
-  response.headers
-  |> should.equal([
-    #("content-type", "text/plain"),
-    #("content-disposition", "attachment; filename=\"hello.txt\""),
-  ])
+  assert response.headers
+    == [
+      #("content-type", "text/plain"),
+      #("content-disposition", "attachment; filename=\"hello.txt\""),
+    ]
 
-  response
-  |> testing.string_body
-  |> should.equal("Hello, Joe!")
+  assert testing.string_body(response) == "Hello, Joe!"
 }
 
 pub fn upload_file_test() {

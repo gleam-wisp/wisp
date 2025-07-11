@@ -1,23 +1,19 @@
 import gleam/json
-import gleeunit/should
 import wisp/testing
 import working_with_json/app/router
 
 pub fn get_test() {
   let response = router.handle_request(testing.get("/", []))
 
-  response.status
-  |> should.equal(405)
+  assert response.status == 405
 }
 
 pub fn submit_wrong_content_type_test() {
   let response = router.handle_request(testing.post("/", [], ""))
 
-  response.status
-  |> should.equal(415)
+  assert response.status == 415
 
-  response.headers
-  |> should.equal([#("accept", "application/json")])
+  assert response.headers == [#("accept", "application/json")]
 }
 
 pub fn submit_missing_parameters_test() {
@@ -29,8 +25,7 @@ pub fn submit_missing_parameters_test() {
     testing.post_json("/", [], json)
     |> router.handle_request()
 
-  response.status
-  |> should.equal(422)
+  assert response.status == 422
 }
 
 pub fn submit_successful_test() {
@@ -40,13 +35,11 @@ pub fn submit_successful_test() {
     testing.post_json("/", [], json)
     |> router.handle_request()
 
-  response.status
-  |> should.equal(201)
+  assert response.status == 201
 
-  response.headers
-  |> should.equal([#("content-type", "application/json; charset=utf-8")])
+  assert response.headers
+    == [#("content-type", "application/json; charset=utf-8")]
 
-  response
-  |> testing.string_body
-  |> should.equal("{\"name\":\"Joe\",\"is-cool\":true,\"saved\":true}")
+  assert testing.string_body(response)
+    == "{\"name\":\"Joe\",\"is-cool\":true,\"saved\":true}"
 }

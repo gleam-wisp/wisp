@@ -1,16 +1,13 @@
 import configuring_default_responses/app/router
 import gleam/string
-import gleeunit/should
 import wisp/testing
 
 pub fn home_test() {
   let response = router.handle_request(testing.get("/", []))
 
-  response.status
-  |> should.equal(200)
+  assert response.status == 200
 
-  response.headers
-  |> should.equal([#("content-type", "text/html; charset=utf-8")])
+  assert response.headers == [#("content-type", "text/html; charset=utf-8")]
 
   let assert True =
     response
@@ -22,11 +19,9 @@ pub fn internal_server_error_test() {
   let response =
     router.handle_request(testing.get("/internal-server-error", []))
 
-  response.status
-  |> should.equal(500)
+  assert response.status == 500
 
-  response.headers
-  |> should.equal([#("content-type", "text/html; charset=utf-8")])
+  assert response.headers == [#("content-type", "text/html; charset=utf-8")]
 
   let assert True =
     response
@@ -37,11 +32,9 @@ pub fn internal_server_error_test() {
 pub fn unprocessable_entity_test() {
   let response = router.handle_request(testing.get("/unprocessable-entity", []))
 
-  response.status
-  |> should.equal(422)
+  assert response.status == 422
 
-  response.headers
-  |> should.equal([#("content-type", "text/html; charset=utf-8")])
+  assert response.headers == [#("content-type", "text/html; charset=utf-8")]
 
   let assert True =
     response
@@ -52,11 +45,9 @@ pub fn unprocessable_entity_test() {
 pub fn bad_request_test() {
   let response = router.handle_request(testing.get("/bad-request", []))
 
-  response.status
-  |> should.equal(400)
+  assert response.status == 400
 
-  response.headers
-  |> should.equal([#("content-type", "text/html; charset=utf-8")])
+  assert response.headers == [#("content-type", "text/html; charset=utf-8")]
 
   let assert True =
     response
@@ -67,14 +58,13 @@ pub fn bad_request_test() {
 pub fn method_not_allowed_test() {
   let response = router.handle_request(testing.get("/method-not-allowed", []))
 
-  response.status
-  |> should.equal(405)
+  assert response.status == 405
 
-  response.headers
-  |> should.equal([
-    #("allow", ""),
-    #("content-type", "text/html; charset=utf-8"),
-  ])
+  assert response.headers
+    == [
+      #("allow", ""),
+      #("content-type", "text/html; charset=utf-8"),
+    ]
 
   let assert True =
     response
@@ -85,11 +75,9 @@ pub fn method_not_allowed_test() {
 pub fn not_found_test() {
   let response = router.handle_request(testing.get("/not-found", []))
 
-  response.status
-  |> should.equal(404)
+  assert response.status == 404
 
-  response.headers
-  |> should.equal([#("content-type", "text/html; charset=utf-8")])
+  assert response.headers == [#("content-type", "text/html; charset=utf-8")]
 
   let assert True =
     response
@@ -100,11 +88,9 @@ pub fn not_found_test() {
 pub fn entity_too_large_test() {
   let response = router.handle_request(testing.get("/entity-too-large", []))
 
-  response.status
-  |> should.equal(413)
+  assert response.status == 413
 
-  response.headers
-  |> should.equal([#("content-type", "text/html; charset=utf-8")])
+  assert response.headers == [#("content-type", "text/html; charset=utf-8")]
 
   let assert True =
     response

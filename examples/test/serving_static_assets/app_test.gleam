@@ -1,5 +1,4 @@
 import gleam/list
-import gleeunit/should
 import serving_static_assets/app
 import serving_static_assets/app/router
 import serving_static_assets/app/web.{type Context, Context}
@@ -18,11 +17,9 @@ pub fn get_home_page_test() {
   let request = testing.get("/", [])
   let response = router.handle_request(request, ctx)
 
-  response.status
-  |> should.equal(200)
+  assert response.status == 200
 
-  response.headers
-  |> should.equal([#("content-type", "text/html; charset=utf-8")])
+  assert response.headers == [#("content-type", "text/html; charset=utf-8")]
 }
 
 pub fn get_stylesheet_test() {
@@ -30,12 +27,10 @@ pub fn get_stylesheet_test() {
   let request = testing.get("/static/styles.css", [])
   let response = router.handle_request(request, ctx)
 
-  response.status
-  |> should.equal(200)
+  assert response.status == 200
 
-  response.headers
-  |> list.key_find("content-type")
-  |> should.equal(Ok("text/css; charset=utf-8"))
+  assert list.key_find(response.headers, "content-type")
+    == Ok("text/css; charset=utf-8")
 }
 
 pub fn get_javascript_test() {
@@ -43,10 +38,8 @@ pub fn get_javascript_test() {
   let request = testing.get("/static/main.js", [])
   let response = router.handle_request(request, ctx)
 
-  response.status
-  |> should.equal(200)
+  assert response.status == 200
 
-  response.headers
-  |> list.key_find("content-type")
-  |> should.equal(Ok("text/javascript; charset=utf-8"))
+  assert list.key_find(response.headers, "content-type")
+    == Ok("text/javascript; charset=utf-8")
 }

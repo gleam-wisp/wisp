@@ -1,5 +1,4 @@
 import gleam/json
-import gleeunit/should
 import tiny_database
 import using_a_database/app
 import using_a_database/app/router
@@ -24,32 +23,27 @@ pub fn get_unknown_test() {
   let request = testing.get("/", [])
   let response = router.handle_request(request, ctx)
 
-  response.status
-  |> should.equal(404)
+  assert response.status == 404
 }
 
 pub fn list_people_test() {
   use ctx <- with_context
 
   let response = router.handle_request(testing.get("/people", []), ctx)
-  response.status
-  |> should.equal(200)
-  response.headers
-  |> should.equal([#("content-type", "application/json; charset=utf-8")])
+  assert response.status == 200
+  assert response.headers
+    == [#("content-type", "application/json; charset=utf-8")]
 
   // Initially there are no people in the database
-  response
-  |> testing.string_body
-  |> should.equal("{\"people\":[]}")
+  assert testing.string_body(response) == "{\"people\":[]}"
 
   // Create a new person
   let assert Ok(id) = people.save_to_database(ctx.db, Person("Jane", "Red"))
 
   // The id of the new person is listed by the API
   let response = router.handle_request(testing.get("/people", []), ctx)
-  response
-  |> testing.string_body
-  |> should.equal("{\"people\":[{\"id\":\"" <> id <> "\"}]}")
+  assert testing.string_body(response)
+    == "{\"people\":[{\"id\":\"" <> id <> "\"}]}"
 }
 
 pub fn create_person_test() {
@@ -62,15 +56,12 @@ pub fn create_person_test() {
   let request = testing.post_json("/people", [], json)
   let response = router.handle_request(request, ctx)
 
-  response.status
-  |> should.equal(201)
+  assert response.status == 201
 
   // The request created a new person in the database
   let assert Ok([id]) = tiny_database.list(ctx.db)
 
-  response
-  |> testing.string_body
-  |> should.equal("{\"id\":\"" <> id <> "\"}")
+  assert testing.string_body(response) == "{\"id\":\"" <> id <> "\"}"
 }
 
 pub fn create_person_missing_parameters_test() {
@@ -79,8 +70,7 @@ pub fn create_person_missing_parameters_test() {
   let request = testing.post_json("/people", [], json)
   let response = router.handle_request(request, ctx)
 
-  response.status
-  |> should.equal(422)
+  assert response.status == 422
 
   // Nothing was created in the database
   let assert Ok([]) = tiny_database.list(ctx.db)
@@ -92,12 +82,10 @@ pub fn read_person_test() {
   let request = testing.get("/people/" <> id, [])
   let response = router.handle_request(request, ctx)
 
-  response.status
-  |> should.equal(200)
+  assert response.status == 200
 
-  response
-  |> testing.string_body
-  |> should.equal(
-    "{\"id\":\"" <> id <> "\",\"name\":\"Jane\",\"favourite-colour\":\"Red\"}",
-  )
+  assert testing.string_body(response)
+    == "{\"id\":\""
+    <> id
+    <> "\",\"name\":\"Jane\",\"favourite-colour\":\"Red\"}"
 }

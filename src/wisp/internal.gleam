@@ -1,4 +1,5 @@
 import directories
+import filepath
 import gleam/bit_array
 import gleam/crypto
 import gleam/int
@@ -35,7 +36,7 @@ pub fn make_connection(
     Ok(tmp_dir) -> tmp_dir <> "/gleam-wisp/"
     Error(_) -> "./tmp/"
   }
-  let temporary_directory = join_path(prefix, random_slug())
+  let temporary_directory = filepath.join(prefix, random_slug())
   Connection(
     reader: body_reader,
     max_body_size: 8_000_000,
@@ -62,15 +63,6 @@ pub fn remove_preceeding_slashes(string: String) -> String {
   case string {
     "/" <> rest -> remove_preceeding_slashes(rest)
     _ -> string
-  }
-}
-
-// TODO: replace with simplifile function when it exists
-pub fn join_path(a: String, b: String) -> String {
-  let b = remove_preceeding_slashes(b)
-  case string.ends_with(a, "/") {
-    True -> a <> b
-    False -> a <> "/" <> b
   }
 }
 

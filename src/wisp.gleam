@@ -1,4 +1,5 @@
 import exception
+import filepath
 import gleam/bit_array
 import gleam/bool
 import gleam/bytes_tree.{type BytesTree}
@@ -776,7 +777,7 @@ pub fn require_string_body(
   request: Request,
   next: fn(String) -> Response,
 ) -> Response {
-  case read_body_to_bitstring(request) {
+  case read_body_bits(request) {
     Ok(body) -> or_400(bit_array.to_string(body), next)
     Error(_) -> entity_too_large()
   }
@@ -809,7 +810,7 @@ pub fn require_bit_array_body(
   request: Request,
   next: fn(BitArray) -> Response,
 ) -> Response {
-  case read_body_to_bitstring(request) {
+  case read_body_bits(request) {
     Ok(body) -> next(body)
     Error(_) -> entity_too_large()
   }
@@ -817,7 +818,7 @@ pub fn require_bit_array_body(
 
 // TODO: don't always return entity to large. Other errors are possible, such as
 // network errors.
-/// Read the entire body of the request as a bit string.
+/// Read the entire body of the request as a bit array.
 ///
 /// You may instead wish to use the `require_bit_array_body` or the
 /// `require_string_body` middleware functions instead.
@@ -831,7 +832,7 @@ pub fn require_bit_array_body(
 /// If the body is larger than the `max_body_size` limit then an empty response
 /// with status code 413: Entity too large will be returned to the client.
 ///
-pub fn read_body_to_bitstring(request: Request) -> Result(BitArray, Nil) {
+pub fn read_body_bits(request: Request) -> Result(BitArray, Nil) {
   let connection = request.body
   read_body_loop(
     connection.reader,
@@ -1378,7 +1379,7 @@ pub fn serve_static(
         path
         |> string.drop_start(string.length(prefix))
         |> string.replace(each: "..", with: "")
-        |> internal.join_path(directory, _)
+        |> filepath.join(directory, _)
 
       let file_type =
         req.path
@@ -1609,7 +1610,7 @@ pub fn new_temporary_file(
 ) -> Result(String, simplifile.FileError) {
   let directory = request.body.temporary_directory
   use _ <- result.try(simplifile.create_directory_all(directory))
-  let path = internal.join_path(directory, internal.random_slug())
+  let path = filepath.join(directory, internal.random_slug())
   use _ <- result.map(simplifile.create_file(path))
   path
 }
@@ -1946,11 +1947,7 @@ pub fn get_cookie(
 //
 
 // TODO: chunk the body
-/// Create a connection which will return the given body when read.
-///
-/// This function is intended for use in tests, though you probably want the
-/// `wisp/testing` module instead.
-///
+@internal
 pub fn create_canned_connection(
   body: BitArray,
   secret_key_base: String,
@@ -1961,4 +1958,93 @@ pub fn create_canned_connection(
     },
     secret_key_base,
   )
+}
+
+// TODO: test
+// TODO: add headers to the test functions
+/// Cross-Site Request Forgery (CSRF) attacks by checking the `host` request
+/// header against the `origin` header or `referer` header.
+///
+/// - Requests with the `Get` and `Head` methods are accepted.
+/// - Requests with no `host` header are rejected with status 400: Bad Request.
+/// - Requests with no `origin` or `referer` headers are accepted, but have the
+///   `cookie` header removed to prevent CSRF attacks against cookie based
+///   sessions.
+/// - Requests with origin/referer headers that match their host header are
+///   accepted.
+/// - Requests with headers that don't match are rejected with status 400: Bad
+///   Request.
+///
+/// This middleware implements the [OWASP Verifying Origin With Standard Headers][1]
+/// CSRF defense-in-depth technique. **Do not** allow `Get` or `Head` requests 
+/// to trigger side effects if relying only on this function and the SameSite
+/// cookies feature for CSRF protection.
+///
+/// This middleware and SameSite cookies typically is sufficient to protect
+/// against CSRF attacks, but you may decide to employ [token based mitigation][2]
+/// for more complete CSRF defence-in-depth.
+///
+/// [1]: https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#using-standard-headers-to-verify-origin
+/// [2]: https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#token-based-mitigation
+///
+pub fn csrf_known_header_protection(
+  request: Request,
+  next: fn(Request) -> Response,
+) -> Response {
+  let is_pure_method = case request.method {
+    http.Head | http.Get -> True
+    _ -> False
+  }
+
+  // GET and HEAD are pure methods, so they SHOULD NOT perform side effects.
+  // If there are no side effects then there's no risk of CSRF attacks.
+  use <- bool.lazy_guard(when: is_pure_method, return: fn() { next(request) })
+
+  // The origin and referer headers are set by the browser.
+  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Origin
+  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Referer
+  let origin = case request.get_header(request, "origin") {
+    Error(_) -> request.get_header(request, "referer")
+    Ok(_) as o -> o
+  }
+
+  // The host header is required for HTTP1.1, but not HTTP1.0 or HTTP2/3.
+  // This would need to be modified to support HTTP3 in future.
+  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Host
+  let host = request.get_header(request, "host")
+
+  case origin, host {
+    _, Error(_) -> {
+      log_warning("Host header missing from request")
+      bad_request()
+    }
+    // If the request does not have origin headers then we cannot perform an
+    // origin check, so we must remove the cookie headers to ensure that a CSRF
+    // attack is not possible.
+    Error(_), _ -> {
+      let headers = list.filter(request.headers, fn(h) { h.0 != "cookie" })
+      let request = request.Request(..request, headers:)
+      next(request)
+    }
+    Ok(origin), Ok(host) -> {
+      let #(host_host, host_port) = case string.split_once(host, ":") {
+        Ok(#(host, port)) -> {
+          let port = port |> int.parse |> option.from_result
+          #(option.Some(host), port)
+        }
+        _ -> #(option.Some(host), option.None)
+      }
+
+      let uri.Uri(host: origin_host, port: origin_port, ..) =
+        uri.parse(origin) |> result.unwrap(uri.empty)
+
+      case host_host == origin_host && host_port == origin_port {
+        True -> next(request)
+        False -> {
+          log_warning("Origin-host mismatch: " <> host <> " " <> origin)
+          bad_request()
+        }
+      }
+    }
+  }
 }
