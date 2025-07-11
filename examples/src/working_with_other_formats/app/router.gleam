@@ -7,7 +7,7 @@ import gsv
 import wisp.{type Request, type Response}
 import working_with_other_formats/app/web
 
-pub fn handle_request(req: Request) -> Response {
+pub fn handle_request(req: Request) -> Response(a, b, c) {
   use req <- web.middleware(req)
   use <- wisp.require_method(req, Post)
 

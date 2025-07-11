@@ -1,8 +1,8 @@
 import server_sent_events/app/web
 import server_sent_events/app/server_sent_events
-import wisp.{type Request, type Response}
+import wisp.{type Request}
 
-pub fn handle_request(req: Request) -> Response {
+pub fn handle_request(req: Request) {
   use req <- web.middleware(req)
 
   case wisp.path_segments(req) {

@@ -41,7 +41,7 @@ import wisp/internal
 /// value will likely be able to hack your application.
 ///
 pub fn handler(
-  handler: fn(wisp.Request) -> wisp.Response,
+  handler: fn(wisp.Request) -> wisp.Response(state, message, data),
   secret_key_base: String,
 ) -> fn(HttpRequest(mist.Connection)) -> HttpResponse(mist.ResponseData) {
   fn(request: HttpRequest(_)) {
@@ -60,8 +60,8 @@ pub fn handler(
       |> handler
 
     let response = case response {
-      response.Response(_, _, body: wisp.ServerSentEvent(subject)) ->
-        mist_server_sent_event(request.set_body(request, mist), subject)
+      response.Response(_, _, wisp.ServerSentEvent(init, loop)) ->
+        mist_server_sent_event(request.set_body(request, mist), init, loop)
       response -> mist_response(response)
     }
 
@@ -90,13 +90,15 @@ fn wrap_mist_chunk(
   })
 }
 
-fn mist_response(response: wisp.Response) -> HttpResponse(mist.ResponseData) {
+fn mist_response(
+  response: wisp.Response(state, message, data),
+) -> HttpResponse(mist.ResponseData) {
   let body = case response.body {
     wisp.Empty -> mist.Bytes(bytes_tree.new())
     wisp.Text(text) -> mist.Bytes(bytes_tree.from_string_tree(text))
     wisp.Bytes(bytes) -> mist.Bytes(bytes)
     wisp.File(path) -> mist_send_file(path)
-    wisp.ServerSentEvent(_) -> panic as "todo: should not happen probably"
+    wisp.ServerSentEvent(_, _) -> todo as "should not happen"
   }
   response
   |> response.set_body(body)
@@ -117,11 +119,11 @@ fn mist_send_file(path: String) -> mist.ResponseData {
 // Server Sent Events
 //
 
-fn mist_server_sent_event(request, subject) {
+fn mist_server_sent_event(request, subject, loop) {
   let on_init = fn(subj) { subject(subj) }
 
   let handler = fn(state, message, connection) {
-    let _ = mist_send_event(connection, message)
+    loop(state, message, fn(message) { mist_send_event(connection, message) })
     actor.continue(state)
   }
 
@@ -129,7 +131,7 @@ fn mist_server_sent_event(request, subject) {
 }
 
 pub fn mist_send_event(connection, event) {
-  let wisp.SSEMessage(data, event, id, retry) = event
+  let wisp.SSEEvent(data, event, id, retry) = event
   let mist_event = mist.event(string_tree.from_string(data))
   event |> option.map(fn(name) { mist.event_name(mist_event, name) })
   id |> option.map(fn(id) { mist.event_id(mist_event, id) })

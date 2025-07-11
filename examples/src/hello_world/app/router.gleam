@@ -1,10 +1,10 @@
 import gleam/string_tree
 import hello_world/app/web
-import wisp.{type Request, type Response}
+import wisp.{type Request}
 
 /// The HTTP request handler- your application!
 /// 
-pub fn handle_request(req: Request) -> Response {
+pub fn handle_request(req: Request) {
   // Apply the middleware stack for this request/response.
   use _req <- web.middleware(req)
 

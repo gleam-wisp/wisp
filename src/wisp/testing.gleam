@@ -227,10 +227,10 @@ pub fn patch_json(
 /// This function will panic if the response body is a file and the file cannot
 /// be read, or if it does not contain valid UTF-8.
 ///
-pub fn string_body(response: Response) -> String {
+pub fn string_body(response: Response(state, message, data)) -> String {
   case response.body {
     Empty -> ""
-    ServerSentEvent(_) -> ""
+    ServerSentEvent(_,_) -> ""
     Text(tree) -> string_tree.to_string(tree)
     Bytes(bytes) -> {
       let data = bytes_tree.to_bit_array(bytes)
@@ -251,10 +251,10 @@ pub fn string_body(response: Response) -> String {
 /// This function will panic if the response body is a file and the file cannot
 /// be read.
 ///
-pub fn bit_array_body(response: Response) -> BitArray {
+pub fn bit_array_body(response: Response(state, message, data)) -> BitArray {
   case response.body {
     Empty -> <<>>
-    ServerSentEvent(_) -> <<>>
+    ServerSentEvent(_,_) -> <<>>
     Bytes(tree) -> bytes_tree.to_bit_array(tree)
     Text(tree) -> bytes_tree.to_bit_array(bytes_tree.from_string_tree(tree))
     File(path) -> {
