@@ -63,7 +63,7 @@ pub fn sse(req: Request) {
           option.None,
           option.None,
         ))
-        actor.continue(state)
+        actor.continue(EventState(..state, count:state.count + 1))
       }
       Down(_) -> {
         repeatedly.stop(state.repeater)
