@@ -3,7 +3,6 @@ import gleam/bytes_tree
 import gleam/http/request.{type Request as HttpRequest}
 import gleam/http/response.{type Response as HttpResponse}
 import gleam/option
-import gleam/otp/actor
 import gleam/result
 import gleam/string
 import gleam/string_tree
@@ -122,7 +121,6 @@ fn mist_server_sent_event(request, subject, loop) {
 
   let handler = fn(state, message, connection) {
     loop(state, message, fn(event) { mist_send_event(connection, event) })
-    actor.continue(state)
   }
 
   mist.server_sent_events(request, response.new(200), on_init, handler)
