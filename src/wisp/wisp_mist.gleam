@@ -132,11 +132,23 @@ fn mist_server_sent_event(request, subject, loop) {
 
 pub fn mist_send_event(connection, event) {
   let wisp.SSEEvent(data, event, id, retry) = event
+
   let mist_event = mist.event(string_tree.from_string(data))
-  event |> option.map(fn(name) { mist.event_name(mist_event, name) })
-  id |> option.map(fn(id) { mist.event_id(mist_event, id) })
-  retry
-  |> option.map(fn(retry) { mist.event_retry(mist_event, retry) })
+
+  let mist_event = case event {
+    option.Some(name) -> mist.event_name(mist_event, name)
+    option.None -> mist_event
+  }
+
+  let mist_event = case id {
+    option.Some(id) -> mist.event_id(mist_event, id)
+    option.None -> mist_event
+  }
+
+  let mist_event = case retry {
+    option.Some(retry) -> mist.event_retry(mist_event, retry)
+    option.None -> mist_event
+  }
 
   let result = mist.send_event(connection, mist_event)
 
