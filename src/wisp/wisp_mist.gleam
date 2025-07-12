@@ -5,6 +5,7 @@ import gleam/http/response.{type Response as HttpResponse}
 import gleam/option
 import gleam/result
 import gleam/string
+import gleam/string_tree
 import mist
 import wisp
 import wisp/internal
@@ -37,10 +38,12 @@ import wisp/internal
 /// value will likely be able to hack your application.
 ///
 pub fn handler(
-  handler: fn(wisp.Request) -> wisp.Response,
+  handler: fn(wisp.Request) -> wisp.Response(state, message, data),
   secret_key_base: String,
 ) -> fn(HttpRequest(mist.Connection)) -> HttpResponse(mist.ResponseData) {
   fn(request: HttpRequest(_)) {
+    let mist = request.body
+
     let connection =
       internal.make_connection(mist_body_reader(request), secret_key_base)
     let request = request.set_body(request, connection)
@@ -52,7 +55,12 @@ pub fn handler(
     let response =
       request
       |> handler
-      |> mist_response
+
+    let response = case response {
+      response.Response(_, _, wisp.ServerSentEvent(init, loop)) ->
+        mist_server_sent_event(request.set_body(request, mist), init, loop)
+      response -> mist_response(response)
+    }
 
     response
   }
@@ -79,12 +87,15 @@ fn wrap_mist_chunk(
   })
 }
 
-fn mist_response(response: wisp.Response) -> HttpResponse(mist.ResponseData) {
+fn mist_response(
+  response: wisp.Response(state, message, data),
+) -> HttpResponse(mist.ResponseData) {
   let body = case response.body {
     wisp.Empty -> mist.Bytes(bytes_tree.new())
     wisp.Text(text) -> mist.Bytes(bytes_tree.from_string_tree(text))
     wisp.Bytes(bytes) -> mist.Bytes(bytes)
     wisp.File(path) -> mist_send_file(path)
+    wisp.ServerSentEvent(_, _) -> panic as "should not happen"
   }
   response
   |> response.set_body(body)
@@ -98,5 +109,47 @@ fn mist_send_file(path: String) -> mist.ResponseData {
       // TODO: return 500
       mist.Bytes(bytes_tree.new())
     }
+  }
+}
+
+//
+// Server Sent Events
+//
+
+fn mist_server_sent_event(request, subject, loop) {
+  let on_init = fn(subj) { subject(subj) }
+
+  let handler = fn(state, message, connection) {
+    loop(state, message, fn(event) { mist_send_event(connection, event) })
+  }
+
+  mist.server_sent_events(request, response.new(200), on_init, handler)
+}
+
+pub fn mist_send_event(connection, event) {
+  let wisp.SSEEvent(data, event, id, retry) = event
+
+  let mist_event = mist.event(string_tree.from_string(data))
+
+  let mist_event = case event {
+    option.Some(name) -> mist.event_name(mist_event, name)
+    option.None -> mist_event
+  }
+
+  let mist_event = case id {
+    option.Some(id) -> mist.event_id(mist_event, id)
+    option.None -> mist_event
+  }
+
+  let mist_event = case retry {
+    option.Some(retry) -> mist.event_retry(mist_event, retry)
+    option.None -> mist_event
+  }
+
+  let result = mist.send_event(connection, mist_event)
+
+  case result {
+    Ok(_) -> Ok(Nil)
+    Error(_) -> Error(wisp.UnexpectedSSEError)
   }
 }

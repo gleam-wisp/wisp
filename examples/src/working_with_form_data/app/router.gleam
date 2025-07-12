@@ -5,7 +5,7 @@ import gleam/string_tree
 import wisp.{type Request, type Response}
 import working_with_form_data/app/web
 
-pub fn handle_request(req: Request) -> Response {
+pub fn handle_request(req: Request) -> Response(a, b, c) {
   use req <- web.middleware(req)
 
   // For GET requests, show the form,
@@ -17,7 +17,7 @@ pub fn handle_request(req: Request) -> Response {
   }
 }
 
-pub fn show_form() -> Response {
+pub fn show_form() -> Response(a, b, c) {
   // In a larger application a template library or HTML form library might
   // be used here instead of a string literal.
   let html =
@@ -36,7 +36,7 @@ pub fn show_form() -> Response {
   |> wisp.html_body(html)
 }
 
-pub fn handle_form_submission(req: Request) -> Response {
+pub fn handle_form_submission(req: Request) -> Response(a, b, c) {
   // This middleware parses a `wisp.FormData` from the request body.
   // It returns an error response if the body is not valid form data, or
   // if the content-type is not `application/x-www-form-urlencoded` or

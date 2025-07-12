@@ -1,8 +1,8 @@
 import configuring_default_responses/app/web
 import gleam/string_tree
-import wisp.{type Request, type Response}
+import wisp.{type Request}
 
-pub fn handle_request(req: Request) -> Response {
+pub fn handle_request(req: Request) {
   use req <- web.middleware(req)
 
   case wisp.path_segments(req) {

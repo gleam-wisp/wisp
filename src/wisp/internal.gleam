@@ -2,9 +2,12 @@ import directories
 import gleam/bit_array
 import gleam/crypto
 import gleam/int
+import gleam/option
 import gleam/string
 
-// HELPERS
+pub opaque type SSECapability {
+  SSECapability
+}
 
 //
 // Requests
@@ -23,6 +26,7 @@ pub type Connection {
     read_chunk_size: Int,
     secret_key_base: String,
     temporary_directory: String,
+    sse_enabled: option.Option(SSECapability),
   )
 }
 
@@ -41,8 +45,9 @@ pub fn make_connection(
     max_body_size: 8_000_000,
     max_files_size: 32_000_000,
     read_chunk_size: 1_000_000,
-    temporary_directory: temporary_directory,
-    secret_key_base: secret_key_base,
+    temporary_directory:,
+    secret_key_base:,
+    sse_enabled: option.Some(SSECapability),
   )
 }
 

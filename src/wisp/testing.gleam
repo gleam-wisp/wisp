@@ -3,13 +3,16 @@ import gleam/bytes_tree
 import gleam/crypto
 import gleam/http
 import gleam/http/request
+import gleam/int
 import gleam/json.{type Json}
 import gleam/option.{None, Some}
 import gleam/string
 import gleam/string_tree
 import gleam/uri
 import simplifile
-import wisp.{type Request, type Response, Bytes, Empty, File, Text}
+import wisp.{
+  type Request, type Response, Bytes, Empty, File, ServerSentEvent, Text,
+}
 
 /// The default secret key base used for test requests.
 /// This should never be used outside of tests.
@@ -224,9 +227,10 @@ pub fn patch_json(
 /// This function will panic if the response body is a file and the file cannot
 /// be read, or if it does not contain valid UTF-8.
 ///
-pub fn string_body(response: Response) -> String {
+pub fn string_body(response: Response(state, message, data)) -> String {
   case response.body {
     Empty -> ""
+    ServerSentEvent(_,_) -> ""
     Text(tree) -> string_tree.to_string(tree)
     Bytes(bytes) -> {
       let data = bytes_tree.to_bit_array(bytes)
@@ -247,9 +251,10 @@ pub fn string_body(response: Response) -> String {
 /// This function will panic if the response body is a file and the file cannot
 /// be read.
 ///
-pub fn bit_array_body(response: Response) -> BitArray {
+pub fn bit_array_body(response: Response(state, message, data)) -> BitArray {
   case response.body {
     Empty -> <<>>
+    ServerSentEvent(_,_) -> <<>>
     Bytes(tree) -> bytes_tree.to_bit_array(tree)
     Text(tree) -> bytes_tree.to_bit_array(bytes_tree.from_string_tree(tree))
     File(path) -> {
@@ -257,6 +262,32 @@ pub fn bit_array_body(response: Response) -> BitArray {
       contents
     }
   }
+}
+
+/// Create a Server Sent Event String Response
+pub fn server_sent_event_string(
+  id: String,
+  event: String,
+  retry: Int,
+  data: String,
+) -> String {
+  let retry = int.to_string(retry)
+
+  let message =
+    "event: "
+    <> event
+    <> "\n"
+    <> "id: "
+    <> id
+    <> "\n"
+    <> "retry: "
+    <> retry
+    <> "\n"
+    <> "data: "
+    <> data
+    <> "\n\n"
+
+  message
 }
 
 /// Set a header on a request.

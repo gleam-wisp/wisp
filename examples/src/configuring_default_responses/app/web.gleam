@@ -4,8 +4,8 @@ import wisp
 
 pub fn middleware(
   req: wisp.Request,
-  handle_request: fn(wisp.Request) -> wisp.Response,
-) -> wisp.Response {
+  handle_request: fn(wisp.Request) -> wisp.Response(a, b, c),
+) {
   let req = wisp.method_override(req)
   use <- wisp.log_request(req)
   use <- wisp.rescue_crashes
@@ -18,7 +18,7 @@ pub fn middleware(
   handle_request(req)
 }
 
-pub fn default_responses(handle_request: fn() -> wisp.Response) -> wisp.Response {
+pub fn default_responses(handle_request: fn() -> wisp.Response(a, b, c)) {
   let response = handle_request()
 
   // The `bool.guard` function is used to return the original request if the

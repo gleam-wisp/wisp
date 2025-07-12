@@ -8,6 +8,7 @@ import gleam/dynamic.{type Dynamic}
 import gleam/dynamic/decode
 import gleam/erlang/application
 import gleam/erlang/atom.{type Atom}
+import gleam/erlang/process
 import gleam/http.{type Method}
 import gleam/http/cookie
 import gleam/http/request.{type Request as HttpRequest}
@@ -18,6 +19,7 @@ import gleam/int
 import gleam/json
 import gleam/list
 import gleam/option.{type Option}
+import gleam/otp/actor
 import gleam/result
 import gleam/string
 import gleam/string_tree.{type StringTree}
@@ -34,7 +36,7 @@ import wisp/internal
 
 /// The body of a HTTP response, to be sent to the client.
 ///
-pub type Body {
+pub type Body(state, message, data) {
   /// A body of unicode text.
   ///
   /// The body is represented using a `StringTree`. If you have a `String`
@@ -54,7 +56,12 @@ pub type Body {
   /// safe to send large files this way.
   ///
   File(path: String)
-  /// An empty body. This may be returned by the `require_*` middleware
+  /// A body which is a stream of server-sent events.
+  ///
+  /// The body is a function which will be called to start the stream. The
+  /// function returns an `actor.Started` or `actor.StartError` result.
+  ///
+  ServerSentEvent(init: Init(state, message, data), loop: Loop(state, message))
   /// functions in the event of a failure, invalid request, or other situation
   /// in which the request cannot be processed.
   ///
@@ -64,9 +71,8 @@ pub type Body {
   Empty
 }
 
-/// An alias for a HTTP response containing a `Body`.
-pub type Response =
-  HttpResponse(Body)
+pub type Response(a, b, c) =
+  HttpResponse(Body(a, b, c))
 
 /// Create an empty response with the given status code.
 ///
@@ -77,7 +83,7 @@ pub type Response =
 /// // -> Response(200, [], Empty)
 /// ```
 ///
-pub fn response(status: Int) -> Response {
+pub fn response(status: Int) -> Response(state, message, data) {
   HttpResponse(status, [], Empty)
 }
 
@@ -91,7 +97,10 @@ pub fn response(status: Int) -> Response {
 /// // -> Response(200, [], File("/tmp/myfile.txt"))
 /// ```
 ///
-pub fn set_body(response: Response, body: Body) -> Response {
+pub fn set_body(
+  response: Response(state, message, data),
+  body: Body(state, message, data),
+) -> Response(state, message, data) {
   response
   |> response.set_body(body)
 }
@@ -122,10 +131,10 @@ pub fn set_body(response: Response, body: Body) -> Response {
 /// ```
 ///
 pub fn file_download(
-  response: Response,
+  response: Response(state, message, data),
   named name: String,
   from path: String,
-) -> Response {
+) -> Response(state, message, data) {
   let name = uri.percent_encode(name)
   response
   |> response.set_header(
@@ -159,10 +168,10 @@ pub fn file_download(
 /// ```
 ///
 pub fn file_download_from_memory(
-  response: Response,
+  response: Response(state, message, data),
   named name: String,
   containing data: BytesTree,
-) -> Response {
+) -> Response(state, message, data) {
   let name = uri.percent_encode(name)
   response
   |> response.set_header(
@@ -185,7 +194,7 @@ pub fn file_download_from_memory(
 /// // -> Response(200, [#("content-type", "text/html; charset=utf-8")], Text(body))
 /// ```
 ///
-pub fn html_response(html: StringTree, status: Int) -> Response {
+pub fn html_response(html: StringTree, status: Int) -> Response(state, message, data) {
   HttpResponse(
     status,
     [#("content-type", "text/html; charset=utf-8")],
@@ -206,7 +215,7 @@ pub fn html_response(html: StringTree, status: Int) -> Response {
 /// // -> Response(200, [#("content-type", "application/json")], Text(body))
 /// ```
 ///
-pub fn json_response(json: StringTree, status: Int) -> Response {
+pub fn json_response(json: StringTree, status: Int) -> Response(state, message, data) {
   HttpResponse(
     status,
     [#("content-type", "application/json; charset=utf-8")],
@@ -228,7 +237,10 @@ pub fn json_response(json: StringTree, status: Int) -> Response {
 /// // -> Response(201, [#("content-type", "text/html; charset=utf-8")], Text(body))
 /// ```
 ///
-pub fn html_body(response: Response, html: StringTree) -> Response {
+pub fn html_body(
+  response: Response(state, message, data),
+  html: StringTree,
+) -> Response(state, message, data) {
   response
   |> response.set_body(Text(html))
   |> response.set_header("content-type", "text/html; charset=utf-8")
@@ -248,7 +260,10 @@ pub fn html_body(response: Response, html: StringTree) -> Response {
 /// // -> Response(201, [#("content-type", "application/json; charset=utf-8")], Text(body))
 /// ```
 ///
-pub fn json_body(response: Response, json: StringTree) -> Response {
+pub fn json_body(
+  response: Response(state, message, data),
+  json: StringTree,
+) -> Response(state, message, data) {
   response
   |> response.set_body(Text(json))
   |> response.set_header("content-type", "application/json; charset=utf-8")
@@ -268,7 +283,10 @@ pub fn json_body(response: Response, json: StringTree) -> Response {
 /// // -> Response(201, [], Text(body))
 /// ```
 ///
-pub fn string_tree_body(response: Response, content: StringTree) -> Response {
+pub fn string_tree_body(
+  response: Response(state, message, data),
+  content: StringTree,
+) -> Response(state, message, data) {
   response
   |> response.set_body(Text(content))
 }
@@ -291,7 +309,10 @@ pub fn string_tree_body(response: Response, content: StringTree) -> Response {
 /// // )
 /// ```
 ///
-pub fn string_body(response: Response, content: String) -> Response {
+pub fn string_body(
+  response: Response(state, message, data),
+  content: String,
+) -> Response(state, message, data) {
   response
   |> response.set_body(Text(string_tree.from_string(content)))
 }
@@ -325,7 +346,9 @@ pub fn escape_html(content: String) -> String {
 /// // -> Response(405, [#("allow", "GET, POST")], Empty)
 /// ```
 ///
-pub fn method_not_allowed(allowed methods: List(Method)) -> Response {
+pub fn method_not_allowed(
+  allowed methods: List(Method),
+) -> Response(state, message, data) {
   let allowed =
     methods
     |> list.map(http.method_to_string)
@@ -344,7 +367,7 @@ pub fn method_not_allowed(allowed methods: List(Method)) -> Response {
 /// // -> Response(200, [], Empty)
 /// ```
 ///
-pub fn ok() -> Response {
+pub fn ok() -> Response(state, message, data) {
   HttpResponse(200, [], Empty)
 }
 
@@ -357,7 +380,7 @@ pub fn ok() -> Response {
 /// // -> Response(201, [], Empty)
 /// ```
 ///
-pub fn created() -> Response {
+pub fn created() -> Response(state, message, data) {
   HttpResponse(201, [], Empty)
 }
 
@@ -370,7 +393,7 @@ pub fn created() -> Response {
 /// // -> Response(202, [], Empty)
 /// ```
 ///
-pub fn accepted() -> Response {
+pub fn accepted() -> Response(state, message, data) {
   HttpResponse(202, [], Empty)
 }
 
@@ -384,7 +407,7 @@ pub fn accepted() -> Response {
 /// // -> Response(303, [#("location", "https://example.com")], Empty)
 /// ```
 ///
-pub fn redirect(to url: String) -> Response {
+pub fn redirect(to url: String) -> Response(state, message, data) {
   HttpResponse(303, [#("location", url)], Empty)
 }
 
@@ -402,7 +425,7 @@ pub fn redirect(to url: String) -> Response {
 /// // -> Response(308, [#("location", "https://example.com")], Empty)
 /// ```
 ///
-pub fn moved_permanently(to url: String) -> Response {
+pub fn moved_permanently(to url: String) -> Response(state, message, data) {
   HttpResponse(308, [#("location", url)], Empty)
 }
 
@@ -415,7 +438,7 @@ pub fn moved_permanently(to url: String) -> Response {
 /// // -> Response(204, [], Empty)
 /// ```
 ///
-pub fn no_content() -> Response {
+pub fn no_content() -> Response(state, message, data) {
   HttpResponse(204, [], Empty)
 }
 
@@ -428,7 +451,7 @@ pub fn no_content() -> Response {
 /// // -> Response(404, [], Empty)
 /// ```
 ///
-pub fn not_found() -> Response {
+pub fn not_found() -> Response(state, message, data) {
   HttpResponse(404, [], Empty)
 }
 
@@ -441,7 +464,7 @@ pub fn not_found() -> Response {
 /// // -> Response(400, [], Empty)
 /// ```
 ///
-pub fn bad_request() -> Response {
+pub fn bad_request() -> Response(state, message, data) {
   HttpResponse(400, [], Empty)
 }
 
@@ -454,7 +477,7 @@ pub fn bad_request() -> Response {
 /// // -> Response(413, [], Empty)
 /// ```
 ///
-pub fn entity_too_large() -> Response {
+pub fn entity_too_large() -> Response(state, message, data) {
   HttpResponse(413, [], Empty)
 }
 
@@ -470,7 +493,9 @@ pub fn entity_too_large() -> Response {
 /// // -> Response(415, [#("allow", "application/json, text/plain")], Empty)
 /// ```
 ///
-pub fn unsupported_media_type(accept acceptable: List(String)) -> Response {
+pub fn unsupported_media_type(
+  accept acceptable: List(String),
+) -> Response(state, message, data) {
   let acceptable = string.join(acceptable, ", ")
   HttpResponse(415, [#("accept", acceptable)], Empty)
 }
@@ -484,7 +509,7 @@ pub fn unsupported_media_type(accept acceptable: List(String)) -> Response {
 /// // -> Response(422, [], Empty)
 /// ```
 ///
-pub fn unprocessable_entity() -> Response {
+pub fn unprocessable_entity() -> Response(state, message, data) {
   HttpResponse(422, [], Empty)
 }
 
@@ -497,7 +522,7 @@ pub fn unprocessable_entity() -> Response {
 /// // -> Response(500, [], Empty)
 /// ```
 ///
-pub fn internal_server_error() -> Response {
+pub fn internal_server_error() -> Response(state, message, data) {
   HttpResponse(500, [], Empty)
 }
 
@@ -513,6 +538,9 @@ pub fn internal_server_error() -> Response {
 pub type Connection =
   internal.Connection
 
+pub type SSEEnabled =
+  internal.SSECapability
+
 type BufferedReader {
   BufferedReader(reader: internal.Reader, buffer: BitArray)
 }
@@ -521,7 +549,10 @@ type Quotas {
   Quotas(body: Int, files: Int)
 }
 
-fn decrement_body_quota(quotas: Quotas, size: Int) -> Result(Quotas, Response) {
+fn decrement_body_quota(
+  quotas: Quotas,
+  size: Int,
+) -> Result(Quotas, Response(state, message, data)) {
   let quotas = Quotas(..quotas, body: quotas.body - size)
   case quotas.body < 0 {
     True -> Error(entity_too_large())
@@ -529,7 +560,10 @@ fn decrement_body_quota(quotas: Quotas, size: Int) -> Result(Quotas, Response) {
   }
 }
 
-fn decrement_quota(quota: Int, size: Int) -> Result(Int, Response) {
+fn decrement_quota(
+  quota: Int,
+  size: Int,
+) -> Result(Int, Response(state, message, data)) {
   case quota - size {
     quota if quota < 0 -> Error(entity_too_large())
     quota -> Ok(quota)
@@ -655,8 +689,8 @@ pub type Request =
 pub fn require_method(
   request: HttpRequest(t),
   method: Method,
-  next: fn() -> Response,
-) -> Response {
+  next: fn() -> Response(state, message, data),
+) -> Response(state, message, data) {
   case request.method == method {
     True -> next()
     False -> method_not_allowed(allowed: [method])
@@ -767,8 +801,8 @@ pub fn method_override(request: HttpRequest(a)) -> HttpRequest(a) {
 ///
 pub fn require_string_body(
   request: Request,
-  next: fn(String) -> Response,
-) -> Response {
+  next: fn(String) -> Response(state, message, data),
+) -> Response(state, message, data) {
   case read_body_to_bitstring(request) {
     Ok(body) -> or_400(bit_array.to_string(body), next)
     Error(_) -> entity_too_large()
@@ -800,8 +834,8 @@ pub fn require_string_body(
 ///
 pub fn require_bit_array_body(
   request: Request,
-  next: fn(BitArray) -> Response,
-) -> Response {
+  next: fn(BitArray) -> Response(state, message, data),
+) -> Response(state, message, data) {
   case read_body_to_bitstring(request) {
     Ok(body) -> next(body)
     Error(_) -> entity_too_large()
@@ -892,8 +926,8 @@ fn read_body_loop(
 ///
 pub fn require_form(
   request: Request,
-  next: fn(FormData) -> Response,
-) -> Response {
+  next: fn(FormData) -> Response(state, message, data),
+) -> Response(state, message, data) {
   case list.key_find(request.headers, "content-type") {
     Ok("application/x-www-form-urlencoded")
     | Ok("application/x-www-form-urlencoded;" <> _) ->
@@ -927,8 +961,8 @@ pub fn require_form(
 pub fn require_content_type(
   request: Request,
   expected: String,
-  next: fn() -> Response,
-) -> Response {
+  next: fn() -> Response(state, message, data),
+) -> Response(state, message, data) {
   case list.key_find(request.headers, "content-type") {
     Ok(content_type) ->
       // This header may have further such as `; charset=utf-8`, so discard
@@ -966,7 +1000,10 @@ pub fn require_content_type(
 /// If the body cannot be parsed successfully then an empty response with status
 /// code 400: Bad request will be returned to the client.
 ///
-pub fn require_json(request: Request, next: fn(Dynamic) -> Response) -> Response {
+pub fn require_json(
+  request: Request,
+  next: fn(Dynamic) -> Response(state, message, data),
+) -> Response(state, message, data) {
   use <- require_content_type(request, "application/json")
   use body <- require_string_body(request)
   use json <- or_400(json.parse(body, decode.dynamic))
@@ -975,8 +1012,8 @@ pub fn require_json(request: Request, next: fn(Dynamic) -> Response) -> Response
 
 fn require_urlencoded_form(
   request: Request,
-  next: fn(FormData) -> Response,
-) -> Response {
+  next: fn(FormData) -> Response(state, message, data),
+) -> Response(state, message, data) {
   use body <- require_string_body(request)
   use pairs <- or_400(uri.parse_query(body))
   let pairs = sort_keys(pairs)
@@ -986,8 +1023,8 @@ fn require_urlencoded_form(
 fn require_multipart_form(
   request: Request,
   boundary: String,
-  next: fn(FormData) -> Response,
-) -> Response {
+  next: fn(FormData) -> Response(state, message, data),
+) -> Response(state, message, data) {
   let quotas =
     Quotas(files: request.body.max_files_size, body: request.body.max_body_size)
   let reader = BufferedReader(request.body.reader, <<>>)
@@ -1006,7 +1043,7 @@ fn read_multipart(
   boundary: String,
   quotas: Quotas,
   data: FormData,
-) -> Result(FormData, Response) {
+) -> Result(FormData, Response(state, message, data)) {
   let read_size = request.body.read_chunk_size
 
   // First we read the headers of the multipart part.
@@ -1057,7 +1094,9 @@ fn read_multipart(
   }
 }
 
-fn bit_array_to_string(bits: BitArray) -> Result(String, Response) {
+fn bit_array_to_string(
+  bits: BitArray,
+) -> Result(String, Response(state, message, data)) {
   bit_array.to_string(bits)
   |> result.replace_error(bad_request())
 }
@@ -1065,13 +1104,13 @@ fn bit_array_to_string(bits: BitArray) -> Result(String, Response) {
 fn multipart_file_append(
   path: String,
   chunk: BitArray,
-) -> Result(String, Response) {
+) -> Result(String, Response(state, message, data)) {
   simplifile.append_bits(path, chunk)
   |> or_500
   |> result.replace(path)
 }
 
-fn or_500(result: Result(a, b)) -> Result(a, Response) {
+fn or_500(result: Result(a, b)) -> Result(a, Response(state, message, data)) {
   case result {
     Ok(value) -> Ok(value)
     Error(error) -> {
@@ -1083,13 +1122,13 @@ fn or_500(result: Result(a, b)) -> Result(a, Response) {
 
 fn multipart_body(
   reader: BufferedReader,
-  parse: fn(BitArray) -> Result(http.MultipartBody, Response),
+  parse: fn(BitArray) -> Result(http.MultipartBody, Response(state, message, data)),
   boundary: String,
   chunk_size: Int,
   quota: Int,
-  append: fn(t, BitArray) -> Result(t, Response),
+  append: fn(t, BitArray) -> Result(t, Response(state, message, data)),
   data: t,
-) -> Result(#(Option(BufferedReader), Int, t), Response) {
+) -> Result(#(Option(BufferedReader), Int, t), Response(state, message, data)) {
   use #(chunk, reader) <- result.try(read_chunk(reader, chunk_size))
   let size_read = bit_array.byte_size(chunk)
   use output <- result.try(parse(chunk))
@@ -1125,7 +1164,7 @@ fn multipart_body(
 
 fn fn_with_bad_request_error(
   f: fn(a) -> Result(b, c),
-) -> fn(a) -> Result(b, Response) {
+) -> fn(a) -> Result(b, Response(state, message, data)) {
   fn(a) {
     f(a)
     |> result.replace_error(bad_request())
@@ -1134,7 +1173,7 @@ fn fn_with_bad_request_error(
 
 fn multipart_content_disposition(
   headers: List(http.Header),
-) -> Result(#(String, Option(String)), Response) {
+) -> Result(#(String, Option(String)), Response(state, message, data)) {
   {
     use header <- result.try(list.key_find(headers, "content-disposition"))
     use header <- result.try(http.parse_content_disposition(header))
@@ -1149,7 +1188,7 @@ fn multipart_content_disposition(
 fn read_chunk(
   reader: BufferedReader,
   chunk_size: Int,
-) -> Result(#(BitArray, internal.Reader), Response) {
+) -> Result(#(BitArray, internal.Reader), Response(state, message, data)) {
   buffered_read(reader, chunk_size)
   |> result.replace_error(bad_request())
   |> result.try(fn(chunk) {
@@ -1162,10 +1201,13 @@ fn read_chunk(
 
 fn multipart_headers(
   reader: BufferedReader,
-  parse: fn(BitArray) -> Result(http.MultipartHeaders, Response),
+  parse: fn(BitArray) -> Result(http.MultipartHeaders, Response(state, message, data)),
   chunk_size: Int,
   quotas: Quotas,
-) -> Result(#(List(http.Header), BufferedReader, Quotas), Response) {
+) -> Result(
+  #(List(http.Header), BufferedReader, Quotas),
+  Response(state, message, data),
+) {
   use #(chunk, reader) <- result.try(read_chunk(reader, chunk_size))
   use headers <- result.try(parse(chunk))
 
@@ -1191,7 +1233,10 @@ fn sort_keys(pairs: List(#(String, t))) -> List(#(String, t)) {
   list.sort(pairs, fn(a, b) { string.compare(a.0, b.0) })
 }
 
-fn or_400(result: Result(value, error), next: fn(value) -> Response) -> Response {
+fn or_400(
+  result: Result(value, error),
+  next: fn(value) -> Response(state, message, data),
+) -> Response(state, message, data) {
   case result {
     Ok(value) -> next(value)
     Error(_) -> bad_request()
@@ -1237,7 +1282,9 @@ pub type UploadedFile {
 /// }
 /// ```
 ///
-pub fn rescue_crashes(handler: fn() -> Response) -> Response {
+pub fn rescue_crashes(
+  handler: fn() -> Response(state, message, data),
+) -> Response(state, message, data) {
   case exception.rescue(handler) {
     Ok(response) -> response
     Error(error) -> {
@@ -1302,7 +1349,10 @@ type ErrorKind {
 /// }
 /// ```
 ///
-pub fn log_request(req: Request, handler: fn() -> Response) -> Response {
+pub fn log_request(
+  req: Request,
+  handler: fn() -> Response(state, message, data),
+) -> Response(state, message, data) {
   let response = handler()
   [
     int.to_string(response.status),
@@ -1361,8 +1411,8 @@ pub fn serve_static(
   req: Request,
   under prefix: String,
   from directory: String,
-  next handler: fn() -> Response,
-) -> Response {
+  next handler: fn() -> Response(state, message, data),
+) -> Response(state, message, data) {
   let path = internal.remove_preceeding_slashes(req.path)
   let prefix = internal.remove_preceeding_slashes(prefix)
   case req.method, string.starts_with(path, prefix) {
@@ -1409,10 +1459,10 @@ pub fn serve_static(
 /// Otherwise if the etag matches, it returns status 304 without the file, allowing the browser to use the cached version.
 ///
 fn handle_etag(
-  resp: Response,
+  resp: Response(state, message, data),
   req: Request,
   file_info: simplifile.FileInfo,
-) -> Response {
+) -> Response(state, message, data) {
   let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
 
   case request.get_header(req, "if-none-match") {
@@ -1442,8 +1492,8 @@ fn handle_etag(
 ///
 pub fn handle_head(
   req: Request,
-  next handler: fn(Request) -> Response,
-) -> Response {
+  next handler: fn(Request) -> Response(state, message, data),
+) -> Response(state, message, data) {
   case req.method {
     http.Head ->
       req
@@ -1717,13 +1767,13 @@ pub fn verify_signed_message(
 /// ```
 ///
 pub fn set_cookie(
-  response response: Response,
+  response response: Response(state, message, data),
   request request: Request,
   name name: String,
   value value: String,
   security security: Security,
   max_age max_age: Int,
-) -> Response {
+) -> Response(state, message, data) {
   let attributes =
     cookie.Attributes(
       ..cookie.defaults(http.Https),
@@ -1772,6 +1822,59 @@ pub fn get_cookie(
     Signed -> verify_signed_message(request, value)
   })
   bit_array.to_string(value)
+}
+
+//
+// Server-Sent Events
+//
+
+/// An error which occurs when sending a server-sent event.
+pub type SSEError {
+  UnexpectedSSEError
+}
+
+/// Send a SSEEvent
+pub type SendEvent =
+  fn(SSEEvent) -> Result(Nil, SSEError)
+
+
+/// Initialise a server-sent event actor
+pub fn sse(
+  request: Request,
+  init: Init(state, message, data),
+  loop: Loop(state, message),
+) -> Result(Response(state, message, data), String) {
+  use <- bool.guard(
+    when: option.is_none(request.body.sse_enabled),
+    return: Error("SSE not enabled"),
+  )
+
+  Ok(HttpResponse(200, [], ServerSentEvent(init, loop)))
+}
+
+/// Initialise an actor
+pub type Init(state, message, return) =
+  fn(process.Subject(message)) ->
+    Result(actor.Initialised(state, message, return), String)
+
+/// Process an event coming from an actor
+pub type Loop(state, message) =
+  fn(state, message, fn(SSEEvent) -> Result(Nil, SSEError)) ->
+    actor.Next(state, message)
+
+/// A server-sent event represented in Gleam.
+///
+/// See the [Mozzilla SSE documentation][1] for more information.
+///
+/// [1]: https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events
+///
+pub type SSEEvent {
+  SSEEvent(
+    data: String,
+    event: Option(String),
+    id: Option(String),
+    retry: Option(Int),
+  )
 }
 
 //

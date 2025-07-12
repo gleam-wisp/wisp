@@ -12,8 +12,8 @@ import wisp
 /// 
 pub fn middleware(
   req: wisp.Request,
-  handle_request: fn(wisp.Request) -> wisp.Response,
-) -> wisp.Response {
+  handle_request: fn(wisp.Request) -> wisp.Response(a, b, c),
+) {
   // Permit browsers to simulate methods other than GET and POST using the
   // `_method` query parameter.
   let req = wisp.method_override(req)
