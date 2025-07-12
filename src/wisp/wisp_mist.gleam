@@ -1,7 +1,5 @@
 import exception
 import gleam/bytes_tree
-import gleam/erlang/process
-import gleam/function
 import gleam/http/request.{type Request as HttpRequest}
 import gleam/http/response.{type Response as HttpResponse}
 import gleam/option
@@ -98,7 +96,7 @@ fn mist_response(
     wisp.Text(text) -> mist.Bytes(bytes_tree.from_string_tree(text))
     wisp.Bytes(bytes) -> mist.Bytes(bytes)
     wisp.File(path) -> mist_send_file(path)
-    wisp.ServerSentEvent(_, _) -> todo as "should not happen"
+    wisp.ServerSentEvent(_, _) -> panic as "should not happen"
   }
   response
   |> response.set_body(body)
@@ -123,7 +121,7 @@ fn mist_server_sent_event(request, subject, loop) {
   let on_init = fn(subj) { subject(subj) }
 
   let handler = fn(state, message, connection) {
-    loop(state, message, fn(message) { mist_send_event(connection, message) })
+    loop(state, message, fn(event) { mist_send_event(connection, event) })
     actor.continue(state)
   }
 
