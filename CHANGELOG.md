@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.0.0 - Unreleased.
+
+- `set_cookie` will no longer set the `Secure` cookie attributes for HTTP
+  requests that do not have the `x-forwarded-proto` header. This means that
+  browsers like Safari, that do not consider `localhost` etc to be a secure
+  context, will send Wisp-set cookies during local development.
+
 ## v1.8.0 - 2025-06-20
 
 - Updated for `gleam_erlang` v1.

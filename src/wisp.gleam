@@ -1689,16 +1689,32 @@ pub fn verify_signed_message(
 /// Set a cookie on the response. After `max_age` seconds the cookie will be
 /// expired by the client.
 ///
-/// This function will sign the value if the `security` parameter is set to
-/// `Signed`, making it so the cookie cannot be tampered with by the client.
+/// If you wish for more control over the cookie attributes then you may want
+/// to use the `gleam/http/cookie` module from the `gleam_http` package.
 ///
-/// Values are base64 encoded so they can contain any characters you want, even
-/// if they would not be permitted directly in a cookie.
+/// # Security
 ///
-/// Cookies are set using `gleam_http`'s default attributes for HTTPS. If you
-/// wish for more control over the cookie attributes then you may want to use
-/// the `gleam/http/cookie` module from the `gleam_http` package instead of this
-/// function. Be sure to sign and escape the cookie value as needed.
+/// - `PlainText`: the cookie value is base64 encoded. This permits use of any
+///    characters in the cookie, but it is possible for the client to edit the
+///    cookie, potentially maliciously.
+/// - `Signed`: the cookie value will be signed with `sign_message` and so
+///    cannot be tampered with by the client.
+///
+/// # `Secure` cookie attribute
+///
+/// This function sets the `Secure` cookie attribute (with one exception detailed
+/// below), ensuring that browsers will only send the cookie over HTTPS
+/// connections.
+///
+/// Most browsers consider localhost to be secure and permit `Secure` cookies
+/// for those requests as well, but Safari does not. For cookies to work in
+/// development for programmers using a browser like Safari the `Secure`
+/// attribute will not be set if all these conditions are met:
+///
+/// - The request scheme is `http://`.
+/// - The request host is `localhost`, `127.0.0.1`, or `[::1]`.
+/// - The `x-forwarded-proto` header has not been set, indicating that the
+///   request is not from a reverse proxy such as Caddy or Nginx.
 ///
 /// # Examples
 ///
@@ -1724,11 +1740,16 @@ pub fn set_cookie(
   security security: Security,
   max_age max_age: Int,
 ) -> Response {
+  let scheme = case request.host {
+    "localhost" | "127.0.0.1" | "[::1]" if request.scheme == http.Http ->
+      case request.get_header(request, "x-forwarded-proto") {
+        Ok(_) -> http.Https
+        Error(_) -> http.Http
+      }
+    _ -> http.Https
+  }
   let attributes =
-    cookie.Attributes(
-      ..cookie.defaults(http.Https),
-      max_age: option.Some(max_age),
-    )
+    cookie.Attributes(..cookie.defaults(scheme), max_age: option.Some(max_age))
   let value = case security {
     PlainText -> bit_array.base64_encode(<<value:utf8>>, False)
     Signed -> sign_message(request, <<value:utf8>>, crypto.Sha512)
@@ -1751,6 +1772,13 @@ pub type Security {
 ///
 /// If a cookie is missing, found to be malformed, or the signature is invalid
 /// for a signed cookie, then `Error(Nil)` is returned.
+///
+/// # Security
+///
+/// - `PlainText`: the cookie value is expected to be base64 encoded.
+/// - `Signed`: the cookie value is expected to be signed with `sign_message`.
+///
+/// # Examples
 ///
 /// ```gleam
 /// wisp.get_cookie(request, "group", wisp.PlainText)
