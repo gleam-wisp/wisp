@@ -1074,6 +1074,41 @@ pub fn set_cookie_signed_test() {
   ])
 }
 
+/// If the scheme is HTTP and the `x-forwarded-proto` header is not set then
+/// the `Secure` attribute is not set.
+pub fn set_cookie_http_test() {
+  let req = testing.get("/", [])
+  let req = request.Request(..req, scheme: http.Http)
+  let response =
+    wisp.ok()
+    |> wisp.set_cookie(req, "id", "123", wisp.PlainText, 60)
+
+  response.headers
+  |> should.equal([
+    #("set-cookie", "id=MTIz; Max-Age=60; Path=/; HttpOnly; SameSite=Lax"),
+  ])
+}
+
+/// If the scheme is HTTP but the `x-forwarded-proto` header is set then the
+/// `Secure` attribute is set, regardless of what the header value is.
+pub fn set_cookie_http_forwarded_test() {
+  let req = testing.get("/", [])
+  let req =
+    request.Request(..req, scheme: http.Http)
+    |> request.set_header("x-forwarded-proto", "http")
+  let response =
+    wisp.ok()
+    |> wisp.set_cookie(req, "id", "123", wisp.PlainText, 60)
+
+  response.headers
+  |> should.equal([
+    #(
+      "set-cookie",
+      "id=MTIz; Max-Age=60; Path=/; Secure; HttpOnly; SameSite=Lax",
+    ),
+  ])
+}
+
 pub fn get_cookie_test() {
   let request =
     testing.get("/", [
