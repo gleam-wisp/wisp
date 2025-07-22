@@ -42,6 +42,11 @@ fn json_handler(
   wisp.ok()
 }
 
+fn static_file_handler(request: wisp.Request) -> wisp.Response {
+  use <- wisp.serve_static(request, under: "/", from: "./test")
+  wisp.ok()
+}
+
 pub fn ok_test() {
   wisp.ok()
   |> should.equal(Response(200, [], wisp.Empty))
@@ -563,87 +568,71 @@ pub fn serve_static_etags_returns_304_test() {
   should.equal(response.body, wisp.Empty)
 }
 
-pub fn serve_static_range_request_test() {
-  let handler = fn(request) {
-    use <- wisp.serve_static(request, under: "/stuff", from: "./test")
-    wisp.ok()
-  }
+pub fn serve_static_range_start_test() {
+  let response =
+    testing.get("/fixture.txt", [])
+    |> testing.set_header("range", "bytes=2-")
+    |> static_file_handler
 
-  let validate_content_range = fn(
-    response: response.Response(wisp.Body),
-    start: Int,
-    end: Int,
-    file_info: simplifile.FileInfo,
-  ) -> response.Response(wisp.Body) {
-    let file_size = file_info.size
-    response.status
-    |> should.equal(206)
+  assert response.status == 206
+  assert response.headers
+    |> list.key_set("etag", "")
+    == [
+      #("content-range", "bytes 2-37/38"),
+      #("accept-ranges", "bytes"),
+      #("content-type", "text/plain; charset=utf-8"),
+      #("etag", ""),
+      #("content-length", "36"),
+    ]
+  assert testing.string_body(response) == "llo, Joe! 👨‍👩‍👧‍👦\n"
+}
 
-    response.get_header(response, "accept-ranges")
-    |> should.equal(Ok("bytes"))
+pub fn serve_static_range_start_stop_test() {
+  let response =
+    testing.get("/fixture.txt", [])
+    |> testing.set_header("range", "bytes=2-15")
+    |> static_file_handler
 
-    response.get_header(response, "content-range")
-    |> should.equal(Ok(
-      "bytes "
-      <> int.to_string(start)
-      <> "-"
-      <> int.to_string(end)
-      <> "/"
-      <> int.to_string(file_size),
-    ))
+  assert response.status == 206
+  assert response.headers
+    |> list.key_set("etag", "")
+    == [
+      #("content-range", "bytes 2-15/38"),
+      #("accept-ranges", "bytes"),
+      #("content-type", "text/plain; charset=utf-8"),
+      #("etag", ""),
+      #("content-length", "14"),
+    ]
+  assert testing.string_body(response) == "llo, Joe! 👨"
+}
 
-    let assert wisp.File(path:, offset:, limit:) = response.body
+pub fn serve_static_range_negative_test() {
+  let response =
+    testing.get("/fixture.txt", [])
+    |> testing.set_header("range", "bytes=-26")
+    |> static_file_handler
 
-    path
-    |> should.equal("./test/fixture.txt")
-    offset |> should.equal(start)
+  assert response.status == 206
+  assert response.headers
+    |> list.key_set("etag", "")
+    == [
+      #("content-range", "bytes 12-37/38"),
+      #("accept-ranges", "bytes"),
+      #("content-type", "text/plain; charset=utf-8"),
+      #("etag", ""),
+      #("content-length", "26"),
+    ]
+  assert testing.string_body(response) == "👨‍👩‍👧‍👦\n"
+}
 
-    case limit {
-      option.None -> {
-        end |> should.equal(file_size - 1)
-
-        response.get_header(response, "content-length")
-        |> should.equal(Ok(int.to_string(file_size - start)))
-      }
-      option.Some(l) -> {
-        l |> should.equal(end - start + 1)
-
-        response.get_header(response, "content-length")
-        |> should.equal(Ok(int.to_string(l)))
-      }
-    }
-    response
-  }
-
-  let assert Ok(file_info) = simplifile.file_info("test/fixture.txt")
-
-  testing.get("/stuff/fixture.txt", [])
-  |> testing.set_header("range", "bytes=0-")
-  |> handler
-  |> validate_content_range(0, file_info.size - 1, file_info)
-  |> testing.string_body
-  |> should.equal("Hello, Joe! 👨‍👩‍👧‍👦\n")
-
-  testing.get("/stuff/fixture.txt", [])
-  |> testing.set_header("range", "bytes=2-15")
-  |> handler
-  |> validate_content_range(2, 15, file_info)
-  |> testing.string_body
-  |> should.equal("llo, Joe! 👨")
-
-  testing.get("/stuff/fixture.txt", [])
-  |> testing.set_header("range", "bytes=-26")
-  |> handler
-  |> validate_content_range(file_info.size - 26, file_info.size - 1, file_info)
-  |> testing.string_body
-  |> should.equal("👨‍👩‍👧‍👦\n")
-
-  let backwards_range_response =
-    testing.get("/stuff/fixture.txt", [])
+pub fn serve_static_range_header_invalid_test() {
+  // The range values are is backwards
+  let response =
+    testing.get("/fixture.txt", [])
     |> testing.set_header("range", "bytes=6-4")
-    |> handler
+    |> static_file_handler
 
-  backwards_range_response.status |> should.equal(416)
+  assert response.status == 416
 }
 
 pub fn temporary_file_test() {
