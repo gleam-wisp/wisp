@@ -1,8 +1,9 @@
+import gleam/http
 import gleam/list
 import serving_static_assets/app
 import serving_static_assets/app/router
 import serving_static_assets/app/web.{type Context, Context}
-import wisp/testing
+import wisp/simulate
 
 fn with_context(testcase: fn(Context) -> t) -> t {
   // Create the context to use in tests
@@ -14,7 +15,7 @@ fn with_context(testcase: fn(Context) -> t) -> t {
 
 pub fn get_home_page_test() {
   use ctx <- with_context
-  let request = testing.get("/", [])
+  let request = simulate.browser_request(http.Get, "/")
   let response = router.handle_request(request, ctx)
 
   assert response.status == 200
@@ -24,7 +25,7 @@ pub fn get_home_page_test() {
 
 pub fn get_stylesheet_test() {
   use ctx <- with_context
-  let request = testing.get("/static/styles.css", [])
+  let request = simulate.browser_request(http.Get, "/static/styles.css")
   let response = router.handle_request(request, ctx)
 
   assert response.status == 200
@@ -35,7 +36,7 @@ pub fn get_stylesheet_test() {
 
 pub fn get_javascript_test() {
   use ctx <- with_context
-  let request = testing.get("/static/main.js", [])
+  let request = simulate.browser_request(http.Get, "/static/main.js")
   let response = router.handle_request(request, ctx)
 
   assert response.status == 200

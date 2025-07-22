@@ -28,7 +28,7 @@ pub fn handle_request(req: Request) -> Response {
   // application it could be XML, protobuf, or anything else.
   let result = {
     // The GSV library is used to parse the CSV.
-    use rows <- result.try(gsv.to_lists(body) |> result.replace_error(Nil))
+    use rows <- result.try(gsv.to_lists(body, ",") |> result.replace_error(Nil))
 
     // Get the first row, which is the header row.
     use headers <- result.try(list.first(rows))
