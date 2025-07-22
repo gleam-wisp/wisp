@@ -1,6 +1,7 @@
 import gleam/http
 import gleam/http/response
 import gleam/json
+import gleam/list
 import gleam/option.{None}
 import gleam/string_tree
 import wisp
@@ -191,4 +192,33 @@ pub fn cookie_signed_test() {
       #("origin", "https://wisp.example.com"),
       #("host", "wisp.example.com"),
     ]
+}
+
+pub fn session_test() {
+  // Initial cookies
+  let request =
+    simulate.browser_request(http.Get, "/")
+    |> simulate.cookie("zero", "0", wisp.PlainText)
+    |> simulate.cookie("one", "1", wisp.PlainText)
+    |> simulate.cookie("two", "2", wisp.PlainText)
+  assert list.key_find(request.headers, "cookie")
+    == Ok("zero=MA; one=MQ; two=Mg")
+
+  // A response from the server that changes the cookies.
+  // - one: changed value
+  // - two: expired
+  // - three: newly added
+  let response =
+    wisp.ok()
+    |> wisp.set_cookie(request, "one", "11", wisp.PlainText, 100)
+    |> wisp.set_cookie(request, "two", "2", wisp.PlainText, 0)
+    |> wisp.set_cookie(request, "three", "3", wisp.PlainText, 100)
+
+  // Continue the session
+  let request =
+    simulate.browser_request(http.Get, "/")
+    |> simulate.session(request, response)
+
+  assert list.key_find(request.headers, "cookie")
+    == Ok("zero=MA; one=MTE; three=Mw")
 }
