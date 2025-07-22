@@ -1535,8 +1535,8 @@ fn handle_file_range_header(
       File(path:, offset: range.offset, limit: range.limit),
     )
     |> response.set_header("content-length", content_length)
-    |> response.prepend_header("accept-ranges", "bytes")
-    |> response.prepend_header("content-range", content_range)
+    |> response.set_header("accept-ranges", "bytes")
+    |> response.set_header("content-range", content_range)
     |> Ok
   }
   |> result.unwrap_both
