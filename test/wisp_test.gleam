@@ -579,16 +579,10 @@ pub fn serve_static_range_request_test() {
     response.status
     |> should.equal(206)
 
-    let headers =
-      response.headers
-      |> dict.from_list
-
-    headers
-    |> dict.get("accept-ranges")
+    response.get_header(response, "accept-ranges")
     |> should.equal(Ok("bytes"))
 
-    headers
-    |> dict.get("content-range")
+    response.get_header(response, "content-range")
     |> should.equal(Ok(
       "bytes "
       <> int.to_string(start)
@@ -608,15 +602,13 @@ pub fn serve_static_range_request_test() {
       option.None -> {
         end |> should.equal(file_size - 1)
 
-        headers
-        |> dict.get("content-length")
+        response.get_header(response, "content-length")
         |> should.equal(Ok(int.to_string(file_size - start)))
       }
       option.Some(l) -> {
         l |> should.equal(end - start + 1)
 
-        headers
-        |> dict.get("content-length")
+        response.get_header(response, "content-length")
         |> should.equal(Ok(int.to_string(l)))
       }
     }
