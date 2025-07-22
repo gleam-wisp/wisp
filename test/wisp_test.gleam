@@ -578,16 +578,16 @@ pub fn serve_static_range_start_test() {
   assert response.headers
     |> list.key_set("etag", "")
     == [
-      #("content-range", "bytes 2-37/38"),
-      #("accept-ranges", "bytes"),
       #("content-type", "text/plain; charset=utf-8"),
       #("etag", ""),
       #("content-length", "36"),
+      #("accept-ranges", "bytes"),
+      #("content-range", "bytes 2-37/38"),
     ]
   assert testing.string_body(response) == "llo, Joe! 👨‍👩‍👧‍👦\n"
 }
 
-pub fn serve_static_range_start_stop_test() {
+pub fn serve_static_range_start_limit_test() {
   let response =
     testing.get("/fixture.txt", [])
     |> testing.set_header("range", "bytes=2-15")
@@ -597,11 +597,11 @@ pub fn serve_static_range_start_stop_test() {
   assert response.headers
     |> list.key_set("etag", "")
     == [
-      #("content-range", "bytes 2-15/38"),
-      #("accept-ranges", "bytes"),
       #("content-type", "text/plain; charset=utf-8"),
       #("etag", ""),
       #("content-length", "14"),
+      #("accept-ranges", "bytes"),
+      #("content-range", "bytes 2-15/38"),
     ]
   assert testing.string_body(response) == "llo, Joe! 👨"
 }
@@ -616,13 +616,21 @@ pub fn serve_static_range_negative_test() {
   assert response.headers
     |> list.key_set("etag", "")
     == [
-      #("content-range", "bytes 12-37/38"),
-      #("accept-ranges", "bytes"),
       #("content-type", "text/plain; charset=utf-8"),
       #("etag", ""),
       #("content-length", "26"),
+      #("accept-ranges", "bytes"),
+      #("content-range", "bytes 12-37/38"),
     ]
   assert testing.string_body(response) == "👨‍👩‍👧‍👦\n"
+}
+
+pub fn serve_static_range_limit_larger_than_content_test() {
+  let response =
+    testing.get("/fixture.txt", [])
+    |> testing.set_header("range", "bytes=2-100")
+    |> static_file_handler
+  assert response.status == 416
 }
 
 pub fn serve_static_range_header_invalid_test() {
