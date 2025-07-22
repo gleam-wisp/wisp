@@ -53,7 +53,14 @@ pub type Body {
   /// underlying HTTP server. The file will not be read into memory so it is
   /// safe to send large files this way.
   ///
-  File(path: String, offset: Int, limit: Option(Int))
+  File(
+    /// The path to the file on the server file system.
+    path: String,
+    /// The number of bytes to skip from the start of the file. Set to 0 for the whole file.
+    offset: Int,
+    /// The maximum number of bytes to send. Set to `None` for the whole file.
+    limit: Option(Int),
+  )
   /// An empty body. This may be returned by the `require_*` middleware
   /// functions in the event of a failure, invalid request, or other situation
   /// in which the request cannot be processed.
@@ -1406,16 +1413,28 @@ pub fn serve_static(
 
 /// The value of a `range` request header.
 ///
-/// If the header requests bytes from the end, the `offset` will be set to
-/// the negative byte amount that should be read from the end of the content.
-/// As an example, `range: bytes=-64` would be represented by
-/// `Range(offset: -64, limit: None)`
 pub type Range {
-  Range(offset: Int, limit: Option(Int))
+  Range(
+    /// The number of bytes to skip from the start of the content. 0 would be
+    /// the start of the file.
+    ///
+    /// A negative offset is an offset backwards from the end of the content.
+    offset: Int,
+    /// The maximum number of bytes in the range. `None` would mean the rest of
+    /// the file.
+    limit: Option(Int),
+  )
 }
 
-/// Parses a request range header and expects the unit to be bytes. Will return
-/// an error if the header can't be parsed as a valid integer bytes range.
+/// Parses the content of a range header.
+///
+/// # Example
+///
+/// ```gleam
+/// wisp.parse_range_header("bytes=-64")
+/// // -> Ok(Range(offset: -64, limit: option.None))
+/// ```
+///
 pub fn parse_range_header(range_header: String) -> Result(Range, Nil) {
   case range_header {
     "bytes=" <> range -> {
@@ -1448,6 +1467,7 @@ pub fn parse_range_header(range_header: String) -> Result(Range, Nil) {
 }
 
 /// Checks for the `range` header and handles partial file reads.
+///
 /// If the range request header is present, it will set the `accept-ranges`,
 /// `content-range`, and `content-length` response headers. If the range
 /// request header has a range that is out of bounds of the file, it will
