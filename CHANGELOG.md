@@ -6,6 +6,8 @@
   requests that do not have the `x-forwarded-proto` header. This means that
   browsers like Safari, that do not consider `localhost` etc to be a secure
   context, will send Wisp-set cookies during local development.
+- The `parse_range_header` function and `Range` type have been added.
+- The `serve_static` middleware now respects the `range` header.
 
 ## v1.8.0 - 2025-06-20
 
