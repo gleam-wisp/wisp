@@ -1,22 +1,24 @@
+import gleam/http
 import gleam/string
-import wisp/testing
+import wisp/simulate
 import working_with_files/app/router
 
 pub fn home_test() {
-  let response = router.handle_request(testing.get("/", []))
+  let response = router.handle_request(simulate.browser_request(http.Get, "/"))
 
   assert response.status == 200
 
   assert response.headers == [#("content-type", "text/html; charset=utf-8")]
 
   assert response
-    |> testing.string_body
+    |> simulate.read_body
     |> string.contains("<form method")
     == True
 }
 
 pub fn file_from_disc_test() {
-  let response = router.handle_request(testing.get("/file-from-disc", []))
+  let response =
+    router.handle_request(simulate.browser_request(http.Get, "/file-from-disc"))
 
   assert response.status == 200
 
@@ -27,13 +29,17 @@ pub fn file_from_disc_test() {
     ]
 
   assert response
-    |> testing.string_body
+    |> simulate.read_body
     |> string.starts_with("name = \"examples\"")
     == True
 }
 
 pub fn file_from_memory_test() {
-  let response = router.handle_request(testing.get("/file-from-memory", []))
+  let response =
+    router.handle_request(simulate.browser_request(
+      http.Get,
+      "/file-from-memory",
+    ))
 
   assert response.status == 200
 
@@ -43,7 +49,7 @@ pub fn file_from_memory_test() {
       #("content-disposition", "attachment; filename=\"hello.txt\""),
     ]
 
-  assert testing.string_body(response) == "Hello, Joe!"
+  assert simulate.read_body(response) == "Hello, Joe!"
 }
 
 pub fn upload_file_test() {

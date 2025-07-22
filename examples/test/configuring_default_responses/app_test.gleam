@@ -1,9 +1,10 @@
 import configuring_default_responses/app/router
+import gleam/http
 import gleam/string
-import wisp/testing
+import wisp/simulate
 
 pub fn home_test() {
-  let response = router.handle_request(testing.get("/", []))
+  let response = router.handle_request(simulate.browser_request(http.Get, "/"))
 
   assert response.status == 200
 
@@ -11,13 +12,16 @@ pub fn home_test() {
 
   let assert True =
     response
-    |> testing.string_body
+    |> simulate.read_body
     |> string.contains("<h1>Hello, Joe!</h1>")
 }
 
 pub fn internal_server_error_test() {
   let response =
-    router.handle_request(testing.get("/internal-server-error", []))
+    router.handle_request(simulate.browser_request(
+      http.Get,
+      "/internal-server-error",
+    ))
 
   assert response.status == 500
 
@@ -25,12 +29,16 @@ pub fn internal_server_error_test() {
 
   let assert True =
     response
-    |> testing.string_body
+    |> simulate.read_body
     |> string.contains("<h1>Internal server error</h1>")
 }
 
 pub fn unprocessable_entity_test() {
-  let response = router.handle_request(testing.get("/unprocessable-entity", []))
+  let response =
+    router.handle_request(simulate.browser_request(
+      http.Get,
+      "/unprocessable-entity",
+    ))
 
   assert response.status == 422
 
@@ -38,12 +46,13 @@ pub fn unprocessable_entity_test() {
 
   let assert True =
     response
-    |> testing.string_body
+    |> simulate.read_body
     |> string.contains("<h1>Bad request</h1>")
 }
 
 pub fn bad_request_test() {
-  let response = router.handle_request(testing.get("/bad-request", []))
+  let response =
+    router.handle_request(simulate.browser_request(http.Get, "/bad-request"))
 
   assert response.status == 400
 
@@ -51,12 +60,16 @@ pub fn bad_request_test() {
 
   let assert True =
     response
-    |> testing.string_body
+    |> simulate.read_body
     |> string.contains("<h1>Bad request</h1>")
 }
 
 pub fn method_not_allowed_test() {
-  let response = router.handle_request(testing.get("/method-not-allowed", []))
+  let response =
+    router.handle_request(simulate.browser_request(
+      http.Get,
+      "/method-not-allowed",
+    ))
 
   assert response.status == 405
 
@@ -68,12 +81,13 @@ pub fn method_not_allowed_test() {
 
   let assert True =
     response
-    |> testing.string_body
+    |> simulate.read_body
     |> string.contains("<h1>There's nothing here</h1>")
 }
 
 pub fn not_found_test() {
-  let response = router.handle_request(testing.get("/not-found", []))
+  let response =
+    router.handle_request(simulate.browser_request(http.Get, "/not-found"))
 
   assert response.status == 404
 
@@ -81,12 +95,16 @@ pub fn not_found_test() {
 
   let assert True =
     response
-    |> testing.string_body
+    |> simulate.read_body
     |> string.contains("<h1>There's nothing here</h1>")
 }
 
 pub fn entity_too_large_test() {
-  let response = router.handle_request(testing.get("/entity-too-large", []))
+  let response =
+    router.handle_request(simulate.browser_request(
+      http.Get,
+      "/entity-too-large",
+    ))
 
   assert response.status == 413
 
@@ -94,6 +112,6 @@ pub fn entity_too_large_test() {
 
   let assert True =
     response
-    |> testing.string_body
+    |> simulate.read_body
     |> string.contains("<h1>Request entity too large</h1>")
 }

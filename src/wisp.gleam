@@ -1960,8 +1960,6 @@ pub fn create_canned_connection(
   )
 }
 
-// TODO: test
-// TODO: add headers to the test functions
 /// Cross-Site Request Forgery (CSRF) attacks by checking the `host` request
 /// header against the `origin` header or `referer` header.
 ///
