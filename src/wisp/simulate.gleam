@@ -4,14 +4,14 @@ import gleam/crypto
 import gleam/http
 import gleam/http/request
 import gleam/json.{type Json}
+import gleam/list
 import gleam/option.{None, Some}
+import gleam/result
 import gleam/string
 import gleam/string_tree
 import gleam/uri
 import simplifile
 import wisp.{type Request, type Response, Bytes, Empty, File, Text}
-
-// TODO: recycle session
 
 /// Create a test request that can be used to test your request handler
 /// functions.
@@ -44,6 +44,47 @@ pub fn request(method: http.Method, path: String) -> Request {
 ///
 pub fn browser_request(method: http.Method, path: String) -> Request {
   request.Request(..request(method, path), headers: default_browser_headers)
+}
+
+/// Continue a browser session from a previous request and response, adopting
+/// the request cookies, and updating the cookies as specified by the response.
+///
+pub fn session(
+  next_request: Request,
+  previous_request: Request,
+  previous_response: Response,
+) -> Request {
+  let request = case list.key_find(previous_request.headers, "cookie") {
+    Ok(cookies) -> header(next_request, "cookie", cookies)
+    Error(_) -> next_request
+  }
+
+  let set_cookies =
+    // Get the newly set cookies
+    list.key_filter(previous_response.headers, "set-cookie")
+    // Parse them to get the name, value, and attributes
+    |> list.map(fn(cookie) {
+      case string.split_once(cookie, ";") {
+        Ok(#(cookie, attributes)) -> {
+          let attributes =
+            string.split(attributes, ";") |> list.map(string.trim)
+          #(cookie, attributes)
+        }
+        Error(Nil) -> #(cookie, [])
+      }
+    })
+    |> list.filter_map(fn(cookie) {
+      string.split_once(cookie.0, "=")
+      |> result.map(fn(split) { #(split.0, split.1, cookie.1) })
+    })
+
+  // Set or remove the cookies as needed on the request
+  list.fold(set_cookies, request, fn(request, cookie) {
+    case list.contains(cookie.2, "Max-Age=0") {
+      True -> request.remove_cookie(request, cookie.0)
+      False -> request.set_cookie(request, cookie.0, cookie.1)
+    }
+  })
 }
 
 /// Add a text body to the request.
