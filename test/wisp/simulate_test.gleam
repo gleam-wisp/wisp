@@ -87,13 +87,6 @@ pub fn json_body_test() {
   assert wisp.read_body_bits(request) == Ok(<<"{\"a\":1,\"b\":2}">>)
 }
 
-pub fn read_text_body_empty_test() {
-  assert wisp.ok()
-    |> response.set_body(wisp.Empty)
-    |> simulate.read_body
-    == ""
-}
-
 pub fn read_text_body_file_test() {
   assert wisp.ok()
     |> response.set_body(wisp.File("test/fixture.txt", 0, None))
@@ -106,13 +99,6 @@ pub fn read_text_body_text_test() {
     |> response.set_body(wisp.Text("Hello, Joe!"))
     |> simulate.read_body
     == "Hello, Joe!"
-}
-
-pub fn read_binary_body_empty_test() {
-  assert wisp.ok()
-    |> response.set_body(wisp.Empty)
-    |> simulate.read_body_bits
-    == <<>>
 }
 
 pub fn read_binary_body_file_test() {

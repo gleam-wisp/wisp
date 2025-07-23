@@ -66,14 +66,6 @@ pub type Body {
     /// The maximum number of bytes to send. Set to `None` for the whole file.
     limit: Option(Int),
   )
-  /// An empty body. This may be returned by the `require_*` middleware
-  /// functions in the event of a failure, invalid request, or other situation
-  /// in which the request cannot be processed.
-  ///
-  /// Your application may wish to use a middleware to provide default responses
-  /// in place of any with an empty body.
-  ///
-  Empty
 }
 
 /// An alias for a HTTP response containing a `Body`.
@@ -86,11 +78,11 @@ pub type Response =
 ///
 /// ```gleam
 /// response(200)
-/// // -> Response(200, [], Empty)
+/// // -> Response(200, [], Text(""))
 /// ```
 ///
 pub fn response(status: Int) -> Response {
-  HttpResponse(status, [], Empty)
+  HttpResponse(status, [], Text(""))
 }
 
 /// Set the body of a response.
@@ -340,7 +332,7 @@ pub fn method_not_allowed(allowed methods: List(Method)) -> Response {
     |> list.sort(string.compare)
     |> string.join(", ")
     |> string.uppercase
-  HttpResponse(405, [#("allow", allowed)], Empty)
+  HttpResponse(405, [#("allow", allowed)], Text("Method not allowed"))
 }
 
 /// Create an empty response with status code 200: OK.
@@ -353,7 +345,7 @@ pub fn method_not_allowed(allowed methods: List(Method)) -> Response {
 /// ```
 ///
 pub fn ok() -> Response {
-  HttpResponse(200, [], Empty)
+  HttpResponse(200, [], Text("OK"))
 }
 
 /// Create an empty response with status code 201: Created.
@@ -366,7 +358,7 @@ pub fn ok() -> Response {
 /// ```
 ///
 pub fn created() -> Response {
-  HttpResponse(201, [], Empty)
+  HttpResponse(201, [], Text("Created"))
 }
 
 /// Create an empty response with status code 202: Accepted.
@@ -379,7 +371,7 @@ pub fn created() -> Response {
 /// ```
 ///
 pub fn accepted() -> Response {
-  HttpResponse(202, [], Empty)
+  HttpResponse(202, [], Text("Accepted"))
 }
 
 /// Create an empty response with status code 303: See Other, and the `location`
@@ -389,11 +381,15 @@ pub fn accepted() -> Response {
 ///
 /// ```gleam
 /// redirect(to: "https://example.com")
-/// // -> Response(303, [#("location", "https://example.com")], Empty)
+/// // -> Response(
+/// //   303,
+/// //   [#("location", "https://example.com")],
+/// //   Text("See other: https://example.com"),
+/// // )
 /// ```
 ///
 pub fn redirect(to url: String) -> Response {
-  HttpResponse(303, [#("location", url)], Empty)
+  HttpResponse(303, [#("location", url)], Text("See other: " <> url))
 }
 
 /// Create an empty response with status code 308: Moved Permanently, and the
@@ -407,11 +403,15 @@ pub fn redirect(to url: String) -> Response {
 ///
 /// ```gleam
 /// moved_permanently(to: "https://example.com")
-/// // -> Response(308, [#("location", "https://example.com")], Empty)
+/// // -> Response(
+/// //   303,
+/// //   [#("location", "https://example.com")],
+/// //   Text("Permanent redirect: https://example.com"),
+/// // )
 /// ```
 ///
-pub fn moved_permanently(to url: String) -> Response {
-  HttpResponse(308, [#("location", url)], Empty)
+pub fn permanent_redirect(to url: String) -> Response {
+  HttpResponse(308, [#("location", url)], Text("Permanent redirect: " <> url))
 }
 
 /// Create an empty response with status code 204: No content.
@@ -420,24 +420,24 @@ pub fn moved_permanently(to url: String) -> Response {
 ///
 /// ```gleam
 /// no_content()
-/// // -> Response(204, [], Empty)
+/// // -> Response(204, [], Text(""))
 /// ```
 ///
 pub fn no_content() -> Response {
-  HttpResponse(204, [], Empty)
+  HttpResponse(204, [], Text(""))
 }
 
-/// Create an empty response with status code 404: No content.
+/// Create an empty response with status code 404: Not found.
 ///
 /// # Examples
 ///
 /// ```gleam
 /// not_found()
-/// // -> Response(404, [], Empty)
+/// // -> Response(404, [], Text("Not found"))
 /// ```
 ///
 pub fn not_found() -> Response {
-  HttpResponse(404, [], Empty)
+  HttpResponse(404, [], Text("Not found"))
 }
 
 /// Create an empty response with status code 400: Bad request.
@@ -446,11 +446,11 @@ pub fn not_found() -> Response {
 ///
 /// ```gleam
 /// bad_request()
-/// // -> Response(400, [], Empty)
+/// // -> Response(400, [], Text("Bad request"))
 /// ```
 ///
 pub fn bad_request() -> Response {
-  HttpResponse(400, [], Empty)
+  HttpResponse(400, [], Text("Bad request"))
 }
 
 /// Create an empty response with status code 413: Entity too large.
@@ -459,11 +459,11 @@ pub fn bad_request() -> Response {
 ///
 /// ```gleam
 /// entity_too_large()
-/// // -> Response(413, [], Empty)
+/// // -> Response(413, [], Text("Entity too large"))
 /// ```
 ///
 pub fn entity_too_large() -> Response {
-  HttpResponse(413, [], Empty)
+  HttpResponse(413, [], Text("Entity too large"))
 }
 
 /// Create an empty response with status code 415: Unsupported media type.
@@ -475,12 +475,12 @@ pub fn entity_too_large() -> Response {
 ///
 /// ```gleam
 /// unsupported_media_type(accept: ["application/json", "text/plain"])
-/// // -> Response(415, [#("allow", "application/json, text/plain")], Empty)
+/// // -> Response(415, [#("allow", "application/json, text/plain")], Text("Unsupported media type"))
 /// ```
 ///
 pub fn unsupported_media_type(accept acceptable: List(String)) -> Response {
   let acceptable = string.join(acceptable, ", ")
-  HttpResponse(415, [#("accept", acceptable)], Empty)
+  HttpResponse(415, [#("accept", acceptable)], Text("Unsupported media type"))
 }
 
 /// Create an empty response with status code 422: Unprocessable entity.
@@ -489,11 +489,11 @@ pub fn unsupported_media_type(accept acceptable: List(String)) -> Response {
 ///
 /// ```gleam
 /// unprocessable_entity()
-/// // -> Response(422, [], Empty)
+/// // -> Response(422, [], Text("Unprocessable entity"))
 /// ```
 ///
 pub fn unprocessable_entity() -> Response {
-  HttpResponse(422, [], Empty)
+  HttpResponse(422, [], Text("Unprocessable entity"))
 }
 
 /// Create an empty response with status code 500: Internal server error.
@@ -502,11 +502,11 @@ pub fn unprocessable_entity() -> Response {
 ///
 /// ```gleam
 /// internal_server_error()
-/// // -> Response(500, [], Empty)
+/// // -> Response(500, [], Text("Internal server error"))
 /// ```
 ///
 pub fn internal_server_error() -> Response {
-  HttpResponse(500, [], Empty)
+  HttpResponse(500, [], Text("Internal server error"))
 }
 
 //

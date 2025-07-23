@@ -14,6 +14,8 @@
 - The `csrf_known_header_protection` middleware has been added.
 - The `Text` body type and associated functions now take a `String` rather than
   a `StringTree`.
+- The `Empty` response body type has been removed.
+- The `moved_permanently` function has been renamed to `permanent_redirect`.
 
 ## v1.8.0 - 2025-06-20
 
