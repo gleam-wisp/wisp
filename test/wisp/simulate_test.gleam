@@ -3,7 +3,6 @@ import gleam/http/response
 import gleam/json
 import gleam/list
 import gleam/option.{None}
-import gleam/string_tree
 import wisp
 import wisp/simulate
 
@@ -104,7 +103,7 @@ pub fn read_text_body_file_test() {
 
 pub fn read_text_body_text_test() {
   assert wisp.ok()
-    |> response.set_body(wisp.Text(string_tree.from_string("Hello, Joe!")))
+    |> response.set_body(wisp.Text("Hello, Joe!"))
     |> simulate.read_body
     == "Hello, Joe!"
 }
@@ -125,7 +124,7 @@ pub fn read_binary_body_file_test() {
 
 pub fn read_binary_body_text_test() {
   assert wisp.ok()
-    |> response.set_body(wisp.Text(string_tree.from_string("Hello, Joe!")))
+    |> response.set_body(wisp.Text("Hello, Joe!"))
     |> simulate.read_body_bits
     == <<"Hello, Joe!":utf8>>
 }

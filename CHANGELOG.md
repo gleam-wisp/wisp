@@ -12,6 +12,8 @@
 - The `create_canned_connection` function has been removed from the public API.
 - The `read_body_to_bitstring` function has renamed to `read_body_bits`.
 - The `csrf_known_header_protection` middleware has been added.
+- The `Text` body type and associated functions now take a `String` rather than
+  a `StringTree`.
 
 ## v1.8.0 - 2025-06-20
 

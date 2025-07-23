@@ -38,14 +38,18 @@ import wisp/internal
 pub type Body {
   /// A body of unicode text.
   ///
-  /// The body is represented using a `StringTree`. If you have a `String`
-  /// you can use the `string_tree.from_string` function to convert it.
+  /// If you have a `StringTree` you can use the `bytes_tree.from_string_tree`
+  /// function with the `Bytes` variant instead, as this will avoid the cost of
+  /// converting the tree into a string.
   ///
-  Text(StringTree)
-  /// A body of binary data.
+  Text(String)
+  /// A body of binary data, stored as a `BytesTree`.
   ///
-  /// The body is represented using a `BytesTree`. If you have a `BitArray`
-  /// you can use the `bytes_tree.from_bit_array` function to convert it.
+  /// If you have a `BitArray` you can use the `bytes_tree.from_bit_array`
+  /// function to convert it.
+  ///
+  /// If you have a `StringTree` you can use the `bytes_tree.from_string_tree`
+  /// function to convert it.
   ///
   Bytes(BytesTree)
   /// A body of the contents of a file.
@@ -188,12 +192,11 @@ pub fn file_download_from_memory(
 /// # Examples
 ///
 /// ```gleam
-/// let body = string_tree.from_string("<h1>Hello, Joe!</h1>")
-/// html_response(body, 200)
+/// html_response("<h1>Hello, Joe!</h1>", 200)
 /// // -> Response(200, [#("content-type", "text/html; charset=utf-8")], Text(body))
 /// ```
 ///
-pub fn html_response(html: StringTree, status: Int) -> Response {
+pub fn html_response(html: String, status: Int) -> Response {
   HttpResponse(
     status,
     [#("content-type", "text/html; charset=utf-8")],
@@ -209,12 +212,11 @@ pub fn html_response(html: StringTree, status: Int) -> Response {
 /// # Examples
 ///
 /// ```gleam
-/// let body = string_tree.from_string("{\"name\": \"Joe\"}")
-/// json_response(body, 200)
+/// json_response("{\"name\": \"Joe\"}", 200)
 /// // -> Response(200, [#("content-type", "application/json")], Text(body))
 /// ```
 ///
-pub fn json_response(json: StringTree, status: Int) -> Response {
+pub fn json_response(json: String, status: Int) -> Response {
   HttpResponse(
     status,
     [#("content-type", "application/json; charset=utf-8")],
@@ -230,13 +232,12 @@ pub fn json_response(json: StringTree, status: Int) -> Response {
 /// # Examples
 ///
 /// ```gleam
-/// let body = string_tree.from_string("<h1>Hello, Joe!</h1>")
 /// response(201)
-/// |> html_body(body)
+/// |> html_body("<h1>Hello, Joe!</h1>")
 /// // -> Response(201, [#("content-type", "text/html; charset=utf-8")], Text(body))
 /// ```
 ///
-pub fn html_body(response: Response, html: StringTree) -> Response {
+pub fn html_body(response: Response, html: String) -> Response {
   response
   |> response.set_body(Text(html))
   |> response.set_header("content-type", "text/html; charset=utf-8")
@@ -250,13 +251,12 @@ pub fn html_body(response: Response, html: StringTree) -> Response {
 /// # Examples
 ///
 /// ```gleam
-/// let body = string_tree.from_string("{\"name\": \"Joe\"}")
 /// response(201)
-/// |> json_body(body)
+/// |> json_body("{\"name\": \"Joe\"}")
 /// // -> Response(201, [#("content-type", "application/json; charset=utf-8")], Text(body))
 /// ```
 ///
-pub fn json_body(response: Response, json: StringTree) -> Response {
+pub fn json_body(response: Response, json: String) -> Response {
   response
   |> response.set_body(Text(json))
   |> response.set_header("content-type", "application/json; charset=utf-8")
@@ -278,7 +278,7 @@ pub fn json_body(response: Response, json: StringTree) -> Response {
 ///
 pub fn string_tree_body(response: Response, content: StringTree) -> Response {
   response
-  |> response.set_body(Text(content))
+  |> response.set_body(Bytes(bytes_tree.from_string_tree(content)))
 }
 
 /// Set the body of a response to a given string.
@@ -301,7 +301,7 @@ pub fn string_tree_body(response: Response, content: StringTree) -> Response {
 ///
 pub fn string_body(response: Response, content: String) -> Response {
   response
-  |> response.set_body(Text(string_tree.from_string(content)))
+  |> response.set_body(Text(content))
 }
 
 /// Escape a string so that it can be safely included in a HTML document.
