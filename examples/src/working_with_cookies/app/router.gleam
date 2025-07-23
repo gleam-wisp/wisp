@@ -1,6 +1,6 @@
 import gleam/http.{Delete, Get, Post}
 import gleam/list
-import gleam/string_tree
+import gleam/string
 import wisp.{type Request, type Response}
 import working_with_cookies/app/web
 
@@ -25,7 +25,7 @@ pub fn home(req: Request) -> Response {
         "  <button type='submit'>Log out</button>",
         "</form>",
       ]
-      |> string_tree.from_strings
+      |> string.concat
       |> wisp.html_response(200)
     }
     Error(_) -> {
@@ -52,7 +52,6 @@ pub fn new_session() -> Response {
     <button type='submit'>Log in</button>
   </form>
   "
-  |> string_tree.from_string
   |> wisp.html_response(200)
 }
 

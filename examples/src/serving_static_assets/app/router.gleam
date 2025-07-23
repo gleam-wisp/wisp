@@ -1,4 +1,3 @@
-import gleam/string_tree
 import serving_static_assets/app/web.{type Context}
 import wisp.{type Request, type Response}
 
@@ -18,5 +17,5 @@ const html = "<!DOCTYPE html>
 
 pub fn handle_request(req: Request, ctx: Context) -> Response {
   use _req <- web.middleware(req, ctx)
-  wisp.html_response(string_tree.from_string(html), 200)
+  wisp.html_response(html, 200)
 }

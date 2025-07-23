@@ -42,7 +42,7 @@ pub fn handle_request(req: Request) -> Response {
         #("is-cool", json.bool(person.is_cool)),
         #("saved", json.bool(True)),
       ])
-    Ok(json.to_string_tree(object))
+    Ok(json.to_string(object))
   }
 
   // An appropriate response is returned depending on whether the JSON could be

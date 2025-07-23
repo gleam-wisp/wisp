@@ -2,7 +2,6 @@ import gleam/bytes_tree
 import gleam/http.{Get, Post}
 import gleam/list
 import gleam/result
-import gleam/string_tree
 import wisp.{type Request, type Response}
 import working_with_files/app/web
 
@@ -35,7 +34,6 @@ const html = "
 fn show_home(req: Request) -> Response {
   use <- wisp.require_method(req, Get)
   html
-  |> string_tree.from_string
   |> wisp.html_response(200)
 }
 
@@ -107,7 +105,6 @@ fn handle_file_upload(req: Request) -> Response {
   case result {
     Ok(name) -> {
       { "<p>Thank you for your file!" <> name <> "</p>" <> html }
-      |> string_tree.from_string
       |> wisp.html_response(200)
     }
     Error(_) -> {

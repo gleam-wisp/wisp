@@ -42,7 +42,7 @@ pub fn list_people(ctx: Context) -> Response {
 
     // Convert the ids into a JSON array of objects.
     Ok(
-      json.to_string_tree(
+      json.to_string(
         json.object([
           #(
             "people",
@@ -79,7 +79,7 @@ pub fn create_person(req: Request, ctx: Context) -> Response {
     use id <- try(save_to_database(ctx.db, person))
 
     // Construct a JSON payload with the id of the newly created person.
-    Ok(json.to_string_tree(json.object([#("id", json.string(id))])))
+    Ok(json.to_string(json.object([#("id", json.string(id))])))
   }
 
   // Return an appropriate response depending on whether everything went well or
@@ -97,7 +97,7 @@ pub fn read_person(ctx: Context, id: String) -> Response {
 
     // Construct a JSON payload with the person's details.
     Ok(
-      json.to_string_tree(
+      json.to_string(
         json.object([
           #("id", json.string(id)),
           #("name", json.string(person.name)),
