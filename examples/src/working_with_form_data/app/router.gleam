@@ -1,7 +1,6 @@
 import gleam/http.{Get, Post}
 import gleam/list
 import gleam/result
-import gleam/string_tree
 import wisp.{type Request, type Response}
 import working_with_form_data/app/web
 
@@ -21,8 +20,7 @@ pub fn show_form() -> Response {
   // In a larger application a template library or HTML form library might
   // be used here instead of a string literal.
   let html =
-    string_tree.from_string(
-      "<form method='post'>
+    "<form method='post'>
         <label>Title:
           <input type='text' name='title'>
         </label>
@@ -30,8 +28,7 @@ pub fn show_form() -> Response {
           <input type='text' name='name'>
         </label>
         <input type='submit' value='Submit'>
-      </form>",
-    )
+      </form>"
   wisp.ok()
   |> wisp.html_body(html)
 }
@@ -60,7 +57,7 @@ pub fn handle_form_submission(req: Request) -> Response {
   case result {
     Ok(content) -> {
       wisp.ok()
-      |> wisp.html_body(string_tree.from_string(content))
+      |> wisp.html_body(content)
     }
     Error(_) -> {
       wisp.bad_request()

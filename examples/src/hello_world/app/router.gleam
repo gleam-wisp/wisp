@@ -1,4 +1,3 @@
-import gleam/string_tree
 import hello_world/app/web
 import wisp.{type Request, type Response}
 
@@ -9,7 +8,7 @@ pub fn handle_request(req: Request) -> Response {
   use _req <- web.middleware(req)
 
   // Later we'll use templates, but for now a string will do.
-  let body = string_tree.from_string("<h1>Hello, Joe!</h1>")
+  let body = "<h1>Hello, Joe!</h1>"
 
   // Return a 200 OK response with the body and a HTML content type.
   wisp.html_response(body, 200)
