@@ -49,59 +49,78 @@ fn static_file_handler(request: wisp.Request) -> wisp.Response {
 }
 
 pub fn ok_test() {
-  assert wisp.ok() == Response(200, [], wisp.Empty)
+  assert wisp.ok() == Response(200, [], wisp.Text("OK"))
 }
 
 pub fn created_test() {
-  assert wisp.created() == Response(201, [], wisp.Empty)
+  assert wisp.created() == Response(201, [], wisp.Text("Created"))
 }
 
 pub fn accepted_test() {
-  assert wisp.accepted() == Response(202, [], wisp.Empty)
+  assert wisp.accepted() == Response(202, [], wisp.Text("Accepted"))
 }
 
 pub fn no_content_test() {
-  assert wisp.no_content() == Response(204, [], wisp.Empty)
+  assert wisp.no_content() == Response(204, [], wisp.Text(""))
 }
 
 pub fn redirect_test() {
   assert wisp.redirect(to: "https://example.com/wibble")
-    == Response(303, [#("location", "https://example.com/wibble")], wisp.Empty)
+    == Response(
+      303,
+      [#("location", "https://example.com/wibble")],
+      wisp.Text("See other: https://example.com/wibble"),
+    )
 }
 
 pub fn moved_permanently_test() {
-  assert wisp.moved_permanently(to: "https://example.com/wobble")
-    == Response(308, [#("location", "https://example.com/wobble")], wisp.Empty)
+  assert wisp.permanent_redirect(to: "https://example.com/wobble")
+    == Response(
+      308,
+      [#("location", "https://example.com/wobble")],
+      wisp.Text("Permanent redirect: https://example.com/wobble"),
+    )
 }
 
 pub fn internal_server_error_test() {
-  assert wisp.internal_server_error() == Response(500, [], wisp.Empty)
+  assert wisp.internal_server_error()
+    == Response(500, [], wisp.Text("Internal server error"))
 }
 
 pub fn entity_too_large_test() {
-  assert wisp.entity_too_large() == Response(413, [], wisp.Empty)
+  assert wisp.entity_too_large()
+    == Response(413, [], wisp.Text("Entity too large"))
 }
 
 pub fn bad_request_test() {
-  assert wisp.bad_request() == Response(400, [], wisp.Empty)
+  assert wisp.bad_request() == Response(400, [], wisp.Text("Bad request"))
 }
 
 pub fn not_found_test() {
-  assert wisp.not_found() == Response(404, [], wisp.Empty)
+  assert wisp.not_found() == Response(404, [], wisp.Text("Not found"))
 }
 
 pub fn method_not_allowed_test() {
   assert wisp.method_not_allowed([http.Get, http.Patch, http.Delete])
-    == Response(405, [#("allow", "DELETE, GET, PATCH")], wisp.Empty)
+    == Response(
+      405,
+      [#("allow", "DELETE, GET, PATCH")],
+      wisp.Text("Method not allowed"),
+    )
 }
 
 pub fn unsupported_media_type_test() {
   assert wisp.unsupported_media_type(accept: ["application/json", "text/plain"])
-    == Response(415, [#("accept", "application/json, text/plain")], wisp.Empty)
+    == Response(
+      415,
+      [#("accept", "application/json, text/plain")],
+      wisp.Text("Unsupported media type"),
+    )
 }
 
 pub fn unprocessable_entity_test() {
-  assert wisp.unprocessable_entity() == Response(422, [], wisp.Empty)
+  assert wisp.unprocessable_entity()
+    == Response(422, [], wisp.Text("Unprocessable entity"))
 }
 
 pub fn json_response_test() {
@@ -376,7 +395,7 @@ pub fn serve_static_test() {
     |> handler
   assert response.status == 200
   assert response.headers == []
-  assert response.body == wisp.Empty
+  assert response.body == wisp.Text("OK")
 }
 
 pub fn serve_static_directory_request_test() {
@@ -394,7 +413,7 @@ pub fn serve_static_directory_request_test() {
     |> handler
   assert response.status == 200
   assert response.headers == []
-  assert response.body == wisp.Empty
+  assert response.body == wisp.Text("OK")
 }
 
 pub fn serve_static_under_has_no_trailing_slash_test() {
@@ -506,7 +525,7 @@ pub fn serve_static_etags_returns_304_test() {
 
   assert response.status == 304
   assert response.headers == [#("etag", etag)]
-  assert response.body == wisp.Empty
+  assert response.body == wisp.Text("")
 }
 
 pub fn serve_static_range_start_test() {
@@ -703,7 +722,7 @@ pub fn json_too_big_test() {
     |> wisp.set_max_body_size(1)
     |> request.set_header("content-type", "application/json")
     |> json_handler(fn(_) { panic as "should be unreachable" })
-    == Response(413, [], wisp.Empty)
+    == Response(413, [], wisp.Text("Entity too large"))
 }
 
 pub fn json_syntax_error_test() {
@@ -711,7 +730,7 @@ pub fn json_syntax_error_test() {
     |> simulate.string_body("{\"one\":")
     |> request.set_header("content-type", "application/json")
     |> json_handler(fn(_) { panic as "should be unreachable" })
-    == Response(400, [], wisp.Empty)
+    == Response(400, [], wisp.Text("Bad request"))
 }
 
 pub fn urlencoded_form_test() {
@@ -743,7 +762,7 @@ pub fn urlencoded_too_big_form_test() {
     |> request.set_header("content-type", "application/x-www-form-urlencoded")
     |> wisp.set_max_body_size(1)
     |> form_handler(fn(_) { panic as "should be unreachable" })
-    == Response(413, [], wisp.Empty)
+    == Response(413, [], wisp.Text("Entity too large"))
 }
 
 pub fn multipart_form_test() {
@@ -787,7 +806,7 @@ Content-Disposition: form-data; name=\"one\"\r
     )
     |> wisp.set_max_body_size(1)
     |> form_handler(fn(_) { panic as "should be unreachable" })
-    == Response(413, [], wisp.Empty)
+    == Response(413, [], wisp.Text("Entity too large"))
 }
 
 pub fn multipart_form_no_boundary_test() {
@@ -802,7 +821,7 @@ Content-Disposition: form-data; name=\"one\"\r
     |> simulate.string_body(data)
     |> request.set_header("content-type", "multipart/form-data")
     |> form_handler(fn(_) { panic as "should be unreachable" })
-    == Response(400, [], wisp.Empty)
+    == Response(400, [], wisp.Text("Bad request"))
 }
 
 pub fn multipart_form_invalid_format_test() {
@@ -814,7 +833,7 @@ pub fn multipart_form_invalid_format_test() {
       "multipart/form-data; boundary=theboundary",
     )
     |> form_handler(fn(_) { panic as "should be unreachable" })
-    == Response(400, [], wisp.Empty)
+    == Response(400, [], wisp.Text("Bad request"))
 }
 
 pub fn form_unknown_content_type_test() {
@@ -826,7 +845,7 @@ pub fn form_unknown_content_type_test() {
     == Response(
       415,
       [#("accept", "application/x-www-form-urlencoded, multipart/form-data")],
-      wisp.Empty,
+      wisp.Text("Unsupported media type"),
     )
 }
 
@@ -884,15 +903,15 @@ Content-Disposition: form-data; name=\"two\"; filename=\"another.txt\"\r
   }
 
   assert testcase(1, fn(_) { panic as "should be unreachable for limit of 1" })
-    == Response(413, [], wisp.Empty)
+    == Response(413, [], wisp.Text("Entity too large"))
 
   assert testcase(2, fn(_) { panic as "should be unreachable for limit of 2" })
-    == Response(413, [], wisp.Empty)
+    == Response(413, [], wisp.Text("Entity too large"))
 
   assert testcase(3, fn(_) { panic as "should be unreachable for limit of 3" })
-    == Response(413, [], wisp.Empty)
+    == Response(413, [], wisp.Text("Entity too large"))
 
-  assert testcase(4, fn(_) { Nil }) == Response(200, [], wisp.Empty)
+  assert testcase(4, fn(_) { Nil }) == Response(200, [], wisp.Text("OK"))
 }
 
 pub fn handle_head_test() {
@@ -927,7 +946,7 @@ pub fn handle_head_test() {
   assert simulate.request(http.Get, "/")
     |> request.set_method(http.Post)
     |> handler(Error(Nil))
-    == Response(405, [#("allow", "GET")], wisp.Empty)
+    == Response(405, [#("allow", "GET")], wisp.Text("Method not allowed"))
 }
 
 pub fn multipart_form_fields_are_sorted_test() {
@@ -1036,7 +1055,7 @@ pub fn set_header_test() {
     == Response(
       200,
       [#("accept", "text/plain"), #("content-type", "text/html")],
-      wisp.Empty,
+      wisp.Text("OK"),
     )
 }
 

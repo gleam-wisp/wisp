@@ -10,7 +10,7 @@ import gleam/result
 import gleam/string
 import gleam/uri
 import simplifile
-import wisp.{type Request, type Response, Bytes, Empty, File, Text}
+import wisp.{type Request, type Response, Bytes, File, Text}
 
 /// Create a test request that can be used to test your request handler
 /// functions.
@@ -164,7 +164,6 @@ pub fn json_body(request: Request, data: Json) -> Request {
 ///
 pub fn read_body(response: Response) -> String {
   case response.body {
-    Empty -> ""
     Text(tree) -> tree
     Bytes(bytes) -> {
       let data = bytes_tree.to_bit_array(bytes)
@@ -202,7 +201,6 @@ pub fn read_body(response: Response) -> String {
 ///
 pub fn read_body_bits(response: Response) -> BitArray {
   case response.body {
-    Empty -> <<>>
     Bytes(tree) -> bytes_tree.to_bit_array(tree)
     Text(tree) -> <<tree:utf8>>
     File(path:, offset: 0, limit: None) -> {
