@@ -34,5 +34,4 @@ Here is a list of all the examples and their associated module name (formatted
 - [`serving_static_assets` - Serving static assets](./src/serving_static_assets)
 - [`logging` - Logging](./src/logging)
 - [`working_with_cookies` - Working with cookies](./src/working_with_cookies)
-- [`configuring_default_responses` - Configuring default responses](./src/configuring_default_responses)
 - [`working_with_files` - Working with files](./src/working_with_files)
