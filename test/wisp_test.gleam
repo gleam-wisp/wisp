@@ -1,5 +1,6 @@
 import exception
 import gleam/bit_array
+import gleam/bytes_tree
 import gleam/crypto
 import gleam/dynamic.{type Dynamic}
 import gleam/http
@@ -104,7 +105,7 @@ pub fn unprocessable_entity_test() {
 }
 
 pub fn json_response_test() {
-  let body = string_tree.from_string("{\"one\":1,\"two\":2}")
+  let body = "{\"one\":1,\"two\":2}"
   let response = wisp.json_response(body, 201)
   assert response.status == 201
   assert response.headers
@@ -113,7 +114,7 @@ pub fn json_response_test() {
 }
 
 pub fn html_response_test() {
-  let body = string_tree.from_string("Hello, world!")
+  let body = "Hello, world!"
   let response = wisp.html_response(body, 200)
   assert response.status == 200
   assert response.headers == [#("content-type", "text/html; charset=utf-8")]
@@ -121,7 +122,7 @@ pub fn html_response_test() {
 }
 
 pub fn html_body_test() {
-  let body = string_tree.from_string("Hello, world!")
+  let body = "Hello, world!"
   let response =
     wisp.method_not_allowed([http.Get])
     |> wisp.html_body(body)
@@ -901,7 +902,7 @@ pub fn handle_head_test() {
 
     assert list.key_find(request.headers, "x-original-method") == header
 
-    string_tree.from_string("Hello!")
+    "Hello!"
     |> wisp.html_response(201)
   }
 
@@ -911,7 +912,7 @@ pub fn handle_head_test() {
     == Response(
       201,
       [#("content-type", "text/html; charset=utf-8")],
-      wisp.Text(string_tree.from_string("Hello!")),
+      wisp.Text("Hello!"),
     )
 
   assert simulate.request(http.Get, "/")
@@ -920,7 +921,7 @@ pub fn handle_head_test() {
     == Response(
       201,
       [#("content-type", "text/html; charset=utf-8")],
-      wisp.Text(string_tree.from_string("Hello!")),
+      wisp.Text("Hello!"),
     )
 
   assert simulate.request(http.Get, "/")
@@ -1041,7 +1042,7 @@ pub fn set_header_test() {
 
 pub fn string_body_test() {
   assert wisp.string_body(wisp.ok(), "Hello, world!")
-    == Response(200, [], wisp.Text(string_tree.from_string("Hello, world!")))
+    == Response(200, [], wisp.Text("Hello, world!"))
 }
 
 pub fn string_tree_body_test() {
@@ -1049,18 +1050,15 @@ pub fn string_tree_body_test() {
       wisp.ok(),
       string_tree.from_string("Hello, world!"),
     )
-    == Response(200, [], wisp.Text(string_tree.from_string("Hello, world!")))
+    == Response(200, [], wisp.Bytes(bytes_tree.from_string("Hello, world!")))
 }
 
 pub fn json_body_test() {
-  assert wisp.json_body(
-      wisp.ok(),
-      string_tree.from_string("{\"one\":1,\"two\":2}"),
-    )
+  assert wisp.json_body(wisp.ok(), "{\"one\":1,\"two\":2}")
     == Response(
       200,
       [#("content-type", "application/json; charset=utf-8")],
-      wisp.Text(string_tree.from_string("{\"one\":1,\"two\":2}")),
+      wisp.Text("{\"one\":1,\"two\":2}"),
     )
 }
 

@@ -8,7 +8,6 @@ import gleam/list
 import gleam/option.{None, Some}
 import gleam/result
 import gleam/string
-import gleam/string_tree
 import gleam/uri
 import simplifile
 import wisp.{type Request, type Response, Bytes, Empty, File, Text}
@@ -166,7 +165,7 @@ pub fn json_body(request: Request, data: Json) -> Request {
 pub fn read_body(response: Response) -> String {
   case response.body {
     Empty -> ""
-    Text(tree) -> string_tree.to_string(tree)
+    Text(tree) -> tree
     Bytes(bytes) -> {
       let data = bytes_tree.to_bit_array(bytes)
       let assert Ok(string) = bit_array.to_string(data)
@@ -205,7 +204,7 @@ pub fn read_body_bits(response: Response) -> BitArray {
   case response.body {
     Empty -> <<>>
     Bytes(tree) -> bytes_tree.to_bit_array(tree)
-    Text(tree) -> bytes_tree.to_bit_array(bytes_tree.from_string_tree(tree))
+    Text(tree) -> <<tree:utf8>>
     File(path:, offset: 0, limit: None) -> {
       let assert Ok(contents) = simplifile.read_bits(path)
         as "the response body was a file, but the file could not be read"
