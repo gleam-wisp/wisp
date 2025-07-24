@@ -71,8 +71,11 @@ pub fn redirect_test() {
   assert wisp.redirect(to: "https://example.com/wibble")
     == Response(
       303,
-      [#("location", "https://example.com/wibble")],
-      wisp.Text("See other: https://example.com/wibble"),
+      [
+        #("location", "https://example.com/wibble"),
+        #("content-type", "text/plain"),
+      ],
+      wisp.Text("You are being redirected: https://example.com/wibble"),
     )
 }
 
@@ -80,8 +83,11 @@ pub fn moved_permanently_test() {
   assert wisp.permanent_redirect(to: "https://example.com/wobble")
     == Response(
       308,
-      [#("location", "https://example.com/wobble")],
-      wisp.Text("Permanent redirect: https://example.com/wobble"),
+      [
+        #("location", "https://example.com/wobble"),
+        #("content-type", "text/plain"),
+      ],
+      wisp.Text("You are being redirected: https://example.com/wobble"),
     )
 }
 
