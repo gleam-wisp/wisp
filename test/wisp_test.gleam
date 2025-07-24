@@ -93,7 +93,12 @@ pub fn entity_too_large_test() {
 }
 
 pub fn bad_request_test() {
-  assert wisp.bad_request() == Response(400, [], wisp.Text("Bad request"))
+  assert wisp.bad_request("") == Response(400, [], wisp.Text("Bad request"))
+}
+
+pub fn bad_request_with_message_test() {
+  assert wisp.bad_request("On fire")
+    == Response(400, [], wisp.Text("Bad request: On fire"))
 }
 
 pub fn not_found_test() {
@@ -314,7 +319,7 @@ pub fn require_string_body_invalid_test() {
     use _ <- wisp.require_string_body(request)
     panic as "should be unreachable"
   }
-  assert response == wisp.bad_request()
+  assert response == wisp.bad_request("Invalid UTF-8")
 }
 
 pub fn rescue_crashes_error_test() {
@@ -730,7 +735,7 @@ pub fn json_syntax_error_test() {
     |> simulate.string_body("{\"one\":")
     |> request.set_header("content-type", "application/json")
     |> json_handler(fn(_) { panic as "should be unreachable" })
-    == Response(400, [], wisp.Text("Bad request"))
+    == Response(400, [], wisp.Text("Bad request: Invalid JSON"))
 }
 
 pub fn urlencoded_form_test() {
@@ -821,7 +826,7 @@ Content-Disposition: form-data; name=\"one\"\r
     |> simulate.string_body(data)
     |> request.set_header("content-type", "multipart/form-data")
     |> form_handler(fn(_) { panic as "should be unreachable" })
-    == Response(400, [], wisp.Text("Bad request"))
+    == Response(400, [], wisp.Text("Bad request: Invalid form encoding"))
 }
 
 pub fn multipart_form_invalid_format_test() {
@@ -833,7 +838,11 @@ pub fn multipart_form_invalid_format_test() {
       "multipart/form-data; boundary=theboundary",
     )
     |> form_handler(fn(_) { panic as "should be unreachable" })
-    == Response(400, [], wisp.Text("Bad request"))
+    == Response(
+      400,
+      [],
+      wisp.Text("Bad request: Unexpected end of request body"),
+    )
 }
 
 pub fn form_unknown_content_type_test() {

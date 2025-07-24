@@ -240,37 +240,37 @@ pub fn mismatched_origin_headers_method_head_test() {
 
 pub fn mismatched_origin_headers_method_post_test() {
   assert send_cookie_request_with_mismatched_origin_header(http.Post, False)
-    == wisp.bad_request()
+    == wisp.bad_request("Invalid origin")
 }
 
 pub fn mismatched_origin_headers_method_put_test() {
   assert send_cookie_request_with_mismatched_origin_header(http.Put, False)
-    == wisp.bad_request()
+    == wisp.bad_request("Invalid origin")
 }
 
 pub fn mismatched_origin_headers_method_delete_test() {
   assert send_cookie_request_with_mismatched_origin_header(http.Delete, False)
-    == wisp.bad_request()
+    == wisp.bad_request("Invalid origin")
 }
 
 pub fn mismatched_origin_headers_method_connect_test() {
   assert send_cookie_request_with_mismatched_origin_header(http.Connect, False)
-    == wisp.bad_request()
+    == wisp.bad_request("Invalid origin")
 }
 
 pub fn mismatched_origin_headers_method_options_test() {
   assert send_cookie_request_with_mismatched_origin_header(http.Options, False)
-    == wisp.bad_request()
+    == wisp.bad_request("Invalid origin")
 }
 
 pub fn mismatched_origin_headers_method_trace_test() {
   assert send_cookie_request_with_mismatched_origin_header(http.Trace, False)
-    == wisp.bad_request()
+    == wisp.bad_request("Invalid origin")
 }
 
 pub fn mismatched_origin_headers_method_patch_test() {
   assert send_cookie_request_with_mismatched_origin_header(http.Patch, False)
-    == wisp.bad_request()
+    == wisp.bad_request("Invalid origin")
 }
 
 fn send_cookie_request_with_mismatched_referer_header(
@@ -307,37 +307,37 @@ pub fn mismatched_referer_headers_method_head_test() {
 
 pub fn mismatched_referer_headers_method_post_test() {
   assert send_cookie_request_with_mismatched_referer_header(http.Post, False)
-    == wisp.bad_request()
+    == wisp.bad_request("Invalid origin")
 }
 
 pub fn mismatched_referer_headers_method_put_test() {
   assert send_cookie_request_with_mismatched_referer_header(http.Put, False)
-    == wisp.bad_request()
+    == wisp.bad_request("Invalid origin")
 }
 
 pub fn mismatched_referer_headers_method_delete_test() {
   assert send_cookie_request_with_mismatched_referer_header(http.Delete, False)
-    == wisp.bad_request()
+    == wisp.bad_request("Invalid origin")
 }
 
 pub fn mismatched_referer_headers_method_connect_test() {
   assert send_cookie_request_with_mismatched_referer_header(http.Connect, False)
-    == wisp.bad_request()
+    == wisp.bad_request("Invalid origin")
 }
 
 pub fn mismatched_referer_headers_method_options_test() {
   assert send_cookie_request_with_mismatched_referer_header(http.Options, False)
-    == wisp.bad_request()
+    == wisp.bad_request("Invalid origin")
 }
 
 pub fn mismatched_referer_headers_method_trace_test() {
   assert send_cookie_request_with_mismatched_referer_header(http.Trace, False)
-    == wisp.bad_request()
+    == wisp.bad_request("Invalid origin")
 }
 
 pub fn mismatched_referer_headers_method_patch_test() {
   assert send_cookie_request_with_mismatched_referer_header(http.Patch, False)
-    == wisp.bad_request()
+    == wisp.bad_request("Invalid origin")
 }
 
 /// This shouldn't be possible with HTTP1 or HTTP2, but let's test it in case
@@ -376,35 +376,35 @@ pub fn missing_host_header_method_head_test() {
 
 pub fn missing_host_header_method_post_test() {
   assert send_cookie_request_with_no_host_header(http.Post, False)
-    == wisp.bad_request()
+    == wisp.bad_request("Invalid host")
 }
 
 pub fn missing_host_header_method_put_test() {
   assert send_cookie_request_with_no_host_header(http.Put, False)
-    == wisp.bad_request()
+    == wisp.bad_request("Invalid host")
 }
 
 pub fn missing_host_header_method_delete_test() {
   assert send_cookie_request_with_no_host_header(http.Delete, False)
-    == wisp.bad_request()
+    == wisp.bad_request("Invalid host")
 }
 
 pub fn missing_host_header_method_connect_test() {
   assert send_cookie_request_with_no_host_header(http.Connect, False)
-    == wisp.bad_request()
+    == wisp.bad_request("Invalid host")
 }
 
 pub fn missing_host_header_method_options_test() {
   assert send_cookie_request_with_no_host_header(http.Options, False)
-    == wisp.bad_request()
+    == wisp.bad_request("Invalid host")
 }
 
 pub fn missing_host_header_method_trace_test() {
   assert send_cookie_request_with_no_host_header(http.Trace, False)
-    == wisp.bad_request()
+    == wisp.bad_request("Invalid host")
 }
 
 pub fn missing_host_header_method_patch_test() {
   assert send_cookie_request_with_no_host_header(http.Patch, False)
-    == wisp.bad_request()
+    == wisp.bad_request("Invalid host")
 }
