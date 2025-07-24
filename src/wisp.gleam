@@ -379,13 +379,17 @@ pub fn accepted() -> Response {
 /// redirect(to: "https://example.com")
 /// // -> Response(
 /// //   303,
-/// //   [#("location", "https://example.com")],
-/// //   Text("See other: https://example.com"),
+/// //   [#("location", "https://example.com"), #("context-type", "text/plain")],
+/// //   Text("You are being redirected: https://example.com"),
 /// // )
 /// ```
 ///
 pub fn redirect(to url: String) -> Response {
-  HttpResponse(303, [#("location", url)], Text("See other: " <> url))
+  HttpResponse(
+    303,
+    [#("location", url), content_text],
+    Text("You are being redirected: " <> url),
+  )
 }
 
 /// Create a response with status code 308: Permanent redirect, and the
@@ -402,12 +406,16 @@ pub fn redirect(to url: String) -> Response {
 /// // -> Response(
 /// //   303,
 /// //   [#("location", "https://example.com")],
-/// //   Text("Permanent redirect: https://example.com"),
+/// //   Text("You are being redirected: https://example.com"),
 /// // )
 /// ```
 ///
 pub fn permanent_redirect(to url: String) -> Response {
-  HttpResponse(308, [#("location", url)], Text("Permanent redirect: " <> url))
+  HttpResponse(
+    308,
+    [#("location", url), content_text],
+    Text("You are being redirected: " <> url),
+  )
 }
 
 /// Create a response with status code 204: No content.
