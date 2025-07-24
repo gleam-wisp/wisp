@@ -392,7 +392,7 @@ pub fn redirect(to url: String) -> Response {
   HttpResponse(303, [#("location", url)], Text("See other: " <> url))
 }
 
-/// Create an empty response with status code 308: Moved Permanently, and the
+/// Create an empty response with status code 308: Permanent redirect, and the
 /// `location` header set to the given URL. Used to redirect the client to
 /// another page.
 ///
@@ -445,12 +445,16 @@ pub fn not_found() -> Response {
 /// # Examples
 ///
 /// ```gleam
-/// bad_request()
-/// // -> Response(400, [], Text("Bad request"))
+/// bad_request("Invalid JSON")
+/// // -> Response(400, [], Text("Bad request: Invalid JSON"))
 /// ```
 ///
-pub fn bad_request() -> Response {
-  HttpResponse(400, [], Text("Bad request"))
+pub fn bad_request(detail: String) -> Response {
+  let body = case detail {
+    "" -> "Bad request"
+    _ -> "Bad request: " <> detail
+  }
+  HttpResponse(400, [], Text(body))
 }
 
 /// Create an empty response with status code 413: Entity too large.
@@ -508,6 +512,22 @@ pub fn unprocessable_entity() -> Response {
 pub fn internal_server_error() -> Response {
   HttpResponse(500, [], Text("Internal server error"))
 }
+
+const invalid_json = "Invalid JSON"
+
+const invalid_form = "Invalid form encoding"
+
+const invalid_utf8 = "Invalid UTF-8"
+
+const invalid_range = "Invalid range"
+
+const invalid_content_disposition = "Invalid content-disposition"
+
+const invalid_host = "Invalid host"
+
+const invalid_origin = "Invalid origin"
+
+const unexpected_end = "Unexpected end of request body"
 
 //
 // Requests
@@ -778,7 +798,11 @@ pub fn require_string_body(
   next: fn(String) -> Response,
 ) -> Response {
   case read_body_bits(request) {
-    Ok(body) -> or_400(bit_array.to_string(body), next)
+    Ok(body) ->
+      case bit_array.to_string(body) {
+        Ok(body) -> next(body)
+        Error(_) -> bad_request(invalid_utf8)
+      }
     Error(_) -> entity_too_large()
   }
 }
@@ -910,7 +934,7 @@ pub fn require_form(
     Ok("multipart/form-data; boundary=" <> boundary) ->
       require_multipart_form(request, boundary, next)
 
-    Ok("multipart/form-data") -> bad_request()
+    Ok("multipart/form-data") -> bad_request(invalid_form)
 
     _ ->
       unsupported_media_type([
@@ -977,8 +1001,10 @@ pub fn require_content_type(
 pub fn require_json(request: Request, next: fn(Dynamic) -> Response) -> Response {
   use <- require_content_type(request, "application/json")
   use body <- require_string_body(request)
-  use json <- or_400(json.parse(body, decode.dynamic))
-  next(json)
+  case json.parse(body, decode.dynamic) {
+    Ok(json) -> next(json)
+    Error(_) -> bad_request(invalid_json)
+  }
 }
 
 fn require_urlencoded_form(
@@ -986,9 +1012,13 @@ fn require_urlencoded_form(
   next: fn(FormData) -> Response,
 ) -> Response {
   use body <- require_string_body(request)
-  use pairs <- or_400(uri.parse_query(body))
-  let pairs = sort_keys(pairs)
-  next(FormData(values: pairs, files: []))
+  case uri.parse_query(body) {
+    Ok(pairs) -> {
+      let pairs = sort_keys(pairs)
+      next(FormData(values: pairs, files: []))
+    }
+    Error(_) -> bad_request(invalid_form)
+  }
 }
 
 fn require_multipart_form(
@@ -1019,13 +1049,20 @@ fn read_multipart(
 
   // First we read the headers of the multipart part.
   let header_parser =
-    fn_with_bad_request_error(http.parse_multipart_headers(_, boundary))
+    fn_with_bad_request_error(
+      http.parse_multipart_headers(_, boundary),
+      invalid_form,
+    )
   let result = multipart_headers(reader, header_parser, read_size, quotas)
   use #(headers, reader, quotas) <- result.try(result)
   use #(name, filename) <- result.try(multipart_content_disposition(headers))
 
   // Then we read the body of the part.
-  let parse = fn_with_bad_request_error(http.parse_multipart_body(_, boundary))
+  let parse =
+    fn_with_bad_request_error(
+      http.parse_multipart_body(_, boundary),
+      invalid_form,
+    )
   use #(data, reader, quotas) <- result.try(case filename {
     // There is a file name, so we treat this as a file upload, streaming the
     // contents to a temporary file and using the dedicated files size quota.
@@ -1050,7 +1087,10 @@ fn read_multipart(
         multipart_body(reader, parse, boundary, read_size, q, append, <<>>)
       use #(reader, quota, value) <- result.try(result)
       let quotas = Quotas(..quotas, body: quota)
-      use value <- result.map(bit_array_to_string(value))
+      use value <- result.map(case bit_array.to_string(value) {
+        Ok(string) -> Ok(string)
+        Error(_) -> Error(bad_request(invalid_utf8))
+      })
       let data = FormData(..data, values: [#(name, value), ..data.values])
       #(data, reader, quotas)
     }
@@ -1063,11 +1103,6 @@ fn read_multipart(
     // There are no more parts, we're done.
     option.None -> Ok(FormData(sort_keys(data.values), sort_keys(data.files)))
   }
-}
-
-fn bit_array_to_string(bits: BitArray) -> Result(String, Response) {
-  bit_array.to_string(bits)
-  |> result.replace_error(bad_request())
 }
 
 fn multipart_file_append(
@@ -1123,7 +1158,7 @@ fn multipart_body(
     }
 
     http.MoreRequiredForBody(chunk, parse) -> {
-      let parse = fn_with_bad_request_error(parse)
+      let parse = fn_with_bad_request_error(parse, invalid_form)
       let reader = BufferedReader(reader, <<>>)
       use data <- result.try(append(data, chunk))
       multipart_body(reader, parse, boundary, chunk_size, quota, append, data)
@@ -1133,10 +1168,13 @@ fn multipart_body(
 
 fn fn_with_bad_request_error(
   f: fn(a) -> Result(b, c),
+  error: String,
 ) -> fn(a) -> Result(b, Response) {
   fn(a) {
-    f(a)
-    |> result.replace_error(bad_request())
+    case f(a) {
+      Ok(x) -> Ok(x)
+      Error(_) -> Error(bad_request(error))
+    }
   }
 }
 
@@ -1151,21 +1189,21 @@ fn multipart_content_disposition(
       option.from_result(list.key_find(header.parameters, "filename"))
     #(name, filename)
   }
-  |> result.replace_error(bad_request())
+  |> result.replace_error(bad_request(invalid_content_disposition))
 }
 
 fn read_chunk(
   reader: BufferedReader,
   chunk_size: Int,
 ) -> Result(#(BitArray, internal.Reader), Response) {
-  buffered_read(reader, chunk_size)
-  |> result.replace_error(bad_request())
-  |> result.try(fn(chunk) {
-    case chunk {
-      internal.Chunk(chunk, next) -> Ok(#(chunk, next))
-      internal.ReadingFinished -> Error(bad_request())
-    }
-  })
+  case buffered_read(reader, chunk_size) {
+    Error(_) -> Error(bad_request(unexpected_end))
+    Ok(chunk) ->
+      case chunk {
+        internal.Chunk(chunk, next) -> Ok(#(chunk, next))
+        internal.ReadingFinished -> Error(bad_request(unexpected_end))
+      }
+  }
 }
 
 fn multipart_headers(
@@ -1186,8 +1224,10 @@ fn multipart_headers(
     }
     http.MoreRequiredForHeaders(parse) -> {
       let parse = fn(chunk) {
-        parse(chunk)
-        |> result.replace_error(bad_request())
+        case parse(chunk) {
+          Ok(parsed) -> Ok(parsed)
+          Error(_) -> Error(bad_request(invalid_form))
+        }
       }
       let reader = BufferedReader(reader, <<>>)
       multipart_headers(reader, parse, chunk_size, quotas)
@@ -1197,13 +1237,6 @@ fn multipart_headers(
 
 fn sort_keys(pairs: List(#(String, t))) -> List(#(String, t)) {
   list.sort(pairs, fn(a, b) { string.compare(a.0, b.0) })
-}
-
-fn or_400(result: Result(value, error), next: fn(value) -> Response) -> Response {
-  case result {
-    Ok(value) -> next(value)
-    Error(_) -> bad_request()
-  }
 }
 
 /// Data parsed from form sent in a request's body.
@@ -1488,7 +1521,7 @@ fn handle_file_range_header(
 
     use range <- result.try(
       parse_range_header(raw_range)
-      |> result.replace_error(bad_request()),
+      |> result.replace_error(bad_request(invalid_range)),
     )
 
     let range = case range.offset < 0 {
@@ -2014,7 +2047,7 @@ pub fn csrf_known_header_protection(
   case origin, host {
     _, Error(_) -> {
       log_warning("Host header missing from request")
-      bad_request()
+      bad_request(invalid_host)
     }
     // If the request does not have origin headers then we cannot perform an
     // origin check, so we must remove the cookie headers to ensure that a CSRF
@@ -2040,7 +2073,7 @@ pub fn csrf_known_header_protection(
         True -> next(request)
         False -> {
           log_warning("Origin-host mismatch: " <> host <> " " <> origin)
-          bad_request()
+          bad_request(invalid_origin)
         }
       }
     }

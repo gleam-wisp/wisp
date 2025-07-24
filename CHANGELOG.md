@@ -16,6 +16,7 @@
   a `StringTree`.
 - The `Empty` response body type has been removed.
 - The `moved_permanently` function has been renamed to `permanent_redirect`.
+- The `bad_request` function now takes a string as an argument.
 
 ## v1.8.0 - 2025-06-20
 
