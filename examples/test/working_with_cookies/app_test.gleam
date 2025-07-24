@@ -11,7 +11,8 @@ pub fn home_not_logged_in_test() {
 
   assert response.status == 303
 
-  assert response.headers == [#("location", "/session")]
+  assert response.headers
+    == [#("location", "/session"), #("content-type", "text/plain")]
 }
 
 pub fn home_logged_in_test() {
