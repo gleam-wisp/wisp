@@ -108,7 +108,7 @@ fn handle_file_upload(req: Request) -> Response {
       |> wisp.html_response(200)
     }
     Error(_) -> {
-      wisp.bad_request()
+      wisp.bad_request("File missing")
     }
   }
 }

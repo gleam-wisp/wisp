@@ -13,7 +13,8 @@ pub fn post_wrong_content_type_test() {
 
   assert response.status == 415
 
-  assert response.headers == [#("accept", "text/csv")]
+  assert response.headers
+    == [#("accept", "text/csv"), #("content-type", "text/plain")]
 }
 
 pub fn post_successful_test() {

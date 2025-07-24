@@ -24,6 +24,7 @@ pub fn submit_wrong_content_type_test() {
   assert response.headers
     == [
       #("accept", "application/x-www-form-urlencoded, multipart/form-data"),
+      #("content-type", "text/plain"),
     ]
 }
 
