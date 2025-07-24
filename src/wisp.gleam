@@ -72,7 +72,7 @@ pub type Body {
 pub type Response =
   HttpResponse(Body)
 
-/// Create an empty response with the given status code.
+/// Create a response with the given status code.
 ///
 /// # Examples
 ///
@@ -284,11 +284,7 @@ pub fn string_tree_body(response: Response, content: StringTree) -> Response {
 /// let body =
 /// response(201)
 /// |> string_body("Hello, Joe!")
-/// // -> Response(
-/// //   201,
-/// //   [],
-/// //   Text(string_tree.from_string("Hello, Joe"))
-/// // )
+/// // -> Response(201, [], Text("Hello, Joe"))
 /// ```
 ///
 pub fn string_body(response: Response, content: String) -> Response {
@@ -312,7 +308,7 @@ pub fn escape_html(content: String) -> String {
   houdini.escape(content)
 }
 
-/// Create an empty response with status code 405: Method Not Allowed. Use this
+/// Create a response with status code 405: Method Not Allowed. Use this
 /// when a request does not have an appropriate method to be handled.
 ///
 /// The `allow` header will be set to a comma separated list of the permitted
@@ -322,7 +318,7 @@ pub fn escape_html(content: String) -> String {
 ///
 /// ```gleam
 /// method_not_allowed(allowed: [Get, Post])
-/// // -> Response(405, [#("allow", "GET, POST")], Empty)
+/// // -> Response(405, [#("allow", "GET, POST")], Text("Method not allowed"))
 /// ```
 ///
 pub fn method_not_allowed(allowed methods: List(Method)) -> Response {
@@ -335,46 +331,46 @@ pub fn method_not_allowed(allowed methods: List(Method)) -> Response {
   HttpResponse(405, [#("allow", allowed)], Text("Method not allowed"))
 }
 
-/// Create an empty response with status code 200: OK.
+/// Create a response with status code 200: OK.
 ///
 /// # Examples
 ///
 /// ```gleam
 /// ok()
-/// // -> Response(200, [], Empty)
+/// // -> Response(200, [#("content-type", "text/plain")], Text("OK"))
 /// ```
 ///
 pub fn ok() -> Response {
-  HttpResponse(200, [], Text("OK"))
+  HttpResponse(200, [content_text], Text("OK"))
 }
 
-/// Create an empty response with status code 201: Created.
+/// Create a response with status code 201: Created.
 ///
 /// # Examples
 ///
 /// ```gleam
 /// created()
-/// // -> Response(201, [], Empty)
+/// // -> Response(201, [#("content-type", "text/plain")], Text("Created"))
 /// ```
 ///
 pub fn created() -> Response {
-  HttpResponse(201, [], Text("Created"))
+  HttpResponse(201, [content_text], Text("Created"))
 }
 
-/// Create an empty response with status code 202: Accepted.
+/// Create a response with status code 202: Accepted.
 ///
 /// # Examples
 ///
 /// ```gleam
 /// accepted()
-/// // -> Response(202, [], Empty)
+/// // -> Response(202, [#("content-type", "text/plain")], Text("Accepted"))
 /// ```
 ///
 pub fn accepted() -> Response {
-  HttpResponse(202, [], Text("Accepted"))
+  HttpResponse(202, [content_text], Text("Accepted"))
 }
 
-/// Create an empty response with status code 303: See Other, and the `location`
+/// Create a response with status code 303: See Other, and the `location`
 /// header set to the given URL. Used to redirect the client to another page.
 ///
 /// # Examples
@@ -392,7 +388,7 @@ pub fn redirect(to url: String) -> Response {
   HttpResponse(303, [#("location", url)], Text("See other: " <> url))
 }
 
-/// Create an empty response with status code 308: Permanent redirect, and the
+/// Create a response with status code 308: Permanent redirect, and the
 /// `location` header set to the given URL. Used to redirect the client to
 /// another page.
 ///
@@ -414,7 +410,7 @@ pub fn permanent_redirect(to url: String) -> Response {
   HttpResponse(308, [#("location", url)], Text("Permanent redirect: " <> url))
 }
 
-/// Create an empty response with status code 204: No content.
+/// Create a response with status code 204: No content.
 ///
 /// # Examples
 ///
@@ -427,26 +423,26 @@ pub fn no_content() -> Response {
   HttpResponse(204, [], Text(""))
 }
 
-/// Create an empty response with status code 404: Not found.
+/// Create a response with status code 404: Not found.
 ///
 /// # Examples
 ///
 /// ```gleam
 /// not_found()
-/// // -> Response(404, [], Text("Not found"))
+/// // -> Response(404, [#("content-type", "text/plain")], Text("Not found"))
 /// ```
 ///
 pub fn not_found() -> Response {
-  HttpResponse(404, [], Text("Not found"))
+  HttpResponse(404, [content_text], Text("Not found"))
 }
 
-/// Create an empty response with status code 400: Bad request.
+/// Create a response with status code 400: Bad request.
 ///
 /// # Examples
 ///
 /// ```gleam
 /// bad_request("Invalid JSON")
-/// // -> Response(400, [], Text("Bad request: Invalid JSON"))
+/// // -> Response(400, [#("content-type", "text/plain")], Text("Bad request: Invalid JSON"))
 /// ```
 ///
 pub fn bad_request(detail: String) -> Response {
@@ -454,23 +450,23 @@ pub fn bad_request(detail: String) -> Response {
     "" -> "Bad request"
     _ -> "Bad request: " <> detail
   }
-  HttpResponse(400, [], Text(body))
+  HttpResponse(400, [content_text], Text(body))
 }
 
-/// Create an empty response with status code 413: Entity too large.
+/// Create a response with status code 413: Entity too large.
 ///
 /// # Examples
 ///
 /// ```gleam
 /// entity_too_large()
-/// // -> Response(413, [], Text("Entity too large"))
+/// // -> Response(413, [#("content-type", "text/plain")], Text("Entity too large"))
 /// ```
 ///
 pub fn entity_too_large() -> Response {
-  HttpResponse(413, [], Text("Entity too large"))
+  HttpResponse(413, [content_text], Text("Entity too large"))
 }
 
-/// Create an empty response with status code 415: Unsupported media type.
+/// Create a response with status code 415: Unsupported media type.
 ///
 /// The `allow` header will be set to a comma separated list of the permitted
 /// content-types.
@@ -484,34 +480,40 @@ pub fn entity_too_large() -> Response {
 ///
 pub fn unsupported_media_type(accept acceptable: List(String)) -> Response {
   let acceptable = string.join(acceptable, ", ")
-  HttpResponse(415, [#("accept", acceptable)], Text("Unsupported media type"))
+  HttpResponse(
+    415,
+    [#("accept", acceptable), content_text],
+    Text("Unsupported media type"),
+  )
 }
 
-/// Create an empty response with status code 422: Unprocessable entity.
+/// Create a response with status code 422: Unprocessable entity.
 ///
 /// # Examples
 ///
 /// ```gleam
 /// unprocessable_entity()
-/// // -> Response(422, [], Text("Unprocessable entity"))
+/// // -> Response(422, [#("content-type", "text/plain")], Text("Unprocessable entity"))
 /// ```
 ///
 pub fn unprocessable_entity() -> Response {
-  HttpResponse(422, [], Text("Unprocessable entity"))
+  HttpResponse(422, [content_text], Text("Unprocessable entity"))
 }
 
-/// Create an empty response with status code 500: Internal server error.
+/// Create a response with status code 500: Internal server error.
 ///
 /// # Examples
 ///
 /// ```gleam
 /// internal_server_error()
-/// // -> Response(500, [], Text("Internal server error"))
+/// // -> Response(500, [#("content-type", "text/plain")], Text("Internal server error"))
 /// ```
 ///
 pub fn internal_server_error() -> Response {
-  HttpResponse(500, [], Text("Internal server error"))
+  HttpResponse(500, [content_text], Text("Internal server error"))
 }
+
+const content_text = #("content-type", "text/plain")
 
 const invalid_json = "Invalid JSON"
 
@@ -668,7 +670,7 @@ pub type Request =
   HttpRequest(internal.Connection)
 
 /// This middleware function ensures that the request has a specific HTTP
-/// method, returning an empty response with status code 405: Method not allowed
+/// method, returning a response with status code 405: Method not allowed
 /// if the method is not correct.
 ///
 /// # Examples
@@ -713,7 +715,7 @@ pub const path_segments = request.path_segments
 /// ```gleam
 /// > wisp.ok()
 /// > |> wisp.set_header("content-type", "application/json")
-/// Request(200, [#("content-type", "application/json")], Empty)
+/// Request(200, [#("content-type", "application/json")], Text("OK"))
 /// ```
 ///
 pub const set_header = response.set_header
@@ -778,10 +780,10 @@ pub fn method_override(request: HttpRequest(a)) -> HttpRequest(a) {
 /// responsibility of the caller to cache the body if it is needed multiple
 /// times.
 ///
-/// If the body is larger than the `max_body_size` limit then an empty response
+/// If the body is larger than the `max_body_size` limit then a response
 /// with status code 413: Entity too large will be returned to the client.
 ///
-/// If the body is found not to be valid UTF-8 then an empty response with
+/// If the body is found not to be valid UTF-8 then a response with
 /// status code 400: Bad request will be returned to the client.
 ///
 /// # Examples
@@ -818,7 +820,7 @@ pub fn require_string_body(
 /// responsibility of the caller to cache the body if it is needed multiple
 /// times.
 ///
-/// If the body is larger than the `max_body_size` limit then an empty response
+/// If the body is larger than the `max_body_size` limit then a response
 /// with status code 413: Entity too large will be returned to the client.
 ///
 /// # Examples
@@ -853,7 +855,7 @@ pub fn require_bit_array_body(
 /// responsibility of the caller to cache the body if it is needed multiple
 /// times.
 ///
-/// If the body is larger than the `max_body_size` limit then an empty response
+/// If the body is larger than the `max_body_size` limit then a response
 /// with status code 413: Entity too large will be returned to the client.
 ///
 pub fn read_body_bits(request: Request) -> Result(BitArray, Nil) {
@@ -911,15 +913,15 @@ fn read_body_loop(
 /// use them after the request has completed you will need to move them to a new
 /// location.
 ///
-/// If the request does not have a recognised `content-type` header then an
-/// empty response with status code 415: Unsupported media type will be returned
+/// If the request does not have a recognised `content-type` header then a
+/// response with status code 415: Unsupported media type will be returned
 /// to the client.
 ///
 /// If the request body is larger than the `max_body_size` or `max_files_size`
-/// limits then an empty response with status code 413: Entity too large will be
+/// limits then a response with status code 413: Entity too large will be
 /// returned to the client.
 ///
-/// If the body cannot be parsed successfully then an empty response with status
+/// If the body cannot be parsed successfully then a response with status
 /// code 400: Bad request will be returned to the client.
 ///
 pub fn require_form(
@@ -944,7 +946,7 @@ pub fn require_form(
 }
 
 /// This middleware function ensures that the request has a value for the
-/// `content-type` header, returning an empty response with status code 415:
+/// `content-type` header, returning a response with status code 415:
 /// Unsupported media type if the header is not the expected value
 ///
 /// # Examples
@@ -987,15 +989,15 @@ pub fn require_content_type(
 /// The `set_max_body_size` and `set_read_chunk_size` can be used to configure
 /// the reading of the request body.
 ///
-/// If the request does not have the `content-type` set to `application/json` an
-/// empty response with status code 415: Unsupported media type will be returned
+/// If the request does not have the `content-type` set to `application/json` a
+/// response with status code 415: Unsupported media type will be returned
 /// to the client.
 ///
 /// If the request body is larger than the `max_body_size` or `max_files_size`
-/// limits then an empty response with status code 413: Entity too large will be
+/// limits then a response with status code 413: Entity too large will be
 /// returned to the client.
 ///
-/// If the body cannot be parsed successfully then an empty response with status
+/// If the body cannot be parsed successfully then a response with status
 /// code 400: Bad request will be returned to the client.
 ///
 pub fn require_json(request: Request, next: fn(Dynamic) -> Response) -> Response {
@@ -1266,7 +1268,7 @@ pub type UploadedFile {
 // Middleware
 //
 
-/// A middleware function that rescues crashes and returns an empty response
+/// A middleware function that rescues crashes and returns a response
 /// with status code 500: Internal server error.
 ///
 /// # Examples
