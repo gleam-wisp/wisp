@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.0.0 - Unreleased.
+## v2.0.0-rc1 - 2025-07-24
 
 - `set_cookie` will no longer set the `Secure` cookie attributes for HTTP
   requests that do not have the `x-forwarded-proto` header. This means that
