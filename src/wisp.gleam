@@ -461,17 +461,17 @@ pub fn bad_request(detail: String) -> Response {
   HttpResponse(400, [content_text], Text(body))
 }
 
-/// Create a response with status code 413: Entity too large.
+/// Create a response with status code 413: Content too large.
 ///
 /// # Examples
 ///
 /// ```gleam
-/// entity_too_large()
-/// // -> Response(413, [#("content-type", "text/plain")], Text("Entity too large"))
+/// content_too_large()
+/// // -> Response(413, [#("content-type", "text/plain")], Text("Content too large"))
 /// ```
 ///
-pub fn entity_too_large() -> Response {
-  HttpResponse(413, [content_text], Text("Entity too large"))
+pub fn content_too_large() -> Response {
+  HttpResponse(413, [content_text], Text("Content too large"))
 }
 
 /// Create a response with status code 415: Unsupported media type.
@@ -495,17 +495,17 @@ pub fn unsupported_media_type(accept acceptable: List(String)) -> Response {
   )
 }
 
-/// Create a response with status code 422: Unprocessable entity.
+/// Create a response with status code 422: Unprocessable content.
 ///
 /// # Examples
 ///
 /// ```gleam
-/// unprocessable_entity()
-/// // -> Response(422, [#("content-type", "text/plain")], Text("Unprocessable entity"))
+/// unprocessable_content()
+/// // -> Response(422, [#("content-type", "text/plain")], Text("Unprocessable content"))
 /// ```
 ///
-pub fn unprocessable_entity() -> Response {
-  HttpResponse(422, [content_text], Text("Unprocessable entity"))
+pub fn unprocessable_content() -> Response {
+  HttpResponse(422, [content_text], Text("Unprocessable content"))
 }
 
 /// Create a response with status code 500: Internal server error.
@@ -562,14 +562,14 @@ type Quotas {
 fn decrement_body_quota(quotas: Quotas, size: Int) -> Result(Quotas, Response) {
   let quotas = Quotas(..quotas, body: quotas.body - size)
   case quotas.body < 0 {
-    True -> Error(entity_too_large())
+    True -> Error(content_too_large())
     False -> Ok(quotas)
   }
 }
 
 fn decrement_quota(quota: Int, size: Int) -> Result(Int, Response) {
   case quota - size {
-    quota if quota < 0 -> Error(entity_too_large())
+    quota if quota < 0 -> Error(content_too_large())
     quota -> Ok(quota)
   }
 }
@@ -587,7 +587,7 @@ fn buffered_read(
 /// Set the maximum permitted size of a request body of the request in bytes.
 ///
 /// If a body is larger than this size attempting to read the body will result
-/// in a response with status code 413: Entity too large will be returned to the
+/// in a response with status code 413: Content too large will be returned to the
 /// client.
 ///
 /// This limit only applies for headers and bodies that get read into memory.
@@ -634,7 +634,7 @@ pub fn get_secret_key_base(request: Request) -> String {
 ///
 /// If a request contains fails which are larger in total than this size
 /// then attempting to read the body will result in a response with status code
-/// 413: Entity too large will be returned to the client.
+/// 413: Content too large will be returned to the client.
 ///
 /// This limit only applies for files in a multipart body that get streamed to
 /// disc. For headers and other content that gets read into memory use the
@@ -778,7 +778,7 @@ pub fn method_override(request: HttpRequest(a)) -> HttpRequest(a) {
   |> result.unwrap(request)
 }
 
-// TODO: don't always return entity too large. Other errors are possible, such as
+// TODO: don't always return content too large. Other errors are possible, such as
 // network errors.
 /// A middleware function which reads the entire body of the request as a string.
 ///
@@ -789,7 +789,7 @@ pub fn method_override(request: HttpRequest(a)) -> HttpRequest(a) {
 /// times.
 ///
 /// If the body is larger than the `max_body_size` limit then a response
-/// with status code 413: Entity too large will be returned to the client.
+/// with status code 413: Content too large will be returned to the client.
 ///
 /// If the body is found not to be valid UTF-8 then a response with
 /// status code 400: Bad request will be returned to the client.
@@ -813,11 +813,11 @@ pub fn require_string_body(
         Ok(body) -> next(body)
         Error(_) -> bad_request(invalid_utf8)
       }
-    Error(_) -> entity_too_large()
+    Error(_) -> content_too_large()
   }
 }
 
-// TODO: don't always return entity too large. Other errors are possible, such as
+// TODO: don't always return content too large. Other errors are possible, such as
 // network errors.
 /// A middleware function which reads the entire body of the request as a bit
 /// string.
@@ -829,7 +829,7 @@ pub fn require_string_body(
 /// times.
 ///
 /// If the body is larger than the `max_body_size` limit then a response
-/// with status code 413: Entity too large will be returned to the client.
+/// with status code 413: Content too large will be returned to the client.
 ///
 /// # Examples
 ///
@@ -846,11 +846,11 @@ pub fn require_bit_array_body(
 ) -> Response {
   case read_body_bits(request) {
     Ok(body) -> next(body)
-    Error(_) -> entity_too_large()
+    Error(_) -> content_too_large()
   }
 }
 
-// TODO: don't always return entity to large. Other errors are possible, such as
+// TODO: don't always return content to large. Other errors are possible, such as
 // network errors.
 /// Read the entire body of the request as a bit array.
 ///
@@ -864,7 +864,7 @@ pub fn require_bit_array_body(
 /// times.
 ///
 /// If the body is larger than the `max_body_size` limit then a response
-/// with status code 413: Entity too large will be returned to the client.
+/// with status code 413: Content too large will be returned to the client.
 ///
 pub fn read_body_bits(request: Request) -> Result(BitArray, Nil) {
   let connection = request.body
@@ -926,7 +926,7 @@ fn read_body_loop(
 /// to the client.
 ///
 /// If the request body is larger than the `max_body_size` or `max_files_size`
-/// limits then a response with status code 413: Entity too large will be
+/// limits then a response with status code 413: Content too large will be
 /// returned to the client.
 ///
 /// If the body cannot be parsed successfully then a response with status
@@ -1002,7 +1002,7 @@ pub fn require_content_type(
 /// to the client.
 ///
 /// If the request body is larger than the `max_body_size` or `max_files_size`
-/// limits then a response with status code 413: Entity too large will be
+/// limits then a response with status code 413: Content too large will be
 /// returned to the client.
 ///
 /// If the body cannot be parsed successfully then a response with status

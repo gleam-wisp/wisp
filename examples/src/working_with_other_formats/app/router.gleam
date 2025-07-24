@@ -55,7 +55,7 @@ pub fn handle_request(req: Request) -> Response {
     }
 
     Error(_error) -> {
-      wisp.unprocessable_entity()
+      wisp.unprocessable_content()
     }
   }
 }

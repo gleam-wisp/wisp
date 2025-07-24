@@ -100,12 +100,12 @@ pub fn internal_server_error_test() {
     )
 }
 
-pub fn entity_too_large_test() {
-  assert wisp.entity_too_large()
+pub fn content_too_large_test() {
+  assert wisp.content_too_large()
     == Response(
       413,
       [#("content-type", "text/plain")],
-      wisp.Text("Entity too large"),
+      wisp.Text("Content too large"),
     )
 }
 
@@ -153,12 +153,12 @@ pub fn unsupported_media_type_test() {
     )
 }
 
-pub fn unprocessable_entity_test() {
-  assert wisp.unprocessable_entity()
+pub fn unprocessable_content_test() {
+  assert wisp.unprocessable_content()
     == Response(
       422,
       [#("content-type", "text/plain")],
-      wisp.Text("Unprocessable entity"),
+      wisp.Text("Unprocessable content"),
     )
 }
 
@@ -764,7 +764,7 @@ pub fn json_too_big_test() {
     == Response(
       413,
       [#("content-type", "text/plain")],
-      wisp.Text("Entity too large"),
+      wisp.Text("Content too large"),
     )
 }
 
@@ -812,7 +812,7 @@ pub fn urlencoded_too_big_form_test() {
     == Response(
       413,
       [#("content-type", "text/plain")],
-      wisp.Text("Entity too large"),
+      wisp.Text("Content too large"),
     )
 }
 
@@ -860,7 +860,7 @@ Content-Disposition: form-data; name=\"one\"\r
     == Response(
       413,
       [#("content-type", "text/plain")],
-      wisp.Text("Entity too large"),
+      wisp.Text("Content too large"),
     )
 }
 
@@ -972,21 +972,21 @@ Content-Disposition: form-data; name=\"two\"; filename=\"another.txt\"\r
     == Response(
       413,
       [#("content-type", "text/plain")],
-      wisp.Text("Entity too large"),
+      wisp.Text("Content too large"),
     )
 
   assert testcase(2, fn(_) { panic as "should be unreachable for limit of 2" })
     == Response(
       413,
       [#("content-type", "text/plain")],
-      wisp.Text("Entity too large"),
+      wisp.Text("Content too large"),
     )
 
   assert testcase(3, fn(_) { panic as "should be unreachable for limit of 3" })
     == Response(
       413,
       [#("content-type", "text/plain")],
-      wisp.Text("Entity too large"),
+      wisp.Text("Content too large"),
     )
 
   assert testcase(4, fn(_) { Nil })

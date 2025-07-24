@@ -52,6 +52,6 @@ pub fn handle_request(req: Request) -> Response {
 
     // In a real application we would probably want to return some JSON error
     // object, but for this example we'll just return an empty response.
-    Error(_) -> wisp.unprocessable_entity()
+    Error(_) -> wisp.unprocessable_content()
   }
 }
