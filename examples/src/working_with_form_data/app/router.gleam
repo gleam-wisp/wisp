@@ -60,7 +60,7 @@ pub fn handle_form_submission(req: Request) -> Response {
       |> wisp.html_body(content)
     }
     Error(_) -> {
-      wisp.bad_request()
+      wisp.bad_request("Invalid form")
     }
   }
 }

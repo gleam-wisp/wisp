@@ -14,7 +14,8 @@ pub fn submit_wrong_content_type_test() {
 
   assert response.status == 415
 
-  assert response.headers == [#("accept", "application/json")]
+  assert response.headers
+    == [#("accept", "application/json"), #("content-type", "text/plain")]
 }
 
 pub fn submit_missing_parameters_test() {
