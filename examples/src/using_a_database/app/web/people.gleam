@@ -86,7 +86,7 @@ pub fn create_person(req: Request, ctx: Context) -> Response {
   // if there was an error.
   case result {
     Ok(json) -> wisp.json_response(json, 201)
-    Error(Nil) -> wisp.unprocessable_entity()
+    Error(Nil) -> wisp.unprocessable_content()
   }
 }
 

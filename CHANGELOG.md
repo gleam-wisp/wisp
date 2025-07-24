@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.0.0-rc2 - 2025-07-
+- The `unprocessable_entity` function has renamed to `unprocessable_content`.
+- The `entity_too_large` function has renamed to `content_too_large`.
+
 ## v2.0.0-rc1 - 2025-07-24
 
 - `set_cookie` will no longer set the `Secure` cookie attributes for HTTP
