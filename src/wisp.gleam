@@ -750,9 +750,11 @@ pub fn get_query(request: Request) -> List(#(String, String)) {
 ///
 /// The `_method` query paramerter can be specified in a HTML form like so:
 ///
-///    <form method="POST" action="/item/1?_method=DELETE">
-///      <button type="submit">Delete item</button>
-///    </form>
+/// ```html
+/// <form method="POST" action="/item/1?_method=DELETE">
+///   <button type="submit">Delete item</button>
+/// </form>
+/// ```
 ///
 /// # Examples
 ///
