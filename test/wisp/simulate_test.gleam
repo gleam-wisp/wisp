@@ -1,8 +1,10 @@
+import gleam/bit_array
 import gleam/http
 import gleam/http/response
 import gleam/json
 import gleam/list
 import gleam/option.{None}
+import gleam/string
 import wisp
 import wisp/simulate
 
@@ -206,4 +208,93 @@ pub fn session_test() {
 
   assert list.key_find(request.headers, "cookie")
     == Ok("zero=MA; one=MTE; three=Mw")
+}
+
+pub fn multipart_body_test() {
+  let file1 = simulate.uploaded_text_file("file1", "test.txt", "Hello, world!")
+  let file2 =
+    simulate.uploaded_file("file2", "data.bin", "application/octet-stream", <<
+      1,
+      2,
+      3,
+      4,
+    >>)
+
+  let request =
+    simulate.request(http.Post, "/upload")
+    |> simulate.multipart_body(
+      [#("name", "test"), #("description", "A test file")],
+      [file1, file2],
+    )
+
+  let assert Ok(content_type) = list.key_find(request.headers, "content-type")
+  assert string.starts_with(content_type, "multipart/form-data; boundary=")
+
+  let body_bits = case wisp.read_body_bits(request) {
+    Ok(bits) -> bits
+    Error(_) -> <<>>
+  }
+  let body_string = case bit_array.to_string(body_bits) {
+    Ok(s) -> s
+    Error(_) -> ""
+  }
+
+  assert body_string |> string.contains("name=\"name\"") == True
+  assert body_string |> string.contains("test") == True
+  assert body_string |> string.contains("name=\"description\"") == True
+  assert body_string |> string.contains("A test file") == True
+
+  // Check for file content
+  assert body_string |> string.contains("name=\"file1\"") == True
+  assert body_string |> string.contains("filename=\"test.txt\"") == True
+  assert body_string |> string.contains("Content-Type: text/plain") == True
+  assert body_string |> string.contains("Hello, world!") == True
+
+  assert body_string |> string.contains("name=\"file2\"") == True
+  assert body_string |> string.contains("filename=\"data.bin\"") == True
+  assert body_string
+    |> string.contains("Content-Type: application/octet-stream")
+    == True
+}
+
+pub fn uploaded_file_test() {
+  let file =
+    simulate.uploaded_file("test-file", "example.jpg", "image/jpeg", <<
+      "fake image data":utf8,
+    >>)
+
+  assert file.name == "test-file"
+  assert file.filename == "example.jpg"
+  assert file.content_type == "image/jpeg"
+  assert file.content == <<"fake image data":utf8>>
+}
+
+pub fn uploaded_text_file_test() {
+  let file =
+    simulate.uploaded_text_file("doc", "readme.txt", "Documentation text")
+
+  assert file.name == "doc"
+  assert file.filename == "readme.txt"
+  assert file.content_type == "text/plain"
+  assert file.content == <<"Documentation text":utf8>>
+}
+
+pub fn multipart_generation_validation_test() {
+  let file =
+    simulate.uploaded_text_file("uploaded-file", "test.txt", "Hello, world!")
+  let request =
+    simulate.browser_request(http.Post, "/upload")
+    |> simulate.multipart_body([#("name", "test")], [file])
+
+  let content_type = list.key_find(request.headers, "content-type")
+  assert case content_type {
+    Ok(ct) -> string.starts_with(ct, "multipart/form-data; boundary=")
+    Error(_) -> False
+  }
+
+  let body_result = wisp.read_body_bits(request)
+  assert case body_result {
+    Ok(bits) -> bit_array.byte_size(bits) > 50
+    Error(_) -> False
+  }
 }
