@@ -53,11 +53,18 @@ pub fn file_from_memory_test() {
 }
 
 pub fn upload_file_test() {
-  // Oh no! What's this? There's no test here!
-  //
-  // The helper for constructing a multipart form request in tests has not yet
-  // been implemented. If this is something you need for your project, please
-  // let us know and we'll bump it up the list of priorities.
-  //
-  Nil
+  let file =
+    simulate.uploaded_text_file("uploaded-file", "test.txt", "Hello, Joe!")
+  let request =
+    simulate.browser_request(http.Post, "/upload-file")
+    |> simulate.multipart_body([], [file])
+
+  let response = router.handle_request(request)
+
+  assert response.status == 200
+  assert response.headers == [#("content-type", "text/html; charset=utf-8")]
+
+  let body = simulate.read_body(response)
+  assert string.contains(body, "Thank you for your file!")
+  assert string.contains(body, "test.txt")
 }
