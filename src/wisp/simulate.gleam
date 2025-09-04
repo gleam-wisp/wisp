@@ -157,8 +157,8 @@ pub fn json_body(request: Request, data: Json) -> Request {
 
 /// Represents a file to be uploaded in a multipart form.
 ///
-pub type UploadedFile {
-  UploadedFile(
+pub type FileUpload {
+  FileUpload(
     name: String,
     filename: String,
     content_type: String,
@@ -188,11 +188,11 @@ pub type UploadedFile {
 /// 
 pub fn multipart_body(
   request: Request,
-  form_values: List(#(String, String)),
-  files: List(UploadedFile),
+  values values: List(#(String, String)),
+  files files: List(FileUpload),
 ) -> Request {
   let boundary = generate_boundary()
-  let body_data = build_multipart_body(form_values, files, boundary)
+  let body_data = build_multipart_body(values, files, boundary)
   let body = wisp.create_canned_connection(body_data, default_secret_key_base)
 
   request
@@ -212,8 +212,8 @@ pub fn uploaded_file(
   filename: String,
   content_type: String,
   content: BitArray,
-) -> UploadedFile {
-  UploadedFile(
+) -> FileUpload {
+  FileUpload(
     name: name,
     filename: filename,
     content_type: content_type,
@@ -227,8 +227,8 @@ pub fn uploaded_text_file(
   name: String,
   filename: String,
   content: String,
-) -> UploadedFile {
-  UploadedFile(
+) -> FileUpload {
+  FileUpload(
     name: name,
     filename: filename,
     content_type: "text/plain",
@@ -244,40 +244,51 @@ fn generate_boundary() -> String {
 
 fn build_multipart_body(
   form_values: List(#(String, String)),
-  files: List(UploadedFile),
+  files: List(FileUpload),
   boundary: String,
 ) -> BitArray {
-  // Build each part as a complete section
-  let form_parts = list.map(form_values, fn(field) {
-    let #(name, value) = field
-    // Each part: --boundary\r\nHeaders\r\n\r\nContent\r\n
-    <<"--":utf8, boundary:utf8, "\r\n":utf8,
-      "Content-Disposition: form-data; name=\"":utf8, name:utf8, "\"\r\n":utf8,
-      "\r\n":utf8,
-      value:utf8, "\r\n":utf8>>
-  })
-  
-  let file_parts = list.map(files, fn(file) {
-    // Each file part: --boundary\r\nHeaders\r\n\r\nContent\r\n  
-    <<"--":utf8, boundary:utf8, "\r\n":utf8,
-      "Content-Disposition: form-data; name=\"":utf8, file.name:utf8, 
-      "\"; filename=\"":utf8, file.filename:utf8, "\"\r\n":utf8,
-      "Content-Type: ":utf8, file.content_type:utf8, "\r\n":utf8,
-      "\r\n":utf8,
-      file.content:bits, "\r\n":utf8>>
-  })
-  
-  // Combine all parts
-  let all_parts = list.append(form_parts, file_parts)
-  
-  // Final boundary: --boundary--\r\n
-  let final_boundary = <<"--":utf8, boundary:utf8, "--\r\n":utf8>>
-  
-  // Concatenate everything
-  let body_content = bit_array.concat(all_parts)
-  <<body_content:bits, final_boundary:bits>>
-}
+  // Append form parts
+  let body =
+    list.fold(form_values, <<>>, fn(acc, field) {
+      let #(name, value) = field
+      // Append this part to accumulator
+      <<
+        acc:bits,
+        "--":utf8,
+        boundary:utf8,
+        "\r\n":utf8,
+        "Content-Disposition: form-data; name=\"":utf8,
+        name:utf8,
+        "\"\r\n":utf8,
+        "\r\n":utf8,
+        value:utf8,
+        "\r\n":utf8,
+      >>
+    })
+    |> list.fold(files, _, fn(acc, file) {
+      // Append this file part to accumulator
+      <<
+        acc:bits,
+        "--":utf8,
+        boundary:utf8,
+        "\r\n":utf8,
+        "Content-Disposition: form-data; name=\"":utf8,
+        file.name:utf8,
+        "\"; filename=\"":utf8,
+        file.filename:utf8,
+        "\"\r\n":utf8,
+        "Content-Type: ":utf8,
+        file.content_type:utf8,
+        "\r\n":utf8,
+        "\r\n":utf8,
+        file.content:bits,
+        "\r\n":utf8,
+      >>
+    })
 
+  // Append final boundary
+  <<body:bits, "--":utf8, boundary:utf8, "--\r\n":utf8>>
+}
 
 /// Read a text body from a response.
 ///
