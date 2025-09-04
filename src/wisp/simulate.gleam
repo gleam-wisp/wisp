@@ -207,7 +207,7 @@ pub fn multipart_body(
 /// 
 /// This is a convenience function for creating file upload test data.
 /// 
-pub fn uploaded_file(
+pub fn upload_file(
   name: String,
   filename: String,
   content_type: String,
@@ -223,7 +223,7 @@ pub fn uploaded_file(
 
 /// Create an UploadedFile from a string for testing text file uploads.
 /// 
-pub fn uploaded_text_file(
+pub fn upload_text_file(
   name: String,
   filename: String,
   content: String,
