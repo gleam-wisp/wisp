@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- The `multipart_body`, `uploaded_file`, and `uploaded_text_file` functions and
+  the `FileUpload` type have been added to the `simulate` module.
+
 ## v2.0.1 - 2025-09-27
 
 - Fixed warnings with latest stdlib.
