@@ -54,7 +54,7 @@ pub fn file_from_memory_test() {
 
 pub fn upload_file_test() {
   let file =
-    simulate.uploaded_text_file("uploaded-file", "test.txt", "Hello, Joe!")
+    simulate.upload_text_file("uploaded-file", "test.txt", "Hello, Joe!")
   let request =
     simulate.browser_request(http.Post, "/upload-file")
     |> simulate.multipart_body([], [file])
