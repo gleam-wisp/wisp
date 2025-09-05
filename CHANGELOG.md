@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.1.0 - Unreleased
+
+- The `simulate` module gains the `mutipart_body`, `upload_file` and
+  `upload_text_file` functions.
+
 ## v2.0.0 - 2025-09-04
 
 - The `unprocessable_entity` function has renamed to `unprocessable_content`.
