@@ -211,9 +211,9 @@ pub fn session_test() {
 }
 
 pub fn multipart_body_test() {
-  let file1 = simulate.uploaded_text_file("file1", "test.txt", "Hello, world!")
+  let file1 = simulate.upload_text_file("file1", "test.txt", "Hello, world!")
   let file2 =
-    simulate.uploaded_file("file2", "data.bin", "application/octet-stream", <<
+    simulate.upload_file("file2", "data.bin", "application/octet-stream", <<
       1,
       2,
       3,
@@ -259,7 +259,7 @@ pub fn multipart_body_test() {
 
 pub fn uploaded_file_test() {
   let file =
-    simulate.uploaded_file("test-file", "example.jpg", "image/jpeg", <<
+    simulate.upload_file("test-file", "example.jpg", "image/jpeg", <<
       "fake image data":utf8,
     >>)
 
@@ -271,7 +271,7 @@ pub fn uploaded_file_test() {
 
 pub fn uploaded_text_file_test() {
   let file =
-    simulate.uploaded_text_file("doc", "readme.txt", "Documentation text")
+    simulate.upload_text_file("doc", "readme.txt", "Documentation text")
 
   assert file.name == "doc"
   assert file.filename == "readme.txt"
@@ -281,7 +281,7 @@ pub fn uploaded_text_file_test() {
 
 pub fn multipart_generation_validation_test() {
   let file =
-    simulate.uploaded_text_file("uploaded-file", "test.txt", "Hello, world!")
+    simulate.upload_text_file("uploaded-file", "test.txt", "Hello, world!")
   let request =
     simulate.browser_request(http.Post, "/upload")
     |> simulate.multipart_body([#("name", "test")], [file])
