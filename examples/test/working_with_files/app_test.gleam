@@ -1,5 +1,6 @@
 import gleam/http
 import gleam/string
+import wisp
 import wisp/simulate
 import working_with_files/app/router
 
@@ -53,11 +54,24 @@ pub fn file_from_memory_test() {
 }
 
 pub fn upload_file_test() {
-  // Oh no! What's this? There's no test here!
-  //
-  // The helper for constructing a multipart form request in tests has not yet
-  // been implemented. If this is something you need for your project, please
-  // let us know and we'll bump it up the list of priorities.
-  //
-  Nil
+  let file1 =
+    simulate.upload_text_file("uploaded-file", "test.txt", "Hello, Joe!")
+  let file2 =
+    simulate.upload_file("other-file", "test.txt", "text/plain", <<
+      "Hello, Joe!",
+    >>)
+  let request =
+    simulate.browser_request(http.Post, "/upload-file")
+    |> simulate.multipart_body([], [file1, file2])
+
+  let response = router.handle_request(request)
+
+  assert response.status == 200
+  assert response.headers == [#("content-type", "text/html; charset=utf-8")]
+
+  {
+    use form_data <- wisp.require_form(request)
+    let assert [#("other-file", _), #("uploaded-file", _)] = form_data.files
+    response
+  }
 }

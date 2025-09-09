@@ -155,6 +155,141 @@ pub fn json_body(request: Request, data: Json) -> Request {
   |> request.set_header("content-type", "application/json")
 }
 
+/// Represents a file to be uploaded in a multipart form.
+///
+pub type FileUpload {
+  FileUpload(
+    name: String,
+    filename: String,
+    content_type: String,
+    content: BitArray,
+  )
+}
+
+/// Add a multipart/form-data body to the request for testing file uploads
+/// and form submissions.
+/// 
+/// The `content-type` header is set to `multipart/form-data` with an
+/// appropriate boundary.
+/// 
+/// # Examples
+/// 
+/// ```gleam
+/// let file = UploadedFile(
+///   name: "uploaded-file",
+///   filename: "test.txt", 
+///   content_type: "text/plain",
+///   content: <<"Hello, world!":utf8>>
+/// )
+/// 
+/// simulate.request(http.Post, "/upload")
+/// |> simulate.multipart_body([#("user", "joe")], [file])
+/// ```
+/// 
+pub fn multipart_body(
+  request: Request,
+  values values: List(#(String, String)),
+  files files: List(FileUpload),
+) -> Request {
+  let boundary = generate_boundary()
+  let body_data = build_multipart_body(values, files, boundary)
+  let body = wisp.create_canned_connection(body_data, default_secret_key_base)
+
+  request
+  |> request.set_body(body)
+  |> request.set_header(
+    "content-type",
+    "multipart/form-data; boundary=" <> boundary,
+  )
+}
+
+/// Create an UploadedFile for testing file uploads.
+/// 
+/// This is a convenience function for creating file upload test data.
+/// 
+pub fn upload_file(
+  name: String,
+  filename: String,
+  content_type: String,
+  content: BitArray,
+) -> FileUpload {
+  FileUpload(
+    name: name,
+    filename: filename,
+    content_type: content_type,
+    content: content,
+  )
+}
+
+/// Create an UploadedFile from a string for testing text file uploads.
+/// 
+pub fn upload_text_file(
+  name: String,
+  filename: String,
+  content: String,
+) -> FileUpload {
+  FileUpload(
+    name: name,
+    filename: filename,
+    content_type: "text/plain",
+    content: bit_array.from_string(content),
+  )
+}
+
+fn generate_boundary() -> String {
+  let random_bytes = crypto.strong_random_bytes(8)
+  let boundary_suffix = bit_array.base16_encode(random_bytes)
+  "boundary" <> boundary_suffix
+}
+
+fn build_multipart_body(
+  form_values: List(#(String, String)),
+  files: List(FileUpload),
+  boundary: String,
+) -> BitArray {
+  // Append form parts
+  let body =
+    list.fold(form_values, <<>>, fn(acc, field) {
+      let #(name, value) = field
+      // Append this part to accumulator
+      <<
+        acc:bits,
+        "--":utf8,
+        boundary:utf8,
+        "\r\n":utf8,
+        "Content-Disposition: form-data; name=\"":utf8,
+        name:utf8,
+        "\"\r\n":utf8,
+        "\r\n":utf8,
+        value:utf8,
+        "\r\n":utf8,
+      >>
+    })
+    |> list.fold(files, _, fn(acc, file) {
+      // Append this file part to accumulator
+      <<
+        acc:bits,
+        "--":utf8,
+        boundary:utf8,
+        "\r\n":utf8,
+        "Content-Disposition: form-data; name=\"":utf8,
+        file.name:utf8,
+        "\"; filename=\"":utf8,
+        file.filename:utf8,
+        "\"\r\n":utf8,
+        "Content-Type: ":utf8,
+        file.content_type:utf8,
+        "\r\n":utf8,
+        "\r\n":utf8,
+        file.content:bits,
+        "\r\n":utf8,
+      >>
+    })
+
+  // Append final boundary
+  <<body:bits, "--":utf8, boundary:utf8, "--\r\n":utf8>>
+}
+
 /// Read a text body from a response.
 ///
 /// # Panics
