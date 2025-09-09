@@ -56,9 +56,13 @@ pub fn file_from_memory_test() {
 pub fn upload_file_test() {
   let file1 =
     simulate.upload_text_file("uploaded-file", "test.txt", "Hello, Joe!")
+  let file2 =
+    simulate.upload_file("other-file", "test.txt", "text/plain", <<
+      "Hello, Joe!",
+    >>)
   let request =
     simulate.browser_request(http.Post, "/upload-file")
-    |> simulate.multipart_body([], [file1])
+    |> simulate.multipart_body([], [file1, file2])
 
   let response = router.handle_request(request)
 
@@ -67,7 +71,7 @@ pub fn upload_file_test() {
 
   {
     use form_data <- wisp.require_form(request)
-    let assert [#("uploaded-file", _)] = form_data.files
+    let assert [#("other-file", _), #("uploaded-file", _)] = form_data.files
     response
   }
 }
