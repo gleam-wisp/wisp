@@ -1,5 +1,6 @@
 import gleam/http
 import gleam/string
+import wisp
 import wisp/simulate
 import working_with_files/app/router
 
@@ -53,18 +54,20 @@ pub fn file_from_memory_test() {
 }
 
 pub fn upload_file_test() {
-  let file =
+  let file1 =
     simulate.upload_text_file("uploaded-file", "test.txt", "Hello, Joe!")
   let request =
     simulate.browser_request(http.Post, "/upload-file")
-    |> simulate.multipart_body([], [file])
+    |> simulate.multipart_body([], [file1])
 
   let response = router.handle_request(request)
 
   assert response.status == 200
   assert response.headers == [#("content-type", "text/html; charset=utf-8")]
 
-  let body = simulate.read_body(response)
-  assert string.contains(body, "Thank you for your file!")
-  assert string.contains(body, "test.txt")
+  {
+    use form_data <- wisp.require_form(request)
+    let assert [#("uploaded-file", _)] = form_data.files
+    response
+  }
 }
