@@ -97,6 +97,9 @@ fn handle_file_upload(req: Request) -> Response {
     // name as the new path for the file.
     wisp.log_info("The file name is reportedly " <> file.file_name)
 
+    // Once the response has been sent the uploaded file will be deleted. If
+    // you want to retain the file then move it to a new location.
+
     Ok(file.file_name)
   }
 
