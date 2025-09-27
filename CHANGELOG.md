@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.0.1 - 2025-09-27
+
+- Fixed warnings with latest stdlib.
+
 ## v2.0.0 - 2025-09-04
 
 - The `unprocessable_entity` function has renamed to `unprocessable_content`.

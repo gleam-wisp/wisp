@@ -1526,7 +1526,7 @@ fn handle_file_range_header(
   file_info: simplifile.FileInfo,
   path: String,
 ) -> Response {
-  {
+  let result = {
     use raw_range <- result.try(
       request.get_header(req, "range") |> result.replace_error(resp),
     )
@@ -1585,7 +1585,11 @@ fn handle_file_range_header(
     |> response.set_header("content-range", content_range)
     |> Ok
   }
-  |> result.unwrap_both
+
+  case result {
+    Error(response) -> response
+    Ok(response) -> response
+  }
 }
 
 /// Calculates etag for requested file and then checks for the request header `if-none-match`.
