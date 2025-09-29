@@ -5,7 +5,7 @@ import gleam/bool
 import gleam/bytes_tree.{type BytesTree}
 import gleam/crypto
 import gleam/dict.{type Dict}
-import gleam/dynamic
+import gleam/dynamic.{type Dynamic}
 import gleam/dynamic/decode
 import gleam/erlang/application
 import gleam/erlang/atom.{type Atom}
@@ -1024,10 +1024,7 @@ pub fn require_content_type(
 /// If the body cannot be parsed successfully then a response with status
 /// code 400: Bad request will be returned to the client.
 ///
-pub fn require_json(
-  request: Request,
-  next: fn(dynamic.Dynamic) -> Response,
-) -> Response {
+pub fn require_json(request: Request, next: fn(Dynamic) -> Response) -> Response {
   use <- require_content_type(request, "application/json")
   use body <- require_string_body(request)
   case json.parse(body, decode.dynamic) {
@@ -1330,9 +1327,9 @@ pub fn rescue_crashes(handler: fn() -> Response) -> Response {
 }
 
 @external(erlang, "gleam@function", "identity")
-fn error_kind_to_dynamic(kind: ErrorKind) -> dynamic.Dynamic
+fn error_kind_to_dynamic(kind: ErrorKind) -> Dynamic
 
-fn atom_dict_decoder() -> decode.Decoder(Dict(Atom, dynamic.Dynamic)) {
+fn atom_dict_decoder() -> decode.Decoder(Dict(Atom, Dynamic)) {
   let atom =
     decode.new_primitive_decoder("Atom", fn(data) {
       case atom_from_dynamic(data) {
@@ -1344,12 +1341,12 @@ fn atom_dict_decoder() -> decode.Decoder(Dict(Atom, dynamic.Dynamic)) {
 }
 
 @external(erlang, "wisp_ffi", "atom_from_dynamic")
-fn atom_from_dynamic(data: dynamic.Dynamic) -> Result(Atom, Nil)
+fn atom_from_dynamic(data: Dynamic) -> Result(Atom, Nil)
 
 type DoNotLeak
 
 @external(erlang, "logger", "error")
-fn log_error_dict(o: Dict(Atom, dynamic.Dynamic)) -> DoNotLeak
+fn log_error_dict(o: Dict(Atom, Dynamic)) -> DoNotLeak
 
 type ErrorKind {
   Errored
