@@ -9,7 +9,7 @@ import wisp.{type Request, type Response}
 
 // This request handler is used for requests to `/people`.
 //
-pub fn all(req: Request, ctx: Context) -> Response(_) {
+pub fn all(req: Request, ctx: Context) -> Response {
   // Dispatch to the appropriate handler based on the HTTP method.
   case req.method {
     Get -> list_people(ctx)
@@ -20,7 +20,7 @@ pub fn all(req: Request, ctx: Context) -> Response(_) {
 
 // This request handler is used for requests to `/people/:id`.
 //
-pub fn one(req: Request, ctx: Context, id: String) -> Response(_) {
+pub fn one(req: Request, ctx: Context, id: String) -> Response {
   // Dispatch to the appropriate handler based on the HTTP method.
   case req.method {
     Get -> read_person(ctx, id)
@@ -35,7 +35,7 @@ pub type Person {
 // This handler returns a list of all the people in the database, in JSON
 // format.
 //
-pub fn list_people(ctx: Context) -> Response(_) {
+pub fn list_people(ctx: Context) -> Response {
   let result = {
     // Get all the ids from the database.
     use ids <- try(tiny_database.list(ctx.db))
@@ -63,7 +63,7 @@ pub fn list_people(ctx: Context) -> Response(_) {
   }
 }
 
-pub fn create_person(req: Request, ctx: Context) -> Response(_) {
+pub fn create_person(req: Request, ctx: Context) -> Response {
   // Read the JSON from the request body.
   use json <- wisp.require_json(req)
 
@@ -90,7 +90,7 @@ pub fn create_person(req: Request, ctx: Context) -> Response(_) {
   }
 }
 
-pub fn read_person(ctx: Context, id: String) -> Response(_) {
+pub fn read_person(ctx: Context, id: String) -> Response {
   let result = {
     // Read the person with the given id from the database.
     use person <- try(read_from_database(ctx.db, id))

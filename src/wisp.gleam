@@ -5,7 +5,7 @@ import gleam/bool
 import gleam/bytes_tree.{type BytesTree}
 import gleam/crypto
 import gleam/dict.{type Dict}
-import gleam/dynamic.{type Dynamic}
+import gleam/dynamic
 import gleam/dynamic/decode
 import gleam/erlang/application
 import gleam/erlang/atom.{type Atom}
@@ -34,9 +34,48 @@ import wisp/websocket
 // Responses
 //
 
+/// A WebSocket upgrade that hides the internal state type for better API compatibility.
+///
+/// This opaque type wraps the callbacks needed for WebSocket handling, allowing
+/// the public API to not expose the websocket_state parameter and preventing
+/// breaking changes when internal websocket implementations change.
+///
+pub opaque type WebSocketUpgrade {
+  WebSocketUpgrade(
+    on_init_fn: fn(websocket.WebSocketConnection) -> dynamic.Dynamic,
+    on_message_fn: fn(
+      dynamic.Dynamic,
+      websocket.WebSocketMessage,
+      websocket.WebSocketConnection,
+    ) ->
+      websocket.WebSocketNext(dynamic.Dynamic),
+    on_close_fn: fn(dynamic.Dynamic) -> Nil,
+  )
+}
+
+/// Extract the callbacks from a WebSocketUpgrade for use by web server adapters.
+/// This is used internally by web server adapters.
+@internal
+pub fn websocket_upgrade_callbacks(
+  upgrade: WebSocketUpgrade,
+) -> #(
+  fn(websocket.WebSocketConnection) -> dynamic.Dynamic,
+  fn(dynamic.Dynamic, websocket.WebSocketMessage, websocket.WebSocketConnection) ->
+    websocket.WebSocketNext(dynamic.Dynamic),
+  fn(dynamic.Dynamic) -> Nil,
+) {
+  case upgrade {
+    WebSocketUpgrade(on_init, on_message, on_close) -> #(
+      on_init,
+      on_message,
+      on_close,
+    )
+  }
+}
+
 /// The body of a HTTP response, to be sent to the client.
 ///
-pub type Body(websocket_state) {
+pub type Body {
   /// A body of unicode text.
   ///
   /// If you have a `StringTree` you can use the `bytes_tree.from_string_tree`
@@ -72,12 +111,12 @@ pub type Body(websocket_state) {
   /// This will upgrade the HTTP connection to a WebSocket connection.
   /// The upgrade is handled by the underlying HTTP server adapter.
   ///
-  WebSocket(websocket.WebSocketHandler(websocket_state))
+  WebSocket(WebSocketUpgrade)
 }
 
 /// An alias for a HTTP response containing a `Body`.
-pub type Response(websocket_state) =
-  HttpResponse(Body(websocket_state))
+pub type Response =
+  HttpResponse(Body)
 
 /// Create a response with the given status code.
 ///
@@ -88,7 +127,7 @@ pub type Response(websocket_state) =
 /// // -> Response(200, [], Text(""))
 /// ```
 ///
-pub fn response(status: Int) -> Response(_) {
+pub fn response(status: Int) -> Response {
   HttpResponse(status, [], Text(""))
 }
 
@@ -102,7 +141,7 @@ pub fn response(status: Int) -> Response(_) {
 /// // -> Response(200, [], File("/tmp/myfile.txt", option.None))
 /// ```
 ///
-pub fn set_body(response: Response(_), body: Body(_)) -> Response(_) {
+pub fn set_body(response: Response, body: Body) -> Response {
   response
   |> response.set_body(body)
 }
@@ -133,10 +172,10 @@ pub fn set_body(response: Response(_), body: Body(_)) -> Response(_) {
 /// ```
 ///
 pub fn file_download(
-  response: Response(_),
+  response: Response,
   named name: String,
   from path: String,
-) -> Response(_) {
+) -> Response {
   let name = uri.percent_encode(name)
   response
   |> response.set_header(
@@ -170,10 +209,10 @@ pub fn file_download(
 /// ```
 ///
 pub fn file_download_from_memory(
-  response: Response(_),
+  response: Response,
   named name: String,
   containing data: BytesTree,
-) -> Response(_) {
+) -> Response {
   let name = uri.percent_encode(name)
   response
   |> response.set_header(
@@ -195,7 +234,7 @@ pub fn file_download_from_memory(
 /// // -> Response(200, [#("content-type", "text/html; charset=utf-8")], Text(body))
 /// ```
 ///
-pub fn html_response(html: String, status: Int) -> Response(_) {
+pub fn html_response(html: String, status: Int) -> Response {
   HttpResponse(
     status,
     [#("content-type", "text/html; charset=utf-8")],
@@ -215,7 +254,7 @@ pub fn html_response(html: String, status: Int) -> Response(_) {
 /// // -> Response(200, [#("content-type", "application/json")], Text(body))
 /// ```
 ///
-pub fn json_response(json: String, status: Int) -> Response(_) {
+pub fn json_response(json: String, status: Int) -> Response {
   HttpResponse(
     status,
     [#("content-type", "application/json; charset=utf-8")],
@@ -236,7 +275,7 @@ pub fn json_response(json: String, status: Int) -> Response(_) {
 /// // -> Response(201, [#("content-type", "text/html; charset=utf-8")], Text(body))
 /// ```
 ///
-pub fn html_body(response: Response(_), html: String) -> Response(_) {
+pub fn html_body(response: Response, html: String) -> Response {
   response
   |> response.set_body(Text(html))
   |> response.set_header("content-type", "text/html; charset=utf-8")
@@ -255,7 +294,7 @@ pub fn html_body(response: Response(_), html: String) -> Response(_) {
 /// // -> Response(201, [#("content-type", "application/json; charset=utf-8")], Text(body))
 /// ```
 ///
-pub fn json_body(response: Response(_), json: String) -> Response(_) {
+pub fn json_body(response: Response, json: String) -> Response {
   response
   |> response.set_body(Text(json))
   |> response.set_header("content-type", "application/json; charset=utf-8")
@@ -275,10 +314,7 @@ pub fn json_body(response: Response(_), json: String) -> Response(_) {
 /// // -> Response(201, [], Text(body))
 /// ```
 ///
-pub fn string_tree_body(
-  response: Response(_),
-  content: StringTree,
-) -> Response(_) {
+pub fn string_tree_body(response: Response, content: StringTree) -> Response {
   response
   |> response.set_body(Bytes(bytes_tree.from_string_tree(content)))
 }
@@ -297,7 +333,7 @@ pub fn string_tree_body(
 /// // -> Response(201, [], Text("Hello, Joe"))
 /// ```
 ///
-pub fn string_body(response: Response(_), content: String) -> Response(_) {
+pub fn string_body(response: Response, content: String) -> Response {
   response
   |> response.set_body(Text(content))
 }
@@ -331,7 +367,7 @@ pub fn escape_html(content: String) -> String {
 /// // -> Response(405, [#("allow", "GET, POST")], Text("Method not allowed"))
 /// ```
 ///
-pub fn method_not_allowed(allowed methods: List(Method)) -> Response(_) {
+pub fn method_not_allowed(allowed methods: List(Method)) -> Response {
   let allowed =
     methods
     |> list.map(http.method_to_string)
@@ -350,7 +386,7 @@ pub fn method_not_allowed(allowed methods: List(Method)) -> Response(_) {
 /// // -> Response(200, [#("content-type", "text/plain")], Text("OK"))
 /// ```
 ///
-pub fn ok() -> Response(_) {
+pub fn ok() -> Response {
   HttpResponse(200, [content_text], Text("OK"))
 }
 
@@ -363,7 +399,7 @@ pub fn ok() -> Response(_) {
 /// // -> Response(201, [#("content-type", "text/plain")], Text("Created"))
 /// ```
 ///
-pub fn created() -> Response(_) {
+pub fn created() -> Response {
   HttpResponse(201, [content_text], Text("Created"))
 }
 
@@ -376,7 +412,7 @@ pub fn created() -> Response(_) {
 /// // -> Response(202, [#("content-type", "text/plain")], Text("Accepted"))
 /// ```
 ///
-pub fn accepted() -> Response(_) {
+pub fn accepted() -> Response {
   HttpResponse(202, [content_text], Text("Accepted"))
 }
 
@@ -394,7 +430,7 @@ pub fn accepted() -> Response(_) {
 /// // )
 /// ```
 ///
-pub fn redirect(to url: String) -> Response(_) {
+pub fn redirect(to url: String) -> Response {
   HttpResponse(
     303,
     [#("location", url), content_text],
@@ -420,7 +456,7 @@ pub fn redirect(to url: String) -> Response(_) {
 /// // )
 /// ```
 ///
-pub fn permanent_redirect(to url: String) -> Response(_) {
+pub fn permanent_redirect(to url: String) -> Response {
   HttpResponse(
     308,
     [#("location", url), content_text],
@@ -437,7 +473,7 @@ pub fn permanent_redirect(to url: String) -> Response(_) {
 /// // -> Response(204, [], Text(""))
 /// ```
 ///
-pub fn no_content() -> Response(_) {
+pub fn no_content() -> Response {
   HttpResponse(204, [], Text(""))
 }
 
@@ -450,7 +486,7 @@ pub fn no_content() -> Response(_) {
 /// // -> Response(404, [#("content-type", "text/plain")], Text("Not found"))
 /// ```
 ///
-pub fn not_found() -> Response(_) {
+pub fn not_found() -> Response {
   HttpResponse(404, [content_text], Text("Not found"))
 }
 
@@ -463,7 +499,7 @@ pub fn not_found() -> Response(_) {
 /// // -> Response(400, [#("content-type", "text/plain")], Text("Bad request: Invalid JSON"))
 /// ```
 ///
-pub fn bad_request(detail: String) -> Response(_) {
+pub fn bad_request(detail: String) -> Response {
   let body = case detail {
     "" -> "Bad request"
     _ -> "Bad request: " <> detail
@@ -480,7 +516,7 @@ pub fn bad_request(detail: String) -> Response(_) {
 /// // -> Response(413, [#("content-type", "text/plain")], Text("Content too large"))
 /// ```
 ///
-pub fn content_too_large() -> Response(_) {
+pub fn content_too_large() -> Response {
   HttpResponse(413, [content_text], Text("Content too large"))
 }
 
@@ -496,7 +532,7 @@ pub fn content_too_large() -> Response(_) {
 /// // -> Response(415, [#("allow", "application/json, text/plain")], Text("Unsupported media type"))
 /// ```
 ///
-pub fn unsupported_media_type(accept acceptable: List(String)) -> Response(_) {
+pub fn unsupported_media_type(accept acceptable: List(String)) -> Response {
   let acceptable = string.join(acceptable, ", ")
   HttpResponse(
     415,
@@ -514,7 +550,7 @@ pub fn unsupported_media_type(accept acceptable: List(String)) -> Response(_) {
 /// // -> Response(422, [#("content-type", "text/plain")], Text("Unprocessable content"))
 /// ```
 ///
-pub fn unprocessable_content() -> Response(_) {
+pub fn unprocessable_content() -> Response {
   HttpResponse(422, [content_text], Text("Unprocessable content"))
 }
 
@@ -527,7 +563,7 @@ pub fn unprocessable_content() -> Response(_) {
 /// // -> Response(500, [#("content-type", "text/plain")], Text("Internal server error"))
 /// ```
 ///
-pub fn internal_server_error() -> Response(_) {
+pub fn internal_server_error() -> Response {
   HttpResponse(500, [content_text], Text("Internal server error"))
 }
 
@@ -569,10 +605,7 @@ type Quotas {
   Quotas(body: Int, files: Int)
 }
 
-fn decrement_body_quota(
-  quotas: Quotas,
-  size: Int,
-) -> Result(Quotas, Response(_)) {
+fn decrement_body_quota(quotas: Quotas, size: Int) -> Result(Quotas, Response) {
   let quotas = Quotas(..quotas, body: quotas.body - size)
   case quotas.body < 0 {
     True -> Error(content_too_large())
@@ -580,7 +613,7 @@ fn decrement_body_quota(
   }
 }
 
-fn decrement_quota(quota: Int, size: Int) -> Result(Int, Response(_)) {
+fn decrement_quota(quota: Int, size: Int) -> Result(Int, Response) {
   case quota - size {
     quota if quota < 0 -> Error(content_too_large())
     quota -> Ok(quota)
@@ -706,8 +739,8 @@ pub type Request =
 pub fn require_method(
   request: HttpRequest(t),
   method: Method,
-  next: fn() -> Response(_),
-) -> Response(_) {
+  next: fn() -> Response,
+) -> Response {
   case request.method == method {
     True -> next()
     False -> method_not_allowed(allowed: [method])
@@ -820,8 +853,8 @@ pub fn method_override(request: HttpRequest(a)) -> HttpRequest(a) {
 ///
 pub fn require_string_body(
   request: Request,
-  next: fn(String) -> Response(_),
-) -> Response(_) {
+  next: fn(String) -> Response,
+) -> Response {
   case read_body_bits(request) {
     Ok(body) ->
       case bit_array.to_string(body) {
@@ -857,8 +890,8 @@ pub fn require_string_body(
 ///
 pub fn require_bit_array_body(
   request: Request,
-  next: fn(BitArray) -> Response(_),
-) -> Response(_) {
+  next: fn(BitArray) -> Response,
+) -> Response {
   case read_body_bits(request) {
     Ok(body) -> next(body)
     Error(_) -> content_too_large()
@@ -949,8 +982,8 @@ fn read_body_loop(
 ///
 pub fn require_form(
   request: Request,
-  next: fn(FormData) -> Response(_),
-) -> Response(_) {
+  next: fn(FormData) -> Response,
+) -> Response {
   case list.key_find(request.headers, "content-type") {
     Ok("application/x-www-form-urlencoded")
     | Ok("application/x-www-form-urlencoded;" <> _) ->
@@ -984,8 +1017,8 @@ pub fn require_form(
 pub fn require_content_type(
   request: Request,
   expected: String,
-  next: fn() -> Response(_),
-) -> Response(_) {
+  next: fn() -> Response,
+) -> Response {
   case list.key_find(request.headers, "content-type") {
     Ok(content_type) ->
       // This header may have further such as `; charset=utf-8`, so discard
@@ -1025,8 +1058,8 @@ pub fn require_content_type(
 ///
 pub fn require_json(
   request: Request,
-  next: fn(Dynamic) -> Response(_),
-) -> Response(_) {
+  next: fn(dynamic.Dynamic) -> Response,
+) -> Response {
   use <- require_content_type(request, "application/json")
   use body <- require_string_body(request)
   case json.parse(body, decode.dynamic) {
@@ -1037,8 +1070,8 @@ pub fn require_json(
 
 fn require_urlencoded_form(
   request: Request,
-  next: fn(FormData) -> Response(_),
-) -> Response(_) {
+  next: fn(FormData) -> Response,
+) -> Response {
   use body <- require_string_body(request)
   case uri.parse_query(body) {
     Ok(pairs) -> {
@@ -1052,8 +1085,8 @@ fn require_urlencoded_form(
 fn require_multipart_form(
   request: Request,
   boundary: String,
-  next: fn(FormData) -> Response(_),
-) -> Response(_) {
+  next: fn(FormData) -> Response,
+) -> Response {
   let quotas =
     Quotas(files: request.body.max_files_size, body: request.body.max_body_size)
   let reader = BufferedReader(request.body.reader, <<>>)
@@ -1072,7 +1105,7 @@ fn read_multipart(
   boundary: String,
   quotas: Quotas,
   data: FormData,
-) -> Result(FormData, Response(_)) {
+) -> Result(FormData, Response) {
   let read_size = request.body.read_chunk_size
 
   // First we read the headers of the multipart part.
@@ -1136,13 +1169,13 @@ fn read_multipart(
 fn multipart_file_append(
   path: String,
   chunk: BitArray,
-) -> Result(String, Response(_)) {
+) -> Result(String, Response) {
   simplifile.append_bits(path, chunk)
   |> or_500
   |> result.replace(path)
 }
 
-fn or_500(result: Result(a, b)) -> Result(a, Response(_)) {
+fn or_500(result: Result(a, b)) -> Result(a, Response) {
   case result {
     Ok(value) -> Ok(value)
     Error(error) -> {
@@ -1154,13 +1187,13 @@ fn or_500(result: Result(a, b)) -> Result(a, Response(_)) {
 
 fn multipart_body(
   reader: BufferedReader,
-  parse: fn(BitArray) -> Result(http.MultipartBody, Response(_)),
+  parse: fn(BitArray) -> Result(http.MultipartBody, Response),
   boundary: String,
   chunk_size: Int,
   quota: Int,
-  append: fn(t, BitArray) -> Result(t, Response(_)),
+  append: fn(t, BitArray) -> Result(t, Response),
   data: t,
-) -> Result(#(Option(BufferedReader), Int, t), Response(_)) {
+) -> Result(#(Option(BufferedReader), Int, t), Response) {
   use #(chunk, reader) <- result.try(read_chunk(reader, chunk_size))
   let size_read = bit_array.byte_size(chunk)
   use output <- result.try(parse(chunk))
@@ -1197,7 +1230,7 @@ fn multipart_body(
 fn fn_with_bad_request_error(
   f: fn(a) -> Result(b, c),
   error: String,
-) -> fn(a) -> Result(b, Response(_)) {
+) -> fn(a) -> Result(b, Response) {
   fn(a) {
     case f(a) {
       Ok(x) -> Ok(x)
@@ -1208,7 +1241,7 @@ fn fn_with_bad_request_error(
 
 fn multipart_content_disposition(
   headers: List(http.Header),
-) -> Result(#(String, Option(String)), Response(_)) {
+) -> Result(#(String, Option(String)), Response) {
   {
     use header <- result.try(list.key_find(headers, "content-disposition"))
     use header <- result.try(http.parse_content_disposition(header))
@@ -1223,7 +1256,7 @@ fn multipart_content_disposition(
 fn read_chunk(
   reader: BufferedReader,
   chunk_size: Int,
-) -> Result(#(BitArray, internal.Reader), Response(_)) {
+) -> Result(#(BitArray, internal.Reader), Response) {
   case buffered_read(reader, chunk_size) {
     Error(_) -> Error(bad_request(unexpected_end))
     Ok(chunk) ->
@@ -1236,10 +1269,10 @@ fn read_chunk(
 
 fn multipart_headers(
   reader: BufferedReader,
-  parse: fn(BitArray) -> Result(http.MultipartHeaders, Response(_)),
+  parse: fn(BitArray) -> Result(http.MultipartHeaders, Response),
   chunk_size: Int,
   quotas: Quotas,
-) -> Result(#(List(http.Header), BufferedReader, Quotas), Response(_)) {
+) -> Result(#(List(http.Header), BufferedReader, Quotas), Response) {
   use #(chunk, reader) <- result.try(read_chunk(reader, chunk_size))
   use headers <- result.try(parse(chunk))
 
@@ -1306,7 +1339,7 @@ pub type UploadedFile {
 /// }
 /// ```
 ///
-pub fn rescue_crashes(handler: fn() -> Response(_)) -> Response(_) {
+pub fn rescue_crashes(handler: fn() -> Response) -> Response {
   case exception.rescue(handler) {
     Ok(response) -> response
     Error(error) -> {
@@ -1329,9 +1362,9 @@ pub fn rescue_crashes(handler: fn() -> Response(_)) -> Response(_) {
 }
 
 @external(erlang, "gleam@function", "identity")
-fn error_kind_to_dynamic(kind: ErrorKind) -> Dynamic
+fn error_kind_to_dynamic(kind: ErrorKind) -> dynamic.Dynamic
 
-fn atom_dict_decoder() -> decode.Decoder(Dict(Atom, Dynamic)) {
+fn atom_dict_decoder() -> decode.Decoder(Dict(Atom, dynamic.Dynamic)) {
   let atom =
     decode.new_primitive_decoder("Atom", fn(data) {
       case atom_from_dynamic(data) {
@@ -1343,12 +1376,18 @@ fn atom_dict_decoder() -> decode.Decoder(Dict(Atom, Dynamic)) {
 }
 
 @external(erlang, "wisp_ffi", "atom_from_dynamic")
-fn atom_from_dynamic(data: Dynamic) -> Result(Atom, Nil)
+fn atom_from_dynamic(data: dynamic.Dynamic) -> Result(Atom, Nil)
+
+@external(erlang, "gleam@function", "identity")
+fn to_dynamic(value: a) -> dynamic.Dynamic
+
+@external(erlang, "gleam@function", "identity")
+fn from_dynamic(value: dynamic.Dynamic) -> a
 
 type DoNotLeak
 
 @external(erlang, "logger", "error")
-fn log_error_dict(o: Dict(Atom, Dynamic)) -> DoNotLeak
+fn log_error_dict(o: Dict(Atom, dynamic.Dynamic)) -> DoNotLeak
 
 type ErrorKind {
   Errored
@@ -1371,7 +1410,7 @@ type ErrorKind {
 /// }
 /// ```
 ///
-pub fn log_request(req: Request, handler: fn() -> Response(_)) -> Response(_) {
+pub fn log_request(req: Request, handler: fn() -> Response) -> Response {
   let response = handler()
   [
     int.to_string(response.status),
@@ -1430,8 +1469,8 @@ pub fn serve_static(
   req: Request,
   under prefix: String,
   from directory: String,
-  next handler: fn() -> Response(_),
-) -> Response(_) {
+  next handler: fn() -> Response,
+) -> Response {
   let path = internal.remove_preceeding_slashes(req.path)
   let prefix = internal.remove_preceeding_slashes(prefix)
   case req.method, string.starts_with(path, prefix) {
@@ -1542,11 +1581,11 @@ pub fn parse_range_header(range_header: String) -> Result(Range, Nil) {
 ///
 /// If the header isn't present, it returns the input response without changes.
 fn handle_file_range_header(
-  resp: Response(_),
+  resp: Response,
   req: Request,
   file_info: simplifile.FileInfo,
   path: String,
-) -> Response(_) {
+) -> Response {
   let result = {
     use raw_range <- result.try(
       request.get_header(req, "range") |> result.replace_error(resp),
@@ -1619,10 +1658,10 @@ fn handle_file_range_header(
 /// Otherwise if the etag matches, it returns status 304 without the file, allowing the browser to use the cached version.
 ///
 fn handle_etag(
-  resp: Response(_),
+  resp: Response,
   req: Request,
   file_info: simplifile.FileInfo,
-) -> Response(_) {
+) -> Response {
   let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
 
   case request.get_header(req, "if-none-match") {
@@ -1652,8 +1691,8 @@ fn handle_etag(
 ///
 pub fn handle_head(
   req: Request,
-  next handler: fn(Request) -> Response(_),
-) -> Response(_) {
+  next handler: fn(Request) -> Response,
+) -> Response {
   case req.method {
     http.Head ->
       req
@@ -1946,13 +1985,13 @@ pub fn verify_signed_message(
 /// ```
 ///
 pub fn set_cookie(
-  response response: Response(_),
+  response response: Response,
   request request: Request,
   name name: String,
   value value: String,
   security security: Security,
   max_age max_age: Int,
-) -> Response(_) {
+) -> Response {
   let scheme = case request.host {
     "localhost" | "127.0.0.1" | "[::1]" if request.scheme == http.Http ->
       case request.get_header(request, "x-forwarded-proto") {
@@ -2064,9 +2103,28 @@ pub fn websocket(
   ) ->
     websocket.WebSocketNext(state),
   on_close on_close: fn(state) -> Nil,
-) -> Response(state) {
+) -> Response {
+  let upgrade =
+    WebSocketUpgrade(
+      on_init_fn: fn(conn) { to_dynamic(on_init(conn)) },
+      on_message_fn: fn(dyn_state, msg, conn) {
+        // Convert Dynamic back to the original state type using unsafe coerce
+        // This is safe because we control the construction and usage of the Dynamic value
+        let state = from_dynamic(dyn_state)
+        case on_message(state, msg, conn) {
+          websocket.Continue(new_state) ->
+            websocket.Continue(to_dynamic(new_state))
+          websocket.Stop -> websocket.Stop
+          websocket.StopWithError(error) -> websocket.StopWithError(error)
+        }
+      },
+      on_close_fn: fn(dyn_state) {
+        let state = from_dynamic(dyn_state)
+        on_close(state)
+      },
+    )
   response(200)
-  |> set_body(WebSocket(websocket.handler(on_init:, on_message:, on_close:)))
+  |> set_body(WebSocket(upgrade))
 }
 
 //
@@ -2117,8 +2175,8 @@ pub fn create_canned_connection(
 ///
 pub fn csrf_known_header_protection(
   request: Request,
-  next: fn(Request) -> Response(_),
-) -> Response(_) {
+  next: fn(Request) -> Response,
+) -> Response {
   let is_pure_method = case request.method {
     http.Head | http.Get -> True
     _ -> False

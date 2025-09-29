@@ -2,7 +2,7 @@ import gleam/http.{Get, Post}
 import routing/app/web
 import wisp.{type Request, type Response}
 
-pub fn handle_request(req: Request) -> Response(_) {
+pub fn handle_request(req: Request) -> Response {
   use req <- web.middleware(req)
 
   // Wisp doesn't have a special router abstraction, instead we recommend using
@@ -25,7 +25,7 @@ pub fn handle_request(req: Request) -> Response(_) {
   }
 }
 
-fn home_page(req: Request) -> Response(_) {
+fn home_page(req: Request) -> Response {
   // The home page can only be accessed via GET requests, so this middleware is
   // used to return a 405: Method Not Allowed response for all other methods.
   use <- wisp.require_method(req, Get)
@@ -34,7 +34,7 @@ fn home_page(req: Request) -> Response(_) {
   |> wisp.html_body("Hello, Joe!")
 }
 
-fn comments(req: Request) -> Response(_) {
+fn comments(req: Request) -> Response {
   // This handler for `/comments` can respond to both GET and POST requests,
   // so we pattern match on the method here.
   case req.method {
@@ -44,19 +44,19 @@ fn comments(req: Request) -> Response(_) {
   }
 }
 
-fn list_comments() -> Response(_) {
+fn list_comments() -> Response {
   // In a later example we'll show how to read from a database.
   wisp.ok()
   |> wisp.html_body("Comments!")
 }
 
-fn create_comment(_req: Request) -> Response(_) {
+fn create_comment(_req: Request) -> Response {
   // In a later example we'll show how to parse data from the request body.
   wisp.created()
   |> wisp.html_body("Created")
 }
 
-fn show_comment(req: Request, id: String) -> Response(_) {
+fn show_comment(req: Request, id: String) -> Response {
   use <- wisp.require_method(req, Get)
 
   // The `id` path parameter has been passed to this function, so we could use

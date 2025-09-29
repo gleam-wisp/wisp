@@ -284,7 +284,7 @@ pub fn websocket_echo_message_test() {
   // Test with a text message
   let mock_connection = simulate.websocket_connection()
   let #(result, _final_connection) =
-    simulate.websocket_message(
+    simulate.websocket_handler_message(
       echo_handler,
       "initial_state",
       websocket.Text("hello"),
@@ -313,7 +313,7 @@ pub fn websocket_ping_message_test() {
 
   // Test ping message
   let #(result, _) =
-    simulate.websocket_message(
+    simulate.websocket_handler_message(
       ping_handler,
       5,
       websocket.Text("ping"),
@@ -324,7 +324,7 @@ pub fn websocket_ping_message_test() {
 
   // Test reset message
   let #(result, _) =
-    simulate.websocket_message(
+    simulate.websocket_handler_message(
       ping_handler,
       10,
       websocket.Text("reset"),
@@ -353,7 +353,7 @@ pub fn websocket_close_message_test() {
 
   // Test close message
   let #(result, _) =
-    simulate.websocket_message(
+    simulate.websocket_handler_message(
       close_handler,
       "active",
       websocket.Closed,
@@ -364,7 +364,7 @@ pub fn websocket_close_message_test() {
 
   // Test shutdown message
   let #(result, _) =
-    simulate.websocket_message(
+    simulate.websocket_handler_message(
       close_handler,
       "active",
       websocket.Shutdown,
@@ -395,7 +395,7 @@ pub fn websocket_binary_message_test() {
   let binary_data = <<"Hello, WebSocket!":utf8>>
 
   let #(result, _) =
-    simulate.websocket_message(
+    simulate.websocket_handler_message(
       binary_handler,
       10,
       websocket.Binary(binary_data),
@@ -435,7 +435,7 @@ pub fn websocket_message_capture_test() {
 
   // Test text message sending
   let #(result, final_connection) =
-    simulate.websocket_message(
+    simulate.websocket_handler_message(
       echo_and_send_handler,
       "ready",
       websocket.Text("send_text:hello"),
@@ -449,7 +449,7 @@ pub fn websocket_message_capture_test() {
 
   // Test binary message sending
   let #(result, final_connection) =
-    simulate.websocket_message(
+    simulate.websocket_handler_message(
       echo_and_send_handler,
       "ready",
       websocket.Text("send_binary"),
@@ -463,7 +463,7 @@ pub fn websocket_message_capture_test() {
 
   // Test connection closing
   let #(result, final_connection) =
-    simulate.websocket_message(
+    simulate.websocket_handler_message(
       echo_and_send_handler,
       "ready",
       websocket.Text("close_connection"),

@@ -14,7 +14,7 @@ import wisp.{type Request, type Response}
 // - info
 // - debug
 //
-pub fn handle_request(req: Request) -> Response(_) {
+pub fn handle_request(req: Request) -> Response {
   use req <- web.middleware(req)
 
   case wisp.path_segments(req) {

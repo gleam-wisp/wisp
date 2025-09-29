@@ -11,7 +11,7 @@ const expected_cookie_value = "123"
 fn cookies_handler_with_csrf_protection(
   request: wisp.Request,
   callback: fn() -> t,
-) -> wisp.Response(_) {
+) -> wisp.Response {
   use request <- wisp.csrf_known_header_protection(request)
   let cookie = wisp.get_cookie(request, "data", wisp.PlainText)
   callback()
@@ -28,7 +28,7 @@ fn delete_header(request: wisp.Request, name: String) -> wisp.Request {
 
 /// Here we are testing that the test helper functions set the appropriate
 /// headers for tests to pass when the CSRF protection middlware is in place.
-fn send_cookie_request_with_test_helper(method: http.Method) -> wisp.Response(_) {
+fn send_cookie_request_with_test_helper(method: http.Method) -> wisp.Response {
   let request =
     simulate.browser_request(http.Get, "/")
     |> simulate.header("cookie", "data=MTIz")
@@ -87,7 +87,7 @@ pub fn test_helper_method_patch_test() {
 /// correctly, being as clear as possible.
 fn send_cookie_request_with_explicit_matched_origin_header(
   method: http.Method,
-) -> wisp.Response(_) {
+) -> wisp.Response {
   let request =
     simulate.request(http.Get, "/")
     |> simulate.header("cookie", "data=MTIz")
@@ -149,7 +149,7 @@ pub fn explicitly_matching_origin_method_patch_test() {
 /// correctly, being as clear as possible.
 fn send_cookie_request_with_explicit_matched_referer_header(
   method: http.Method,
-) -> wisp.Response(_) {
+) -> wisp.Response {
   let request =
     simulate.request(http.Get, "/")
     |> simulate.header("cookie", "data=MTIz")
@@ -209,7 +209,7 @@ pub fn explicitly_matching_referer_method_patch_test() {
 fn send_cookie_request_with_mismatched_origin_header(
   method: http.Method,
   should_pass: Bool,
-) -> wisp.Response(_) {
+) -> wisp.Response {
   let request =
     simulate.request(http.Get, "/")
     |> simulate.header("cookie", "data=MTIz")
@@ -276,7 +276,7 @@ pub fn mismatched_origin_headers_method_patch_test() {
 fn send_cookie_request_with_mismatched_referer_header(
   method: http.Method,
   should_pass: Bool,
-) -> wisp.Response(_) {
+) -> wisp.Response {
   let request =
     simulate.request(http.Get, "/")
     |> simulate.header("cookie", "data=MTIz")
@@ -345,7 +345,7 @@ pub fn mismatched_referer_headers_method_patch_test() {
 fn send_cookie_request_with_no_host_header(
   method: http.Method,
   should_pass: Bool,
-) -> wisp.Response(_) {
+) -> wisp.Response {
   let request =
     simulate.request(http.Get, "/")
     |> simulate.header("cookie", "data=MTIz")
