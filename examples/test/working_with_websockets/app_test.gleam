@@ -1,4 +1,3 @@
-import gleam/dynamic
 import gleam/http
 import wisp
 import wisp/simulate
@@ -35,10 +34,16 @@ pub fn websocket_text_message_echo_test() {
   let request = simulate.websocket_request(http.Get, "/websocket")
   let response = router.handle_request(request)
   let websocket_callbacks = simulate.expect_websocket_upgrade(response)
+  let #(on_init, _on_message, _on_close) = websocket_callbacks
 
   let mock_connection = simulate.websocket_connection()
+  let ws_connection =
+    websocket.make_connection(fn(_) { Ok(Nil) }, fn(_) { Ok(Nil) }, fn() {
+      Ok(Nil)
+    })
 
-  let initial_state = dynamic.int(0)
+  // Initialize state using the on_init callback
+  let initial_state = on_init(ws_connection)
 
   // Test first text message
   let #(result, final_connection) =
@@ -70,14 +75,22 @@ pub fn websocket_binary_message_echo_test() {
   let request = simulate.websocket_request(http.Get, "/websocket")
   let response = router.handle_request(request)
   let websocket_callbacks = simulate.expect_websocket_upgrade(response)
+  let #(on_init, _on_message, _on_close) = websocket_callbacks
 
   let mock_connection = simulate.websocket_connection()
+  let ws_connection =
+    websocket.make_connection(fn(_) { Ok(Nil) }, fn(_) { Ok(Nil) }, fn() {
+      Ok(Nil)
+    })
+
+  // Initialize state - we need a proper state, can't just use dynamic.int(5)
+  let initial_state = on_init(ws_connection)
   let binary_data = <<"Binary test data":utf8>>
 
   let #(result, final_connection) =
     simulate.websocket_message(
       websocket_callbacks,
-      dynamic.int(5),
+      initial_state,
       websocket.Binary(binary_data),
       mock_connection,
     )
@@ -92,13 +105,21 @@ pub fn websocket_close_message_test() {
   let request = simulate.websocket_request(http.Get, "/websocket")
   let response = router.handle_request(request)
   let websocket_callbacks = simulate.expect_websocket_upgrade(response)
+  let #(on_init, _on_message, _on_close) = websocket_callbacks
 
   let mock_connection = simulate.websocket_connection()
+  let ws_connection =
+    websocket.make_connection(fn(_) { Ok(Nil) }, fn(_) { Ok(Nil) }, fn() {
+      Ok(Nil)
+    })
+
+  // Initialize state properly
+  let initial_state = on_init(ws_connection)
 
   let #(result, final_connection) =
     simulate.websocket_message(
       websocket_callbacks,
-      dynamic.int(3),
+      initial_state,
       websocket.Closed,
       mock_connection,
     )
@@ -113,13 +134,21 @@ pub fn websocket_shutdown_message_test() {
   let request = simulate.websocket_request(http.Get, "/websocket")
   let response = router.handle_request(request)
   let websocket_callbacks = simulate.expect_websocket_upgrade(response)
+  let #(on_init, _on_message, _on_close) = websocket_callbacks
 
   let mock_connection = simulate.websocket_connection()
+  let ws_connection =
+    websocket.make_connection(fn(_) { Ok(Nil) }, fn(_) { Ok(Nil) }, fn() {
+      Ok(Nil)
+    })
+
+  // Initialize state properly
+  let initial_state = on_init(ws_connection)
 
   let #(result, final_connection) =
     simulate.websocket_message(
       websocket_callbacks,
-      dynamic.int(10),
+      initial_state,
       websocket.Shutdown,
       mock_connection,
     )

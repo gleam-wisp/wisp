@@ -29,7 +29,6 @@ import marceau
 import simplifile
 import wisp/internal
 import wisp/websocket
-import wisp/websocket_typesafe
 
 //
 // Responses
@@ -37,10 +36,9 @@ import wisp/websocket_typesafe
 
 /// A completely type-safe WebSocket upgrade that maintains type safety
 /// throughout the connection lifecycle without any dynamic casts.
-/// This uses the glinterface pattern with opaque types and function composition.
 ///
 pub opaque type WebSocketUpgrade {
-  WebSocketUpgrade(type_safe_ws: websocket_typesafe.TypeSafeWebSocket)
+  WebSocketUpgrade(ws: websocket.WebSocket)
 }
 
 /// Extract the callbacks from a WebSocketUpgrade for use by web server adapters.
@@ -49,12 +47,16 @@ pub opaque type WebSocketUpgrade {
 pub fn websocket_upgrade_callbacks(
   upgrade: WebSocketUpgrade,
 ) -> #(
-  fn(websocket.WebSocketConnection) -> websocket_typesafe.TypeSafeState,
-  fn(websocket_typesafe.TypeSafeState, websocket.WebSocketMessage, websocket.WebSocketConnection) ->
-    websocket.WebSocketNext(websocket_typesafe.TypeSafeState),
-  fn(websocket_typesafe.TypeSafeState) -> Nil,
+  fn(websocket.WebSocketConnection) -> websocket.WebSocketState,
+  fn(
+    websocket.WebSocketState,
+    websocket.WebSocketMessage,
+    websocket.WebSocketConnection,
+  ) ->
+    websocket.WebSocketNext(websocket.WebSocketState),
+  fn(websocket.WebSocketState) -> Nil,
 ) {
-  websocket_typesafe.extract_callbacks(upgrade.type_safe_ws)
+  websocket.extract_callbacks(upgrade.ws)
 }
 
 /// The body of a HTTP response, to be sent to the client.
@@ -1362,7 +1364,6 @@ fn atom_dict_decoder() -> decode.Decoder(Dict(Atom, dynamic.Dynamic)) {
 @external(erlang, "wisp_ffi", "atom_from_dynamic")
 fn atom_from_dynamic(data: dynamic.Dynamic) -> Result(Atom, Nil)
 
-
 type DoNotLeak
 
 @external(erlang, "logger", "error")
@@ -2083,8 +2084,8 @@ pub fn websocket(
     websocket.WebSocketNext(state),
   on_close on_close: fn(state) -> Nil,
 ) -> Response {
-  let type_safe_ws = websocket_typesafe.create(on_init, on_message, on_close)
-  let upgrade = WebSocketUpgrade(type_safe_ws: type_safe_ws)
+  let ws = websocket.create(on_init, on_message, on_close)
+  let upgrade = WebSocketUpgrade(ws: ws)
 
   response(200)
   |> set_body(WebSocket(upgrade))

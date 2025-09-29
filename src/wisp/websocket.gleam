@@ -44,6 +44,44 @@ pub type WebSocketNext(state) {
   StopWithError(String)
 }
 
+/// A completely type-safe WebSocket interface that uses existential types
+/// to hide the state type while maintaining compile-time type safety.
+/// This follows the glinterface pattern of using opaque types and function composition.
+pub opaque type WebSocket {
+  WebSocket(interface: WebSocketInterface)
+}
+
+/// The core interface that encapsulates all WebSocket operations
+/// without exposing or requiring knowledge of the internal state type.
+type WebSocketInterface {
+  WebSocketInterface(
+    init: fn(WebSocketConnection) -> WebSocketState,
+    handle: fn(WebSocketState, WebSocketMessage, WebSocketConnection) ->
+      WebSocketResult,
+    close: fn(WebSocketState) -> Nil,
+  )
+}
+
+/// Opaque state container that hides the actual state type completely
+/// while allowing operations on it through function composition.
+pub opaque type WebSocketState {
+  WebSocketState(step: fn(WebSocketAction) -> WebSocketResult)
+}
+
+/// Actions that can be performed on the WebSocket state
+type WebSocketAction {
+  HandleMessage(WebSocketMessage, WebSocketConnection)
+  Close
+  GetNext(WebSocketNext(WebSocketState))
+}
+
+/// Results from WebSocket operations that maintain type safety
+pub type WebSocketResult {
+  ContinueWith(WebSocketState)
+  StopNow
+  StopWithErrorResult(String)
+}
+
 /// A WebSocket handler contains all the information needed to handle
 /// a WebSocket connection. This is a simple, type-safe approach that
 /// uses callbacks stored in the handler.
@@ -106,6 +144,123 @@ pub fn stop_with_error(error: String) -> WebSocketNext(state) {
   StopWithError(error)
 }
 
+/// Create a type-safe WebSocket interface from user handlers.
+/// This is the main entry point that captures the user's state type
+/// and creates a completely type-safe interface without dynamic casts.
+pub fn create(
+  on_init: fn(WebSocketConnection) -> state,
+  on_message: fn(state, WebSocketMessage, WebSocketConnection) ->
+    WebSocketNext(state),
+  on_close: fn(state) -> Nil,
+) -> WebSocket {
+  WebSocket(interface: WebSocketInterface(
+    init: fn(connection) {
+      let initial_state = on_init(connection)
+      create_state(initial_state, on_message, on_close)
+    },
+    handle: handle_action,
+    close: close_state,
+  ))
+}
+
+/// Create a type-safe state container that captures the state and operations
+/// in closures, eliminating the need for dynamic casts.
+fn create_state(
+  state: state,
+  on_message: fn(state, WebSocketMessage, WebSocketConnection) ->
+    WebSocketNext(state),
+  on_close: fn(state) -> Nil,
+) -> WebSocketState {
+  WebSocketState(step: fn(action) {
+    case action {
+      HandleMessage(message, connection) -> {
+        case on_message(state, message, connection) {
+          Continue(new_state) ->
+            ContinueWith(create_state(new_state, on_message, on_close))
+          Stop -> StopNow
+          StopWithError(error) -> StopWithErrorResult(error)
+        }
+      }
+      Close -> {
+        on_close(state)
+        StopNow
+      }
+      GetNext(next) ->
+        case next {
+          Continue(safe_state) -> ContinueWith(safe_state)
+          Stop -> StopNow
+          StopWithError(error) -> StopWithErrorResult(error)
+        }
+    }
+  })
+}
+
+/// Handle an action on the type-safe state
+fn handle_action(
+  state: WebSocketState,
+  message: WebSocketMessage,
+  connection: WebSocketConnection,
+) -> WebSocketResult {
+  state.step(HandleMessage(message, connection))
+}
+
+/// Close the type-safe state
+fn close_state(state: WebSocketState) -> Nil {
+  case state.step(Close) {
+    _ -> Nil
+  }
+}
+
+/// Initialize the type-safe WebSocket
+pub fn init(ws: WebSocket, connection: WebSocketConnection) -> WebSocketState {
+  ws.interface.init(connection)
+}
+
+/// Handle a message
+pub fn handle_message(
+  ws: WebSocket,
+  state: WebSocketState,
+  message: WebSocketMessage,
+  connection: WebSocketConnection,
+) -> WebSocketResult {
+  ws.interface.handle(state, message, connection)
+}
+
+/// Close the WebSocket
+pub fn close_websocket(ws: WebSocket, state: WebSocketState) -> Nil {
+  ws.interface.close(state)
+}
+
+/// Convert WebSocketResult to standard WebSocketNext for compatibility
+pub fn result_to_next(result: WebSocketResult) -> WebSocketNext(WebSocketState) {
+  case result {
+    ContinueWith(state) -> Continue(state)
+    StopNow -> Stop
+    StopWithErrorResult(error) -> StopWithError(error)
+  }
+}
+
+/// Extract the interface callbacks for integration with existing infrastructure.
+/// This provides the necessary bridge to work with the current WebSocket system
+/// while maintaining complete type safety.
+pub fn extract_callbacks(
+  ws: WebSocket,
+) -> #(
+  fn(WebSocketConnection) -> WebSocketState,
+  fn(WebSocketState, WebSocketMessage, WebSocketConnection) ->
+    WebSocketNext(WebSocketState),
+  fn(WebSocketState) -> Nil,
+) {
+  #(
+    ws.interface.init,
+    fn(state, message, connection) {
+      ws.interface.handle(state, message, connection)
+      |> result_to_next
+    },
+    ws.interface.close,
+  )
+}
+
 /// Create a new WebSocket handler.
 pub fn handler(
   on_init on_init: fn(WebSocketConnection) -> state,
@@ -136,4 +291,15 @@ pub fn on_message(
 /// This is used by web server adapters.
 pub fn on_close(handler: WebSocketHandler(state)) -> fn(state) -> Nil {
   handler.on_close
+}
+
+/// Create a WebSocket from a standard WebSocketHandler for easy migration
+pub fn from_handler(handler: WebSocketHandler(state)) -> WebSocket {
+  create(on_init(handler), on_message(handler), on_close(handler))
+}
+
+/// Create a standard WebSocketHandler from a WebSocket for compatibility
+pub fn to_handler(ws: WebSocket) -> WebSocketHandler(WebSocketState) {
+  let #(init_fn, message_fn, close_fn) = extract_callbacks(ws)
+  handler(on_init: init_fn, on_message: message_fn, on_close: close_fn)
 }
