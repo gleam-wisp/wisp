@@ -2,7 +2,7 @@ import gleam/int
 import wisp.{type Request, type Response}
 import wisp/websocket
 
-pub fn handle_request(request: Request) -> Response(_) {
+pub fn handle_request(request: Request) -> Response {
   use <- wisp.log_request(request)
 
   case wisp.path_segments(request) {
@@ -12,7 +12,7 @@ pub fn handle_request(request: Request) -> Response(_) {
   }
 }
 
-fn home_page() -> Response(_) {
+fn home_page() -> Response {
   let html =
     "<!DOCTYPE html>
 <html>
@@ -111,7 +111,7 @@ fn home_page() -> Response(_) {
   wisp.html_response(html, 200)
 }
 
-fn websocket_handler(request: Request) -> Response(_) {
+fn websocket_handler(request: Request) -> Response {
   wisp.websocket(
     request,
     on_init: fn(_connection) {

@@ -2,7 +2,7 @@ import using_a_database/app/web.{type Context}
 import using_a_database/app/web/people
 import wisp.{type Request, type Response}
 
-pub fn handle_request(req: Request, ctx: Context) -> Response(_) {
+pub fn handle_request(req: Request, ctx: Context) -> Response {
   use req <- web.middleware(req)
 
   // A new `app/web/people` module now contains the handlers and other functions

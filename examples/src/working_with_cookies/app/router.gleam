@@ -6,7 +6,7 @@ import working_with_cookies/app/web
 
 const cookie_name = "id"
 
-pub fn handle_request(req: Request) -> Response(_) {
+pub fn handle_request(req: Request) -> Response {
   use req <- web.middleware(req)
 
   case wisp.path_segments(req) {
@@ -16,7 +16,7 @@ pub fn handle_request(req: Request) -> Response(_) {
   }
 }
 
-pub fn home(req: Request) -> Response(_) {
+pub fn home(req: Request) -> Response {
   case wisp.get_cookie(req, cookie_name, wisp.Signed) {
     Ok(name) -> {
       [
@@ -34,7 +34,7 @@ pub fn home(req: Request) -> Response(_) {
   }
 }
 
-pub fn session(req: Request) -> Response(_) {
+pub fn session(req: Request) -> Response {
   case req.method {
     Get -> new_session()
     Post -> create_session(req)
@@ -43,7 +43,7 @@ pub fn session(req: Request) -> Response(_) {
   }
 }
 
-pub fn new_session() -> Response(_) {
+pub fn new_session() -> Response {
   "
   <form action='/session' method='post'>
     <label>
@@ -55,7 +55,7 @@ pub fn new_session() -> Response(_) {
   |> wisp.html_response(200)
 }
 
-pub fn destroy_session(req: Request) -> Response(_) {
+pub fn destroy_session(req: Request) -> Response {
   let resp = wisp.redirect("/session")
   case wisp.get_cookie(req, cookie_name, wisp.Signed) {
     Ok(value) -> wisp.set_cookie(resp, req, cookie_name, value, wisp.Signed, 0)
@@ -63,7 +63,7 @@ pub fn destroy_session(req: Request) -> Response(_) {
   }
 }
 
-pub fn create_session(req: Request) -> Response(_) {
+pub fn create_session(req: Request) -> Response {
   use formdata <- wisp.require_form(req)
 
   case list.key_find(formdata.values, "name") {

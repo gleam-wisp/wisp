@@ -38,7 +38,7 @@ import wisp/websocket
 /// value will likely be able to hack your application.
 ///
 pub fn handler(
-  handler: fn(wisp.Request) -> wisp.Response(_),
+  handler: fn(wisp.Request) -> wisp.Response,
   secret_key_base: String,
 ) -> fn(HttpRequest(mist.Connection)) -> HttpResponse(mist.ResponseData) {
   fn(request: HttpRequest(_)) {
@@ -54,9 +54,9 @@ pub fn handler(
 
     // Handle WebSocket upgrade specially
     case response.body {
-      wisp.WebSocket(wrapper) -> {
-        // Convert to mist WebSocket response
-        mist_websocket_upgrade(request, wrapper)
+      wisp.WebSocket(upgrade) -> {
+        // Extract the handler from the opaque wrapper and convert to mist WebSocket response
+        mist_websocket_upgrade(request, upgrade)
       }
       wisp.Text(text) ->
         response
@@ -106,9 +106,10 @@ fn mist_send_file(
 
 fn mist_websocket_upgrade(
   request: HttpRequest(mist.Connection),
-  handler: websocket.WebSocketHandler(_),
+  upgrade: wisp.WebSocketUpgrade,
 ) -> HttpResponse(mist.ResponseData) {
-  // Extract the handler functions from the wrapper
+  // Extract the callbacks from the opaque wrapper
+  let #(on_init_fn, on_message_fn, on_close_fn) = wisp.websocket_upgrade_callbacks(upgrade)
 
   // Use mist.websocket to create the WebSocket response
   mist.websocket(
@@ -127,8 +128,7 @@ fn mist_websocket_upgrade(
           fn() { Ok(Nil) },
         )
 
-      let on_init = websocket.on_init(handler)
-      #(on_init(wisp_connection), option.None)
+      #(on_init_fn(wisp_connection), option.None)
     },
     handler: fn(user_state, message, connection) {
       let wisp_connection =
@@ -151,17 +151,13 @@ fn mist_websocket_upgrade(
         mist.Shutdown -> websocket.Shutdown
         mist.Custom(_custom) -> websocket.Closed
       }
-      let on_message = websocket.on_message(handler)
-      let result = on_message(user_state, wisp_message, wisp_connection)
+      let result = on_message_fn(user_state, wisp_message, wisp_connection)
       case result {
         websocket.Continue(new_state) -> mist.continue(new_state)
         websocket.Stop -> mist.stop()
         websocket.StopWithError(reason) -> mist.stop_abnormal(reason)
       }
     },
-    on_close: fn(state) {
-      let close_fn = websocket.on_close(handler)
-      close_fn(state)
-    },
+    on_close: on_close_fn,
   )
 }

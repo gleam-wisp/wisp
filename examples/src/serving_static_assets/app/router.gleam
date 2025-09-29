@@ -15,7 +15,7 @@ const html = "<!DOCTYPE html>
 </html>
 "
 
-pub fn handle_request(req: Request, ctx: Context) -> Response(_) {
+pub fn handle_request(req: Request, ctx: Context) -> Response {
   use _req <- web.middleware(req, ctx)
   wisp.html_response(html, 200)
 }

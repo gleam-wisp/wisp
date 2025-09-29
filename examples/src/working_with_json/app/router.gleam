@@ -21,7 +21,7 @@ fn person_decoder() -> decode.Decoder(Person) {
   decode.success(Person(name:, is_cool:))
 }
 
-pub fn handle_request(req: Request) -> Response(_) {
+pub fn handle_request(req: Request) -> Response {
   use req <- web.middleware(req)
   use <- wisp.require_method(req, Post)
 

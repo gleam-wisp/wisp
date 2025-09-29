@@ -53,7 +53,7 @@ pub fn browser_request(method: http.Method, path: String) -> Request {
 pub fn session(
   next_request: Request,
   previous_request: Request,
-  previous_response: Response(_),
+  previous_response: Response,
 ) -> Request {
   let request = case list.key_find(previous_request.headers, "cookie") {
     Ok(cookies) -> header(next_request, "cookie", cookies)
@@ -254,7 +254,7 @@ fn build_multipart_body(
 /// This function will panic if the response body is a file and the file cannot
 /// be read, or if it does not contain valid UTF-8.
 ///
-pub fn read_body(response: Response(_)) -> String {
+pub fn read_body(response: Response) -> String {
   case response.body {
     Text(tree) -> tree
     Bytes(bytes) -> {
@@ -294,7 +294,7 @@ pub fn read_body(response: Response(_)) -> String {
 /// This function will panic if the response body is a file and the file cannot
 /// be read.
 ///
-pub fn read_body_bits(response: Response(_)) -> BitArray {
+pub fn read_body_bits(response: Response) -> BitArray {
   case response.body {
     Bytes(tree) -> bytes_tree.to_bit_array(tree)
     Text(tree) -> <<tree:utf8>>
@@ -349,14 +349,18 @@ pub fn websocket_request(method: http.Method, path: String) -> Request {
 }
 
 /// Test a WebSocket handler by checking that it returns a WebSocket response.
-/// Returns the extracted WebSocket handler for further testing.
+/// Returns the extracted callbacks for further testing.
 ///
 pub fn expect_websocket_upgrade(
-  response: Response(_),
-) -> websocket.WebSocketHandler(a) {
+  response: Response,
+) -> #(
+  fn(websocket.WebSocketConnection) -> dynamic.Dynamic,
+  fn(dynamic.Dynamic, websocket.WebSocketMessage, websocket.WebSocketConnection) -> websocket.WebSocketNext(dynamic.Dynamic),
+  fn(dynamic.Dynamic) -> Nil,
+) {
   case response.body {
-    WebSocket(wrapper) -> {
-      wrapper
+    WebSocket(upgrade) -> {
+      wisp.websocket_upgrade_callbacks(upgrade)
     }
     _ ->
       panic as "Expected WebSocket response, but got a different response type"
@@ -380,13 +384,47 @@ pub fn websocket_connection() -> WebSocketConnection {
   WebSocketConnection(sent_texts: [], sent_binaries: [], closed: False)
 }
 
-/// Test a WebSocket handler with a specific message and initial state.
+/// Test WebSocket callbacks with a specific message and initial state.
 /// Returns the new state and any actions performed on the connection.
 ///
 /// This implementation captures all WebSocket actions (text messages, binary messages,
 /// and close operations) in the returned WebSocketConnection for testing purposes.
 ///
 pub fn websocket_message(
+  callbacks: #(
+    fn(websocket.WebSocketConnection) -> dynamic.Dynamic,
+    fn(dynamic.Dynamic, websocket.WebSocketMessage, websocket.WebSocketConnection) -> websocket.WebSocketNext(dynamic.Dynamic),
+    fn(dynamic.Dynamic) -> Nil,
+  ),
+  initial_state: dynamic.Dynamic,
+  message: websocket.WebSocketMessage,
+  mock_connection: WebSocketConnection,
+) -> #(websocket.WebSocketNext(dynamic.Dynamic), WebSocketConnection) {
+  let #(_on_init, on_message_fn, _on_close) = callbacks
+
+  // Use the helper function to capture WebSocket actions
+  let final_connection =
+    capture_websocket_actions(callbacks, initial_state, message, mock_connection)
+
+  // Also get the result by running the handler once more (this is necessary because
+  // we need both the return value and the side effects)
+  let test_connection =
+    websocket.make_connection(
+      fn(_text) { Ok(Nil) },
+      fn(_binary) { Ok(Nil) },
+      fn() { Ok(Nil) },
+    )
+
+  let result = on_message_fn(initial_state, message, test_connection)
+
+  #(result, final_connection)
+}
+
+/// Test a WebSocket handler directly with a specific message and initial state.
+/// This is a legacy function for backward compatibility.
+/// Returns the new state and any actions performed on the connection.
+///
+pub fn websocket_handler_message(
   handler: websocket.WebSocketHandler(state),
   initial_state: state,
   message: websocket.WebSocketMessage,
@@ -394,7 +432,7 @@ pub fn websocket_message(
 ) -> #(websocket.WebSocketNext(state), WebSocketConnection) {
   // Use the helper function to capture WebSocket actions
   let final_connection =
-    capture_websocket_actions(handler, initial_state, message, mock_connection)
+    capture_websocket_handler_actions(handler, initial_state, message, mock_connection)
 
   // Also get the result by running the handler once more (this is necessary because
   // we need both the return value and the side effects)
@@ -413,6 +451,56 @@ pub fn websocket_message(
 
 // Helper function to capture WebSocket actions using process simulation
 fn capture_websocket_actions(
+  callbacks: #(
+    fn(websocket.WebSocketConnection) -> dynamic.Dynamic,
+    fn(dynamic.Dynamic, websocket.WebSocketMessage, websocket.WebSocketConnection) -> websocket.WebSocketNext(dynamic.Dynamic),
+    fn(dynamic.Dynamic) -> Nil,
+  ),
+  initial_state: dynamic.Dynamic,
+  message: websocket.WebSocketMessage,
+  mock_connection: WebSocketConnection,
+) -> WebSocketConnection {
+  let #(_on_init, on_message_fn, _on_close) = callbacks
+
+  // Create a reference to track the connection state using Erlang references
+  let texts_ref = make_ref_with_value(mock_connection.sent_texts)
+  let binaries_ref = make_ref_with_value(mock_connection.sent_binaries)
+  let closed_ref = make_ref_with_value(mock_connection.closed)
+
+  let tracking_connection =
+    websocket.make_connection(
+      // Track text messages
+      fn(text) {
+        let current_texts = get_ref_value(texts_ref)
+        set_ref_value(texts_ref, [text, ..current_texts])
+        Ok(Nil)
+      },
+      // Track binary messages
+      fn(binary) {
+        let current_binaries = get_ref_value(binaries_ref)
+        set_ref_value(binaries_ref, [binary, ..current_binaries])
+        Ok(Nil)
+      },
+      // Track close action
+      fn() {
+        set_ref_value(closed_ref, True)
+        Ok(Nil)
+      },
+    )
+
+  // Execute the callback with the tracking connection
+  let _ = on_message_fn(initial_state, message, tracking_connection)
+
+  // Return the captured state (reversed to maintain order)
+  WebSocketConnection(
+    sent_texts: list.reverse(get_ref_value(texts_ref)),
+    sent_binaries: list.reverse(get_ref_value(binaries_ref)),
+    closed: get_ref_value(closed_ref),
+  )
+}
+
+// Helper function to capture WebSocket handler actions using process simulation
+fn capture_websocket_handler_actions(
   handler: websocket.WebSocketHandler(state),
   initial_state: state,
   message: websocket.WebSocketMessage,
