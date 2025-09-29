@@ -417,7 +417,8 @@ pub fn websocket_message_capture_test() {
             websocket.Continue(state)
           }
           websocket.Text("send_binary") -> {
-            let _ = websocket.send_binary(connection, <<"Binary response":utf8>>)
+            let _ =
+              websocket.send_binary(connection, <<"Binary response":utf8>>)
             websocket.Continue(state)
           }
           websocket.Text("close_connection") -> {

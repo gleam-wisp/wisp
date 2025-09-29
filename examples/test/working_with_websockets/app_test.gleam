@@ -47,11 +47,10 @@ pub fn websocket_handler_extraction_test() {
   let websocket_handler = simulate.expect_websocket_upgrade(response)
 
   // Test the initial state
-  let test_connection = websocket.make_connection(
-    fn(_) { Ok(Nil) },
-    fn(_) { Ok(Nil) },
-    fn() { Ok(Nil) },
-  )
+  let test_connection =
+    websocket.make_connection(fn(_) { Ok(Nil) }, fn(_) { Ok(Nil) }, fn() {
+      Ok(Nil)
+    })
   let initial_state = websocket.on_init(websocket_handler)(test_connection)
   assert initial_state == 0
 }
@@ -109,7 +108,8 @@ pub fn websocket_binary_message_echo_test() {
     )
 
   // Check that the handler echoed the binary message
-  let assert websocket.Continue(5) = result  // State should remain the same for binary
+  let assert websocket.Continue(5) = result
+  // State should remain the same for binary
   assert final_connection.sent_texts == []
   assert final_connection.sent_binaries == [binary_data]
   assert final_connection.closed == False
@@ -134,7 +134,8 @@ pub fn websocket_close_message_test() {
   let assert websocket.Stop = result
   assert final_connection.sent_texts == []
   assert final_connection.sent_binaries == []
-  assert final_connection.closed == False  // Handler doesn't call close, just stops
+  assert final_connection.closed == False
+  // Handler doesn't call close, just stops
 }
 
 pub fn websocket_shutdown_message_test() {
@@ -156,7 +157,8 @@ pub fn websocket_shutdown_message_test() {
   let assert websocket.Stop = result
   assert final_connection.sent_texts == []
   assert final_connection.sent_binaries == []
-  assert final_connection.closed == False  // Handler doesn't call close, just stops
+  assert final_connection.closed == False
+  // Handler doesn't call close, just stops
 }
 
 // Helper function to check if a string contains a substring
