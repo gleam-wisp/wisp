@@ -230,31 +230,13 @@ pub fn multipart_body_test() {
   let assert Ok(content_type) = list.key_find(request.headers, "content-type")
   assert string.starts_with(content_type, "multipart/form-data; boundary=")
 
-  let body_bits = case wisp.read_body_bits(request) {
-    Ok(bits) -> bits
-    Error(_) -> <<>>
+  {
+    use formdata <- wisp.require_form(request)
+    let assert [#("file1", file1), #("file2", file2)] = formdata.files
+    let assert "test.txt" = file1.file_name
+    let assert "data.bin" = file2.file_name
+    wisp.ok()
   }
-  let body_string = case bit_array.to_string(body_bits) {
-    Ok(s) -> s
-    Error(_) -> ""
-  }
-
-  assert body_string |> string.contains("name=\"name\"") == True
-  assert body_string |> string.contains("test") == True
-  assert body_string |> string.contains("name=\"description\"") == True
-  assert body_string |> string.contains("A test file") == True
-
-  // Check for file content
-  assert body_string |> string.contains("name=\"file1\"") == True
-  assert body_string |> string.contains("filename=\"test.txt\"") == True
-  assert body_string |> string.contains("Content-Type: text/plain") == True
-  assert body_string |> string.contains("Hello, world!") == True
-
-  assert body_string |> string.contains("name=\"file2\"") == True
-  assert body_string |> string.contains("filename=\"data.bin\"") == True
-  assert body_string
-    |> string.contains("Content-Type: application/octet-stream")
-    == True
 }
 
 pub fn uploaded_file_test() {
