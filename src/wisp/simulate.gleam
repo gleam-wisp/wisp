@@ -13,6 +13,7 @@ import gleam/uri
 import simplifile
 import wisp.{type Request, type Response, Bytes, File, Text, WebSocket}
 import wisp/websocket
+import wisp/websocket_typesafe
 
 /// Create a test request that can be used to test your request handler
 /// functions.
@@ -349,14 +350,14 @@ pub fn websocket_request(method: http.Method, path: String) -> Request {
 }
 
 /// Test a WebSocket handler by checking that it returns a WebSocket response.
-/// Returns the extracted callbacks for further testing.
+/// Returns the extracted type-safe callbacks for further testing.
 ///
 pub fn expect_websocket_upgrade(
   response: Response,
 ) -> #(
-  fn(websocket.WebSocketConnection) -> dynamic.Dynamic,
-  fn(dynamic.Dynamic, websocket.WebSocketMessage, websocket.WebSocketConnection) -> websocket.WebSocketNext(dynamic.Dynamic),
-  fn(dynamic.Dynamic) -> Nil,
+  fn(websocket.WebSocketConnection) -> websocket_typesafe.TypeSafeState,
+  fn(websocket_typesafe.TypeSafeState, websocket.WebSocketMessage, websocket.WebSocketConnection) -> websocket.WebSocketNext(websocket_typesafe.TypeSafeState),
+  fn(websocket_typesafe.TypeSafeState) -> Nil,
 ) {
   case response.body {
     WebSocket(upgrade) -> {

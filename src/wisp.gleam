@@ -29,28 +29,18 @@ import marceau
 import simplifile
 import wisp/internal
 import wisp/websocket
+import wisp/websocket_typesafe
 
 //
 // Responses
 //
 
-/// A WebSocket upgrade that hides the internal state type for better API compatibility.
-///
-/// This opaque type wraps the callbacks needed for WebSocket handling, allowing
-/// the public API to not expose the websocket_state parameter and preventing
-/// breaking changes when internal websocket implementations change.
+/// A completely type-safe WebSocket upgrade that maintains type safety
+/// throughout the connection lifecycle without any dynamic casts.
+/// This uses the glinterface pattern with opaque types and function composition.
 ///
 pub opaque type WebSocketUpgrade {
-  WebSocketUpgrade(
-    on_init_fn: fn(websocket.WebSocketConnection) -> dynamic.Dynamic,
-    on_message_fn: fn(
-      dynamic.Dynamic,
-      websocket.WebSocketMessage,
-      websocket.WebSocketConnection,
-    ) ->
-      websocket.WebSocketNext(dynamic.Dynamic),
-    on_close_fn: fn(dynamic.Dynamic) -> Nil,
-  )
+  WebSocketUpgrade(type_safe_ws: websocket_typesafe.TypeSafeWebSocket)
 }
 
 /// Extract the callbacks from a WebSocketUpgrade for use by web server adapters.
@@ -59,18 +49,12 @@ pub opaque type WebSocketUpgrade {
 pub fn websocket_upgrade_callbacks(
   upgrade: WebSocketUpgrade,
 ) -> #(
-  fn(websocket.WebSocketConnection) -> dynamic.Dynamic,
-  fn(dynamic.Dynamic, websocket.WebSocketMessage, websocket.WebSocketConnection) ->
-    websocket.WebSocketNext(dynamic.Dynamic),
-  fn(dynamic.Dynamic) -> Nil,
+  fn(websocket.WebSocketConnection) -> websocket_typesafe.TypeSafeState,
+  fn(websocket_typesafe.TypeSafeState, websocket.WebSocketMessage, websocket.WebSocketConnection) ->
+    websocket.WebSocketNext(websocket_typesafe.TypeSafeState),
+  fn(websocket_typesafe.TypeSafeState) -> Nil,
 ) {
-  case upgrade {
-    WebSocketUpgrade(on_init, on_message, on_close) -> #(
-      on_init,
-      on_message,
-      on_close,
-    )
-  }
+  websocket_typesafe.extract_callbacks(upgrade.type_safe_ws)
 }
 
 /// The body of a HTTP response, to be sent to the client.
@@ -1378,11 +1362,6 @@ fn atom_dict_decoder() -> decode.Decoder(Dict(Atom, dynamic.Dynamic)) {
 @external(erlang, "wisp_ffi", "atom_from_dynamic")
 fn atom_from_dynamic(data: dynamic.Dynamic) -> Result(Atom, Nil)
 
-@external(erlang, "gleam@function", "identity")
-fn to_dynamic(value: a) -> dynamic.Dynamic
-
-@external(erlang, "gleam@function", "identity")
-fn from_dynamic(value: dynamic.Dynamic) -> a
 
 type DoNotLeak
 
@@ -2104,25 +2083,9 @@ pub fn websocket(
     websocket.WebSocketNext(state),
   on_close on_close: fn(state) -> Nil,
 ) -> Response {
-  let upgrade =
-    WebSocketUpgrade(
-      on_init_fn: fn(conn) { to_dynamic(on_init(conn)) },
-      on_message_fn: fn(dyn_state, msg, conn) {
-        // Convert Dynamic back to the original state type using unsafe coerce
-        // This is safe because we control the construction and usage of the Dynamic value
-        let state = from_dynamic(dyn_state)
-        case on_message(state, msg, conn) {
-          websocket.Continue(new_state) ->
-            websocket.Continue(to_dynamic(new_state))
-          websocket.Stop -> websocket.Stop
-          websocket.StopWithError(error) -> websocket.StopWithError(error)
-        }
-      },
-      on_close_fn: fn(dyn_state) {
-        let state = from_dynamic(dyn_state)
-        on_close(state)
-      },
-    )
+  let type_safe_ws = websocket_typesafe.create(on_init, on_message, on_close)
+  let upgrade = WebSocketUpgrade(type_safe_ws: type_safe_ws)
+
   response(200)
   |> set_body(WebSocket(upgrade))
 }
