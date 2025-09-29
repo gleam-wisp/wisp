@@ -1,3 +1,4 @@
+import gleam/bit_array
 import gleam/http
 import gleam/http/response
 import gleam/json
@@ -7,6 +8,7 @@ import gleam/string
 import simplifile
 import wisp
 import wisp/simulate
+import wisp/websocket
 
 pub fn request_test() {
   let request = simulate.request(http.Patch, "/wibble/woo")
@@ -260,4 +262,215 @@ pub fn multipart_generation_validation_test() {
     <> boundary
     <> "--\r\n"
   assert body == <<expected_body:utf8>>
+}
+
+/// Test WebSocket message handling with the simulate module
+pub fn websocket_echo_message_test() {
+  // Create a simple echo handler
+  let echo_handler =
+    websocket.handler(
+      on_init: fn(_) { "echo_state" },
+      on_message: fn(state, message, _connection) {
+        case message {
+          websocket.Text(text) -> websocket.Continue("echoed: " <> text)
+          websocket.Binary(_) -> websocket.Continue(state)
+          websocket.Closed -> websocket.Stop
+          websocket.Shutdown -> websocket.Stop
+        }
+      },
+      on_close: fn(_) { Nil },
+    )
+
+  // Test with a text message
+  let mock_connection = simulate.websocket_connection()
+  let #(result, _final_connection) =
+    simulate.websocket_message(
+      echo_handler,
+      "initial_state",
+      websocket.Text("hello"),
+      mock_connection,
+    )
+
+  // Check that the handler processed the message correctly
+  let assert websocket.Continue("echoed: hello") = result
+}
+
+pub fn websocket_ping_message_test() {
+  let ping_handler =
+    websocket.handler(
+      on_init: fn(_) { 0 },
+      on_message: fn(state, message, _connection) {
+        case message {
+          websocket.Text("ping") -> websocket.Continue(state + 1)
+          websocket.Text("reset") -> websocket.Continue(0)
+          _ -> websocket.Continue(state)
+        }
+      },
+      on_close: fn(_) { Nil },
+    )
+
+  let mock_connection = simulate.websocket_connection()
+
+  // Test ping message
+  let #(result, _) =
+    simulate.websocket_message(
+      ping_handler,
+      5,
+      websocket.Text("ping"),
+      mock_connection,
+    )
+
+  let assert websocket.Continue(6) = result
+
+  // Test reset message
+  let #(result, _) =
+    simulate.websocket_message(
+      ping_handler,
+      10,
+      websocket.Text("reset"),
+      mock_connection,
+    )
+
+  let assert websocket.Continue(0) = result
+}
+
+/// Test WebSocket handler with close message
+pub fn websocket_close_message_test() {
+  let close_handler =
+    websocket.handler(
+      on_init: fn(_) { "active" },
+      on_message: fn(_state, message, _connection) {
+        case message {
+          websocket.Closed -> websocket.Stop
+          websocket.Shutdown -> websocket.StopWithError("shutdown")
+          _ -> websocket.Continue("still_active")
+        }
+      },
+      on_close: fn(_) { Nil },
+    )
+
+  let connection = simulate.websocket_connection()
+
+  // Test close message
+  let #(result, _) =
+    simulate.websocket_message(
+      close_handler,
+      "active",
+      websocket.Closed,
+      connection,
+    )
+
+  let assert websocket.Stop = result
+
+  // Test shutdown message
+  let #(result, _) =
+    simulate.websocket_message(
+      close_handler,
+      "active",
+      websocket.Shutdown,
+      connection,
+    )
+
+  let assert websocket.StopWithError("shutdown") = result
+}
+
+/// Test WebSocket handler with binary message
+pub fn websocket_binary_message_test() {
+  let binary_handler =
+    websocket.handler(
+      on_init: fn(_) { 0 },
+      on_message: fn(state, message, _connection) {
+        case message {
+          websocket.Binary(data) -> {
+            let size = bit_array.byte_size(data)
+            websocket.Continue(state + size)
+          }
+          _ -> websocket.Continue(state)
+        }
+      },
+      on_close: fn(_) { Nil },
+    )
+
+  let mock_connection = simulate.websocket_connection()
+  let binary_data = <<"Hello, WebSocket!":utf8>>
+
+  let #(result, _) =
+    simulate.websocket_message(
+      binary_handler,
+      10,
+      websocket.Binary(binary_data),
+      mock_connection,
+    )
+
+  let assert websocket.Continue(27) = result
+}
+
+/// Test WebSocket message capture functionality - verify that sent messages are tracked
+pub fn websocket_message_capture_test() {
+  let echo_and_send_handler =
+    websocket.handler(
+      on_init: fn(_) { "ready" },
+      on_message: fn(state, message, connection) {
+        case message {
+          websocket.Text("send_text:" <> text) -> {
+            let _ = websocket.send_text(connection, "Response: " <> text)
+            websocket.Continue(state)
+          }
+          websocket.Text("send_binary") -> {
+            let _ = websocket.send_binary(connection, <<"Binary response":utf8>>)
+            websocket.Continue(state)
+          }
+          websocket.Text("close_connection") -> {
+            let _ = websocket.close(connection)
+            websocket.Stop
+          }
+          _ -> websocket.Continue(state)
+        }
+      },
+      on_close: fn(_) { Nil },
+    )
+
+  let mock_connection = simulate.websocket_connection()
+
+  // Test text message sending
+  let #(result, final_connection) =
+    simulate.websocket_message(
+      echo_and_send_handler,
+      "ready",
+      websocket.Text("send_text:hello"),
+      mock_connection,
+    )
+
+  let assert websocket.Continue("ready") = result
+  assert final_connection.sent_texts == ["Response: hello"]
+  assert final_connection.sent_binaries == []
+  assert final_connection.closed == False
+
+  // Test binary message sending
+  let #(result, final_connection) =
+    simulate.websocket_message(
+      echo_and_send_handler,
+      "ready",
+      websocket.Text("send_binary"),
+      mock_connection,
+    )
+
+  let assert websocket.Continue("ready") = result
+  assert final_connection.sent_texts == []
+  assert final_connection.sent_binaries == [<<"Binary response":utf8>>]
+  assert final_connection.closed == False
+
+  // Test connection closing
+  let #(result, final_connection) =
+    simulate.websocket_message(
+      echo_and_send_handler,
+      "ready",
+      websocket.Text("close_connection"),
+      mock_connection,
+    )
+
+  let assert websocket.Stop = result
+  assert final_connection.sent_texts == []
+  assert final_connection.sent_binaries == []
+  assert final_connection.closed == True
 }

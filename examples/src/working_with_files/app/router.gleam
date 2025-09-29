@@ -5,7 +5,7 @@ import gleam/result
 import wisp.{type Request, type Response}
 import working_with_files/app/web
 
-pub fn handle_request(req: Request) -> Response {
+pub fn handle_request(req: Request) -> Response(_) {
   use req <- web.middleware(req)
 
   case wisp.path_segments(req) {
@@ -31,13 +31,13 @@ const html = "
 </form>
 "
 
-fn show_home(req: Request) -> Response {
+fn show_home(req: Request) -> Response(_) {
   use <- wisp.require_method(req, Get)
   html
   |> wisp.html_response(200)
 }
 
-fn handle_download_file_from_memory(req: Request) -> Response {
+fn handle_download_file_from_memory(req: Request) -> Response(_) {
   use <- wisp.require_method(req, Get)
 
   // In this case we have the file contents in memory as a string.
@@ -57,7 +57,7 @@ fn handle_download_file_from_memory(req: Request) -> Response {
   )
 }
 
-fn handle_download_file_from_disc(req: Request) -> Response {
+fn handle_download_file_from_disc(req: Request) -> Response(_) {
   use <- wisp.require_method(req, Get)
 
   // In this case the file exists on the disc.
@@ -70,7 +70,7 @@ fn handle_download_file_from_disc(req: Request) -> Response {
   |> wisp.file_download(named: "hello.md", from: file_path)
 }
 
-fn handle_file_upload(req: Request) -> Response {
+fn handle_file_upload(req: Request) -> Response(_) {
   use <- wisp.require_method(req, Post)
   use formdata <- wisp.require_form(req)
 

@@ -1,6 +1,7 @@
 import gleam/bit_array
 import gleam/bytes_tree
 import gleam/crypto
+import gleam/dynamic
 import gleam/http
 import gleam/http/request
 import gleam/json.{type Json}
@@ -10,7 +11,8 @@ import gleam/result
 import gleam/string
 import gleam/uri
 import simplifile
-import wisp.{type Request, type Response, Bytes, File, Text}
+import wisp.{type Request, type Response, Bytes, File, Text, WebSocket}
+import wisp/websocket
 
 /// Create a test request that can be used to test your request handler
 /// functions.
@@ -51,7 +53,7 @@ pub fn browser_request(method: http.Method, path: String) -> Request {
 pub fn session(
   next_request: Request,
   previous_request: Request,
-  previous_response: Response,
+  previous_response: Response(_),
 ) -> Request {
   let request = case list.key_find(previous_request.headers, "cookie") {
     Ok(cookies) -> header(next_request, "cookie", cookies)
@@ -252,7 +254,7 @@ fn build_multipart_body(
 /// This function will panic if the response body is a file and the file cannot
 /// be read, or if it does not contain valid UTF-8.
 ///
-pub fn read_body(response: Response) -> String {
+pub fn read_body(response: Response(_)) -> String {
   case response.body {
     Text(tree) -> tree
     Bytes(bytes) -> {
@@ -279,6 +281,9 @@ pub fn read_body(response: Response) -> String {
         as "the body file range was not valid UTF-8"
       string
     }
+    WebSocket(_) -> {
+      panic as "Cannot read body of WebSocket response - use a WebSocket client instead"
+    }
   }
 }
 
@@ -289,7 +294,7 @@ pub fn read_body(response: Response) -> String {
 /// This function will panic if the response body is a file and the file cannot
 /// be read.
 ///
-pub fn read_body_bits(response: Response) -> BitArray {
+pub fn read_body_bits(response: Response(_)) -> BitArray {
   case response.body {
     Bytes(tree) -> bytes_tree.to_bit_array(tree)
     Text(tree) -> <<tree:utf8>>
@@ -305,6 +310,9 @@ pub fn read_body_bits(response: Response) -> BitArray {
       let assert Ok(sliced) = contents |> bit_array.slice(offset, limit)
         as "the body was a file, but the limit and offset were invalid"
       sliced
+    }
+    WebSocket(_) -> {
+      panic as "Cannot read body of WebSocket response - use a WebSocket client instead"
     }
   }
 }
@@ -329,6 +337,154 @@ pub fn cookie(
   }
   request.set_cookie(request, name, value)
 }
+
+/// Create a WebSocket upgrade request with the necessary headers for testing.
+///
+pub fn websocket_request(method: http.Method, path: String) -> Request {
+  request(method, path)
+  |> header("Connection", "Upgrade")
+  |> header("Upgrade", "websocket")
+  |> header("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
+  |> header("Sec-WebSocket-Version", "13")
+}
+
+/// Test a WebSocket handler by checking that it returns a WebSocket response.
+/// Returns the extracted WebSocket handler for further testing.
+///
+pub fn expect_websocket_upgrade(
+  response: Response(_),
+) -> websocket.WebSocketHandler(a) {
+  case response.body {
+    WebSocket(wrapper) -> {
+      wrapper
+    }
+    _ ->
+      panic as "Expected WebSocket response, but got a different response type"
+  }
+}
+
+/// Simulate a WebSocket connection for testing purposes.
+/// This creates a mock WebSocket connection that can be used to test handlers.
+///
+pub type WebSocketConnection {
+  WebSocketConnection(
+    sent_texts: List(String),
+    sent_binaries: List(BitArray),
+    closed: Bool,
+  )
+}
+
+/// Create a new mock WebSocket connection for testing.
+///
+pub fn websocket_connection() -> WebSocketConnection {
+  WebSocketConnection(sent_texts: [], sent_binaries: [], closed: False)
+}
+
+/// Test a WebSocket handler with a specific message and initial state.
+/// Returns the new state and any actions performed on the connection.
+///
+/// This implementation captures all WebSocket actions (text messages, binary messages,
+/// and close operations) in the returned WebSocketConnection for testing purposes.
+///
+pub fn websocket_message(
+  handler: websocket.WebSocketHandler(state),
+  initial_state: state,
+  message: websocket.WebSocketMessage,
+  mock_connection: WebSocketConnection,
+) -> #(websocket.WebSocketNext(state), WebSocketConnection) {
+  // Use the helper function to capture WebSocket actions
+  let final_connection =
+    capture_websocket_actions(handler, initial_state, message, mock_connection)
+
+  // Also get the result by running the handler once more (this is necessary because
+  // we need both the return value and the side effects)
+  let test_connection =
+    websocket.make_connection(
+      fn(_text) { Ok(Nil) },
+      fn(_binary) { Ok(Nil) },
+      fn() { Ok(Nil) },
+    )
+
+  let on_message_fn = websocket.on_message(handler)
+  let result = on_message_fn(initial_state, message, test_connection)
+
+  #(result, final_connection)
+}
+
+// Helper function to capture WebSocket actions using process simulation
+fn capture_websocket_actions(
+  handler: websocket.WebSocketHandler(state),
+  initial_state: state,
+  message: websocket.WebSocketMessage,
+  mock_connection: WebSocketConnection,
+) -> WebSocketConnection {
+  // Create a reference to track the connection state using Erlang references
+  let texts_ref = make_ref_with_value(mock_connection.sent_texts)
+  let binaries_ref = make_ref_with_value(mock_connection.sent_binaries)
+  let closed_ref = make_ref_with_value(mock_connection.closed)
+
+  let tracking_connection =
+    websocket.make_connection(
+      // Track text messages
+      fn(text) {
+        let current_texts = get_ref_value(texts_ref)
+        set_ref_value(texts_ref, [text, ..current_texts])
+        Ok(Nil)
+      },
+      // Track binary messages
+      fn(binary) {
+        let current_binaries = get_ref_value(binaries_ref)
+        set_ref_value(binaries_ref, [binary, ..current_binaries])
+        Ok(Nil)
+      },
+      // Track close action
+      fn() {
+        set_ref_value(closed_ref, True)
+        Ok(Nil)
+      },
+    )
+
+  // Execute the handler with the tracking connection
+  let on_message_fn = websocket.on_message(handler)
+  let _ = on_message_fn(initial_state, message, tracking_connection)
+
+  // Return the captured state (reversed to maintain order)
+  WebSocketConnection(
+    sent_texts: list.reverse(get_ref_value(texts_ref)),
+    sent_binaries: list.reverse(get_ref_value(binaries_ref)),
+    closed: get_ref_value(closed_ref),
+  )
+}
+
+// External Erlang reference functions for mutable state
+@external(erlang, "erlang", "make_ref")
+fn make_ref() -> dynamic.Dynamic
+
+@external(erlang, "erlang", "put")
+fn erlang_put(key: dynamic.Dynamic, value: dynamic.Dynamic) -> dynamic.Dynamic
+
+@external(erlang, "erlang", "get")
+fn erlang_get(key: dynamic.Dynamic) -> dynamic.Dynamic
+
+// Helper functions to work with references
+fn make_ref_with_value(value: a) -> dynamic.Dynamic {
+  let ref = make_ref()
+  let _ = erlang_put(ref, unsafe_coerce(value))
+  ref
+}
+
+fn get_ref_value(ref: dynamic.Dynamic) -> a {
+  erlang_get(ref) |> unsafe_coerce
+}
+
+fn set_ref_value(ref: dynamic.Dynamic, value: a) -> Nil {
+  let _ = erlang_put(ref, unsafe_coerce(value))
+  Nil
+}
+
+// Unsafe coercion function for dynamic values
+@external(erlang, "gleam_stdlib", "identity")
+fn unsafe_coerce(value: a) -> b
 
 /// The default secret key base used for test requests.
 /// This should never be used outside of tests.
