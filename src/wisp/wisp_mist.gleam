@@ -52,18 +52,15 @@ pub fn handler(
 
     let response = handler(wisp_request)
 
-    // Handle WebSocket upgrade specially
     case response.body {
       wisp.WebSocket(upgrade) -> {
-        // Extract the handler from the opaque wrapper and convert to mist WebSocket response
         mist_websocket_upgrade(request, upgrade)
       }
       wisp.Text(text) ->
-        response
-        |> response.set_body(mist.Bytes(bytes_tree.from_string(text)))
-      wisp.Bytes(bytes) -> response |> response.set_body(mist.Bytes(bytes))
+        response.set_body(response, mist.Bytes(bytes_tree.from_string(text)))
+      wisp.Bytes(bytes) -> response.set_body(response, mist.Bytes(bytes))
       wisp.File(path:, offset:, limit:) ->
-        response |> response.set_body(mist_send_file(path, offset, limit))
+        response.set_body(response, mist_send_file(path, offset, limit))
     }
   }
 }
@@ -108,11 +105,11 @@ fn mist_websocket_upgrade(
   request: HttpRequest(mist.Connection),
   upgrade: wisp.WebSocketUpgrade,
 ) -> HttpResponse(mist.ResponseData) {
-  // Extract the callbacks from the opaque wrapper
   let #(on_init_fn, on_message_fn, on_close_fn) =
-    wisp.websocket_upgrade_callbacks(upgrade)
+    upgrade
+    |> wisp.upgrade_to_websocket
+    |> websocket.extract_callbacks
 
-  // Use mist.websocket to create the WebSocket response
   mist.websocket(
     request: request,
     on_init: fn(connection) {
@@ -150,7 +147,7 @@ fn mist_websocket_upgrade(
         mist.Binary(binary) -> websocket.Binary(binary)
         mist.Closed -> websocket.Closed
         mist.Shutdown -> websocket.Shutdown
-        mist.Custom(_custom) -> websocket.Closed
+        mist.Custom(_) -> websocket.Closed
       }
       let result = on_message_fn(user_state, wisp_message, wisp_connection)
       case result {

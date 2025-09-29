@@ -121,24 +121,18 @@ fn websocket_handler(request: Request) -> Response {
           let count = state + 1
           let response = "Echo #" <> int.to_string(count) <> ": " <> text
           case websocket.send_text(connection, response) {
-            Ok(_) -> websocket.continue(count)
-            Error(_) -> websocket.stop_with_error("Failed to send message")
+            Ok(_) -> websocket.Continue(count)
+            Error(_) -> websocket.StopWithError("Failed to send message")
           }
         }
         websocket.Binary(binary) -> {
-          // Echo binary messages back
           case websocket.send_binary(connection, binary) {
-            Ok(_) -> websocket.continue(state)
-            Error(_) ->
-              websocket.stop_with_error("Failed to send binary message")
+            Ok(_) -> websocket.Continue(state)
+            Error(_) -> websocket.StopWithError("Failed to send binary message")
           }
         }
-        websocket.Closed -> {
-          websocket.stop()
-        }
-        websocket.Shutdown -> {
-          websocket.stop()
-        }
+        websocket.Closed -> websocket.Stop
+        websocket.Shutdown -> websocket.Stop
       }
     },
     on_close: fn(_state) {

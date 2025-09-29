@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(gleam test:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

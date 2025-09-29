@@ -1,4 +1,3 @@
-import gleam/bit_array
 import gleam/http
 import gleam/http/response
 import gleam/json
@@ -381,97 +380,87 @@ pub fn websocket_binary_message_test() {
       on_init: fn(_) { 0 },
       on_message: fn(state, message, _connection) {
         case message {
-          websocket.Binary(data) -> {
-            let size = bit_array.byte_size(data)
-            websocket.Continue(state + size)
-          }
-          _ -> websocket.Continue(state)
-        }
-      },
-      on_close: fn(_) { Nil },
-    )
+pub fn mock_websocket_connection_test() {
+  // Create a mock websocket connection
+  let assert Ok(#(mock, connection)) = simulate.websocket_connection()
 
-  let mock_connection = simulate.websocket_connection()
-  let binary_data = <<"Hello, WebSocket!":utf8>>
+  // Initially, no messages should be sent
+  assert simulate.get_sent_text_messages(mock) == []
+  assert simulate.get_sent_binary_messages(mock) == []
+  assert simulate.is_connection_closed(mock) == False
 
-  let #(result, _) =
-    simulate.websocket_handler_message(
-      binary_handler,
-      10,
-      websocket.Binary(binary_data),
-      mock_connection,
-    )
+  // Send a text message
+  let assert Ok(_) = websocket.send_text(connection, "Hello, WebSocket!")
 
-  let assert websocket.Continue(27) = result
+  // Check that the message was captured
+  assert simulate.get_sent_text_messages(mock) == ["Hello, WebSocket!"]
+  assert simulate.get_sent_binary_messages(mock) == []
+  assert simulate.is_connection_closed(mock) == False
+
+  // Send a binary message
+  let assert Ok(_) = websocket.send_binary(connection, <<"Binary data">>)
+
+  // Check that both messages were captured
+  assert simulate.get_sent_text_messages(mock) == ["Hello, WebSocket!"]
+  assert simulate.get_sent_binary_messages(mock) == [<<"Binary data">>]
+  assert simulate.is_connection_closed(mock) == False
+
+  let assert Ok(_) = websocket.send_text(connection, "Second message")
+  assert simulate.get_sent_text_messages(mock)
+    == ["Hello, WebSocket!", "Second message"]
+
+  assert simulate.get_sent_binary_messages(mock) == [<<"Binary data">>]
+  assert simulate.is_connection_closed(mock) == False
+
+  let assert Ok(_) = websocket.close_connection(connection)
+
+  assert simulate.is_connection_closed(mock) == True
+  assert simulate.get_sent_text_messages(mock)
+    == ["Hello, WebSocket!", "Second message"]
+  assert simulate.get_sent_binary_messages(mock) == [<<"Binary data">>]
+
+  simulate.reset_mock(mock)
+
+  assert simulate.get_sent_text_messages(mock) == []
+  assert simulate.get_sent_binary_messages(mock) == []
+  assert simulate.is_connection_closed(mock) == False
 }
 
-/// Test WebSocket message capture functionality - verify that sent messages are tracked
-pub fn websocket_message_capture_test() {
-  let echo_and_send_handler =
-    websocket.handler(
-      on_init: fn(_) { "ready" },
-      on_message: fn(state, message, connection) {
+pub fn websocket_handler_simulation_test() {
+  let websocket_handler =
+    websocket.new(
+      fn(_conn) { "initial_state" },
+      fn(state, message, connection) {
         case message {
-          websocket.Text("send_text:" <> text) -> {
-            let _ = websocket.send_text(connection, "Response: " <> text)
+          websocket.Text(text) -> {
+            let assert Ok(_) = websocket.send_text(connection, "Echo: " <> text)
             websocket.Continue(state)
           }
-          websocket.Text("send_binary") -> {
-            let _ =
-              websocket.send_binary(connection, <<"Binary response":utf8>>)
+          websocket.Binary(data) -> {
+            let assert Ok(_) = websocket.send_binary(connection, data)
             websocket.Continue(state)
           }
-          websocket.Text("close_connection") -> {
-            let _ = websocket.close(connection)
-            websocket.Stop
-          }
-          _ -> websocket.Continue(state)
+          websocket.Closed | websocket.Shutdown -> websocket.Stop
         }
       },
-      on_close: fn(_) { Nil },
+      fn(_state) { Nil },
     )
 
-  let mock_connection = simulate.websocket_connection()
+  let assert Ok(#(mock, connection)) = simulate.websocket_connection()
 
-  // Test text message sending
-  let #(result, final_connection) =
-    simulate.websocket_handler_message(
-      echo_and_send_handler,
-      "ready",
-      websocket.Text("send_text:hello"),
-      mock_connection,
-    )
+  let #(init_fn, handle_fn, _close_fn) =
+    websocket.extract_callbacks(websocket_handler)
 
-  let assert websocket.Continue("ready") = result
-  assert final_connection.sent_texts == ["Response: hello"]
-  assert final_connection.sent_binaries == []
-  assert final_connection.closed == False
+  let state = init_fn(connection)
 
-  // Test binary message sending
-  let #(result, final_connection) =
-    simulate.websocket_handler_message(
-      echo_and_send_handler,
-      "ready",
-      websocket.Text("send_binary"),
-      mock_connection,
-    )
+  let next = handle_fn(state, websocket.Text("Hello"), connection)
+  let assert websocket.Continue(new_state) = next
 
-  let assert websocket.Continue("ready") = result
-  assert final_connection.sent_texts == []
-  assert final_connection.sent_binaries == [<<"Binary response":utf8>>]
-  assert final_connection.closed == False
+  assert simulate.get_sent_text_messages(mock) == ["Echo: Hello"]
 
-  // Test connection closing
-  let #(result, final_connection) =
-    simulate.websocket_handler_message(
-      echo_and_send_handler,
-      "ready",
-      websocket.Text("close_connection"),
-      mock_connection,
-    )
+  let next = handle_fn(new_state, websocket.Binary(<<"test">>), connection)
+  let assert websocket.Continue(_) = next
 
-  let assert websocket.Stop = result
-  assert final_connection.sent_texts == []
-  assert final_connection.sent_binaries == []
-  assert final_connection.closed == True
+  assert simulate.get_sent_text_messages(mock) == ["Echo: Hello"]
+  assert simulate.get_sent_binary_messages(mock) == [<<"test">>]
 }
