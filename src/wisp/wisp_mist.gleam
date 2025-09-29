@@ -58,7 +58,12 @@ pub fn handler(
         // Convert to mist WebSocket response
         mist_websocket_upgrade(request, wrapper)
       }
-      _ -> mist_response(response)
+      wisp.Text(text) ->
+        response
+        |> response.set_body(mist.Bytes(bytes_tree.from_string(text)))
+      wisp.Bytes(bytes) -> response |> response.set_body(mist.Bytes(bytes))
+      wisp.File(path:, offset:, limit:) ->
+        response |> response.set_body(mist_send_file(path, offset, limit))
     }
   }
 }
@@ -82,19 +87,6 @@ fn wrap_mist_chunk(
         internal.Chunk(data, fn(size) { wrap_mist_chunk(consume(size)) })
     }
   })
-}
-
-fn mist_response(response: wisp.Response(_)) -> HttpResponse(mist.ResponseData) {
-  let body = case response.body {
-    wisp.Text(text) -> mist.Bytes(bytes_tree.from_string(text))
-    wisp.Bytes(bytes) -> mist.Bytes(bytes)
-    wisp.File(path:, offset:, limit:) -> mist_send_file(path, offset, limit)
-    // WebSocket responses are handled separately in the main handler
-    wisp.WebSocket(_) ->
-      panic as "WebSocket responses should not reach mist_response"
-  }
-  response
-  |> response.set_body(body)
 }
 
 fn mist_send_file(
