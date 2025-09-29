@@ -34,31 +34,6 @@ import wisp/websocket
 // Responses
 //
 
-/// A completely type-safe WebSocket upgrade that maintains type safety
-/// throughout the connection lifecycle without any dynamic casts.
-///
-pub opaque type WebSocketUpgrade {
-  WebSocketUpgrade(ws: websocket.WebSocket)
-}
-
-/// Extract the callbacks from a WebSocketUpgrade for use by web server adapters.
-/// This is used internally by web server adapters.
-@internal
-pub fn websocket_upgrade_callbacks(
-  upgrade: WebSocketUpgrade,
-) -> #(
-  fn(websocket.WebSocketConnection) -> websocket.WebSocketState,
-  fn(
-    websocket.WebSocketState,
-    websocket.WebSocketMessage,
-    websocket.WebSocketConnection,
-  ) ->
-    websocket.WebSocketNext(websocket.WebSocketState),
-  fn(websocket.WebSocketState) -> Nil,
-) {
-  websocket.extract_callbacks(upgrade.ws)
-}
-
 /// The body of a HTTP response, to be sent to the client.
 ///
 pub type Body {
@@ -98,6 +73,13 @@ pub type Body {
   /// The upgrade is handled by the underlying HTTP server adapter.
   ///
   WebSocket(WebSocketUpgrade)
+}
+
+/// A completely type-safe WebSocket upgrade that maintains type safety
+/// throughout the connection lifecycle without any dynamic casts.
+///
+pub opaque type WebSocketUpgrade {
+  WebSocketUpgrade(ws: websocket.WebSocket)
 }
 
 /// An alias for a HTTP response containing a `Body`.
@@ -2084,7 +2066,7 @@ pub fn websocket(
     websocket.WebSocketNext(state),
   on_close on_close: fn(state) -> Nil,
 ) -> Response {
-  let ws = websocket.create(on_init, on_message, on_close)
+  let ws = websocket.new(on_init, on_message, on_close)
   let upgrade = WebSocketUpgrade(ws: ws)
 
   response(200)
@@ -2256,4 +2238,9 @@ pub fn content_security_policy_protection(
     <> "' 'strict-dynamic'; object-src 'none'; base-uri 'none'"
   handle_request(nonce)
   |> response.set_header("content-security-policy", header)
+}
+
+@internal
+pub fn upgrade_to_websocket(upgrade: WebSocketUpgrade) -> websocket.WebSocket {
+  upgrade.ws
 }
