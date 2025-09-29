@@ -51,6 +51,7 @@ pub type WebSocketResult {
   StopWithErrorResult(String)
 }
 
+@internal
 pub fn make_connection(
   send_text: fn(String) -> Result(Nil, WebSocketError),
   send_binary: fn(BitArray) -> Result(Nil, WebSocketError),
