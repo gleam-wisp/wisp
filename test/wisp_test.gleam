@@ -28,7 +28,7 @@ pub fn main() {
 fn form_handler(
   request: wisp.Request,
   callback: fn(wisp.FormData) -> anything,
-) -> wisp.Response {
+) -> wisp.Response(_) {
   use form <- wisp.require_form(request)
   callback(form)
   wisp.ok()
@@ -37,13 +37,13 @@ fn form_handler(
 fn json_handler(
   request: wisp.Request,
   callback: fn(Dynamic) -> anything,
-) -> wisp.Response {
+) -> wisp.Response(_) {
   use json <- wisp.require_json(request)
   callback(json)
   wisp.ok()
 }
 
-fn static_file_handler(request: wisp.Request) -> wisp.Response {
+fn static_file_handler(request: wisp.Request) -> wisp.Response(_) {
   use <- wisp.serve_static(request, under: "/", from: "./test")
   wisp.ok()
 }

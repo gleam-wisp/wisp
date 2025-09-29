@@ -3,7 +3,7 @@ import wisp.{type Request, type Response}
 
 /// The HTTP request handler- your application!
 /// 
-pub fn handle_request(req: Request) -> Response {
+pub fn handle_request(req: Request) -> Response(_) {
   // Apply the middleware stack for this request/response.
   use _req <- web.middleware(req)
 
