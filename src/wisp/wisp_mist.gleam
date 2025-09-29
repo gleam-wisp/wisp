@@ -109,7 +109,8 @@ fn mist_websocket_upgrade(
   upgrade: wisp.WebSocketUpgrade,
 ) -> HttpResponse(mist.ResponseData) {
   // Extract the callbacks from the opaque wrapper
-  let #(on_init_fn, on_message_fn, on_close_fn) = wisp.websocket_upgrade_callbacks(upgrade)
+  let #(on_init_fn, on_message_fn, on_close_fn) =
+    wisp.websocket_upgrade_callbacks(upgrade)
 
   // Use mist.websocket to create the WebSocket response
   mist.websocket(

@@ -114,10 +114,7 @@ fn home_page() -> Response {
 fn websocket_handler(request: Request) -> Response {
   wisp.websocket(
     request,
-    on_init: fn(_connection) {
-      // Initial state: message counter
-      0
-    },
+    on_init: fn(_connection) { 0 },
     on_message: fn(state, message, connection) {
       case message {
         websocket.Text(text) -> {

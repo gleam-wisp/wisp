@@ -13,7 +13,6 @@ import gleam/uri
 import simplifile
 import wisp.{type Request, type Response, Bytes, File, Text, WebSocket}
 import wisp/websocket
-import wisp/websocket_typesafe
 
 /// Create a test request that can be used to test your request handler
 /// functions.
@@ -355,9 +354,14 @@ pub fn websocket_request(method: http.Method, path: String) -> Request {
 pub fn expect_websocket_upgrade(
   response: Response,
 ) -> #(
-  fn(websocket.WebSocketConnection) -> websocket_typesafe.TypeSafeState,
-  fn(websocket_typesafe.TypeSafeState, websocket.WebSocketMessage, websocket.WebSocketConnection) -> websocket.WebSocketNext(websocket_typesafe.TypeSafeState),
-  fn(websocket_typesafe.TypeSafeState) -> Nil,
+  fn(websocket.WebSocketConnection) -> websocket.WebSocketState,
+  fn(
+    websocket.WebSocketState,
+    websocket.WebSocketMessage,
+    websocket.WebSocketConnection,
+  ) ->
+    websocket.WebSocketNext(websocket.WebSocketState),
+  fn(websocket.WebSocketState) -> Nil,
 ) {
   case response.body {
     WebSocket(upgrade) -> {
@@ -393,19 +397,29 @@ pub fn websocket_connection() -> WebSocketConnection {
 ///
 pub fn websocket_message(
   callbacks: #(
-    fn(websocket.WebSocketConnection) -> dynamic.Dynamic,
-    fn(dynamic.Dynamic, websocket.WebSocketMessage, websocket.WebSocketConnection) -> websocket.WebSocketNext(dynamic.Dynamic),
-    fn(dynamic.Dynamic) -> Nil,
+    fn(websocket.WebSocketConnection) -> websocket.WebSocketState,
+    fn(
+      websocket.WebSocketState,
+      websocket.WebSocketMessage,
+      websocket.WebSocketConnection,
+    ) ->
+      websocket.WebSocketNext(websocket.WebSocketState),
+    fn(websocket.WebSocketState) -> Nil,
   ),
-  initial_state: dynamic.Dynamic,
+  initial_state: websocket.WebSocketState,
   message: websocket.WebSocketMessage,
   mock_connection: WebSocketConnection,
-) -> #(websocket.WebSocketNext(dynamic.Dynamic), WebSocketConnection) {
+) -> #(websocket.WebSocketNext(websocket.WebSocketState), WebSocketConnection) {
   let #(_on_init, on_message_fn, _on_close) = callbacks
 
   // Use the helper function to capture WebSocket actions
   let final_connection =
-    capture_websocket_actions(callbacks, initial_state, message, mock_connection)
+    capture_websocket_actions(
+      callbacks,
+      initial_state,
+      message,
+      mock_connection,
+    )
 
   // Also get the result by running the handler once more (this is necessary because
   // we need both the return value and the side effects)
@@ -433,7 +447,12 @@ pub fn websocket_handler_message(
 ) -> #(websocket.WebSocketNext(state), WebSocketConnection) {
   // Use the helper function to capture WebSocket actions
   let final_connection =
-    capture_websocket_handler_actions(handler, initial_state, message, mock_connection)
+    capture_websocket_handler_actions(
+      handler,
+      initial_state,
+      message,
+      mock_connection,
+    )
 
   // Also get the result by running the handler once more (this is necessary because
   // we need both the return value and the side effects)
@@ -453,11 +472,16 @@ pub fn websocket_handler_message(
 // Helper function to capture WebSocket actions using process simulation
 fn capture_websocket_actions(
   callbacks: #(
-    fn(websocket.WebSocketConnection) -> dynamic.Dynamic,
-    fn(dynamic.Dynamic, websocket.WebSocketMessage, websocket.WebSocketConnection) -> websocket.WebSocketNext(dynamic.Dynamic),
-    fn(dynamic.Dynamic) -> Nil,
+    fn(websocket.WebSocketConnection) -> websocket.WebSocketState,
+    fn(
+      websocket.WebSocketState,
+      websocket.WebSocketMessage,
+      websocket.WebSocketConnection,
+    ) ->
+      websocket.WebSocketNext(websocket.WebSocketState),
+    fn(websocket.WebSocketState) -> Nil,
   ),
-  initial_state: dynamic.Dynamic,
+  initial_state: websocket.WebSocketState,
   message: websocket.WebSocketMessage,
   mock_connection: WebSocketConnection,
 ) -> WebSocketConnection {
