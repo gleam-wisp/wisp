@@ -30,7 +30,7 @@ pub fn websocket_text_echo_test() {
   let response = router.handle_request(request)
 
   let assert wisp.WebSocket(upgrade) = response.body
-  let handler = wisp.upgrade_to_websocket(upgrade)
+  let handler = wisp.recover(upgrade)
   let assert Ok(ws) = simulate.create_websocket(handler)
 
   // Send first text message
@@ -54,7 +54,7 @@ pub fn websocket_binary_echo_test() {
   let response = router.handle_request(request)
 
   let assert wisp.WebSocket(upgrade) = response.body
-  let handler = wisp.upgrade_to_websocket(upgrade)
+  let handler = wisp.recover(upgrade)
   let assert Ok(ws) = simulate.create_websocket(handler)
 
   // Send binary message
@@ -73,7 +73,7 @@ pub fn websocket_mixed_messages_test() {
   let response = router.handle_request(request)
 
   let assert wisp.WebSocket(upgrade) = response.body
-  let handler = wisp.upgrade_to_websocket(upgrade)
+  let handler = wisp.recover(upgrade)
   let assert Ok(ws) = simulate.create_websocket(handler)
 
   // Send text message
@@ -96,7 +96,7 @@ pub fn websocket_close_test() {
   let response = router.handle_request(request)
 
   let assert wisp.WebSocket(upgrade) = response.body
-  let handler = wisp.upgrade_to_websocket(upgrade)
+  let handler = wisp.recover(upgrade)
   let assert Ok(ws) = simulate.create_websocket(handler)
 
   // Send some messages
@@ -116,7 +116,7 @@ pub fn websocket_closed_ignores_messages_test() {
   let response = router.handle_request(request)
 
   let assert wisp.WebSocket(upgrade) = response.body
-  let handler = wisp.upgrade_to_websocket(upgrade)
+  let handler = wisp.recover(upgrade)
   let assert Ok(ws) = simulate.create_websocket(handler)
 
   // Send a message

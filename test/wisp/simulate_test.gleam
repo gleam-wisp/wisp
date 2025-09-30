@@ -436,7 +436,7 @@ pub fn websocket_handler_test() {
       fn(_conn) {
         let initial_state = "Initial State"
         process.send(state_subject, initial_state)
-        initial_state
+        #(initial_state, option.None)
       },
       fn(state, message, connection) {
         case message {
@@ -455,6 +455,11 @@ pub fn websocket_handler_test() {
           }
           websocket.Closed | websocket.Shutdown -> {
             websocket.Stop
+          }
+          websocket.Custom(_) -> {
+            let new_state = state <> " | Custom"
+            process.send(state_subject, new_state)
+            websocket.Continue(new_state)
           }
         }
       },

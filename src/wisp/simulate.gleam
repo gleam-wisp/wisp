@@ -360,7 +360,25 @@ pub const default_browser_headers: List(#(String, String)) = [
 ]
 
 /// Create a websocket upgrade request with proper headers.
-/// This creates a request that simulates a WebSocket upgrade handshake.
+///
+/// This creates a request that simulates a WebSocket upgrade handshake by
+/// setting the necessary headers: `connection`, `upgrade`, `sec-websocket-key`,
+/// and `sec-websocket-version`.
+///
+/// ## Example
+///
+/// ```gleam
+/// let request = simulate.websocket_request(http.Get, "/chat")
+/// let response = handle_request(request)
+///
+/// case response.body {
+///   wisp.WebSocket(upgrade) -> {
+///     let handler = wisp.upgrade_to_websocket(upgrade)
+///     // Test the websocket handler
+///   }
+///   _ -> panic as "Expected WebSocket upgrade"
+/// }
+/// ```
 ///
 pub fn websocket_request(method: http.Method, path: String) -> Request {
   request(method, path)
@@ -370,23 +388,38 @@ pub fn websocket_request(method: http.Method, path: String) -> Request {
   |> header("sec-websocket-version", "13")
 }
 
-/// A websocket mock that captures sent messages for testing.
-/// This allows you to verify what messages your websocket handler sends
-/// in response to incoming messages.
+/// A websocket mock for testing websocket handlers.
 ///
-pub opaque type WebSocket {
+/// This opaque type represents a test websocket connection that captures all
+/// messages sent by the handler. It maintains the handler's state and tracks
+/// all text and binary messages sent through the connection.
+///
+/// You cannot construct this type directly - use `create_websocket` to create
+/// a test websocket from a websocket handler.
+///
+/// ## Functions
+///
+/// - `create_websocket` - Create a new test websocket
+/// - `send_websocket_text` - Send a text message to the handler
+/// - `send_websocket_binary` - Send a binary message to the handler
+/// - `websocket_sent_text_messages` - Get all text messages sent by the handler
+/// - `websocket_sent_binary_messages` - Get all binary messages sent by the handler
+/// - `reset_websocket` - Reset to initial state
+/// - `close_websocket` - Close the connection
+///
+pub opaque type WebSocket(selector_message, state) {
   WebSocket(
-    websocket: websocket.WebSocket,
+    websocket: websocket.WebSocket(selector_message, state),
     connection: websocket.Connection,
-    state: websocket.State,
-    subject: process.Subject(WebSocketMessage),
+    state: websocket.State(state),
+    subject: process.Subject(WebSocketMessage(state)),
   )
 }
 
 /// Internal state for the websocket mock actor
-type WebSocketState {
+type WebSocketState(state) {
   State(
-    state: option.Option(websocket.State),
+    state: option.Option(websocket.State(state)),
     sent_text_messages: List(String),
     sent_binary_messages: List(BitArray),
     closed: Bool,
@@ -394,24 +427,55 @@ type WebSocketState {
 }
 
 /// Messages that can be sent to the mock websocket actor
-type WebSocketMessage {
+type WebSocketMessage(state) {
   SendText(String)
   SendBinary(BitArray)
-  Close(websocket.State)
+  Close(websocket.State(state))
   GetSentTextMessages(reply_with: process.Subject(List(String)))
   GetSentBinaryMessages(reply_with: process.Subject(List(BitArray)))
-  Reset(state: websocket.State)
-  SetState(state: websocket.State)
-  GetState(reply_with: process.Subject(websocket.State))
+  Reset(state: websocket.State(state))
+  SetState(state: websocket.State(state))
+  GetState(reply_with: process.Subject(websocket.State(state)))
   IsClosed(reply_with: process.Subject(Bool))
 }
 
-/// Create a new websocket mock that captures all sent messages.
-/// Returns both the websocket and the websocket connection.
+/// Create a new websocket mock for testing.
+///
+/// This function creates a test websocket that captures all messages sent by the
+/// handler, allowing you to verify the handler's behavior without needing a real
+/// WebSocket connection. The mock automatically tracks text and binary messages
+/// sent through the connection.
+///
+/// ## Example
+///
+/// ```gleam
+/// let handler = websocket.new(
+///   on_init: fn(_conn) { 0 },
+///   on_message: fn(state, message, connection) {
+///     case message {
+///       websocket.Text(text) -> {
+///         websocket.send_text(connection, "Echo: " <> text)
+///         websocket.Continue(state + 1)
+///       }
+///       _ -> websocket.Continue(state)
+///     }
+///   },
+///   on_close: fn(_state) { Nil },
+/// )
+///
+/// let assert Ok(ws) = simulate.create_websocket(handler)
+/// let assert Ok(ws) = simulate.send_websocket_text(ws, "Hello")
+/// let assert ["Echo: Hello"] = simulate.websocket_sent_text_messages(ws)
+/// ```
+///
+/// ## Returns
+///
+/// - `Ok(WebSocket)` - A test websocket that can be used with other simulate functions
+/// - `Error(actor.StartError)` - If the underlying actor fails to start
 ///
 pub fn create_websocket(
-  handler websocket: websocket.WebSocket,
-) -> Result(WebSocket, actor.StartError) {
+  handler websocket: websocket.WebSocket(selector_message, state),
+) -> Result(WebSocket(selector_message, state), actor.StartError) {
   let #(init, _, stop) = websocket.extract_callbacks(websocket)
 
   use started <- result.try(
@@ -441,18 +505,23 @@ pub fn create_websocket(
         Ok(Nil)
       },
     )
-  let state = init(connection)
+  let #(state, _selector) = init(connection)
   process.send(started.data, SetState(state))
-  let websocket =
-    WebSocket(websocket:, connection:, state:, subject: started.data)
-  Ok(websocket)
+  let ws_instance =
+    WebSocket(
+      websocket: websocket,
+      connection: connection,
+      state: state,
+      subject: started.data,
+    )
+  Ok(ws_instance)
 }
 
 /// Handle messages sent to the mock websocket actor
 fn handle_message(
-  state: WebSocketState,
-  message: WebSocketMessage,
-) -> actor.Next(WebSocketState, WebSocketMessage) {
+  state: WebSocketState(state),
+  message: WebSocketMessage(state),
+) -> actor.Next(WebSocketState(state), WebSocketMessage(state)) {
   case message {
     SendText(text) -> {
       let new_state = case state.closed {
@@ -511,38 +580,110 @@ fn handle_message(
   }
 }
 
-/// Get all text messages that were sent through the mock connection.
-/// Messages are returned in the order they were sent.
+/// Get all text messages that have been sent by the websocket handler.
 ///
-pub fn websocket_sent_text_messages(websocket: WebSocket) -> List(String) {
+/// Messages are returned in the order they were sent. This is useful for
+/// verifying that your handler sends the expected messages in response to
+/// incoming messages.
+///
+/// ## Example
+///
+/// ```gleam
+/// let assert Ok(ws) = simulate.create_websocket(handler)
+/// let assert Ok(ws) = simulate.send_websocket_text(ws, "Hello")
+/// let assert Ok(ws) = simulate.send_websocket_text(ws, "World")
+///
+/// let messages = simulate.websocket_sent_text_messages(ws)
+/// assert messages == ["Response 1", "Response 2"]
+/// ```
+///
+pub fn websocket_sent_text_messages(
+  websocket: WebSocket(selector_message, state),
+) -> List(String) {
   process.call(websocket.subject, 1000, GetSentTextMessages)
 }
 
-/// Get all binary messages that were sent through the mock connection.
-/// Messages are returned in the order they were sent.
+/// Get all binary messages that have been sent by the websocket handler.
 ///
-pub fn websocket_sent_binary_messages(websocket: WebSocket) -> List(BitArray) {
+/// Messages are returned in the order they were sent. This is useful for
+/// verifying that your handler sends the expected binary data in response to
+/// incoming messages.
+///
+/// ## Example
+///
+/// ```gleam
+/// let assert Ok(ws) = simulate.create_websocket(handler)
+/// let assert Ok(ws) = simulate.send_websocket_binary(ws, <<1, 2, 3>>)
+///
+/// let messages = simulate.websocket_sent_binary_messages(ws)
+/// assert messages == [<<1, 2, 3>>]
+/// ```
+///
+pub fn websocket_sent_binary_messages(
+  websocket: WebSocket(selector_message, state),
+) -> List(BitArray) {
   process.call(websocket.subject, 1000, GetSentBinaryMessages)
 }
 
-/// Reset the mock to its initial state, clearing all captured messages.
+/// Reset the websocket to its initial state, clearing all captured messages.
 ///
-pub fn reset_websocket(websocket: WebSocket) -> WebSocket {
+/// This calls the handler's `on_init` callback again and clears the list of
+/// sent messages. The websocket is also marked as not closed, allowing you to
+/// send messages again after a close.
+///
+/// ## Example
+///
+/// ```gleam
+/// let assert Ok(ws) = simulate.create_websocket(handler)
+/// let assert Ok(ws) = simulate.send_websocket_text(ws, "Hello")
+/// let assert ["Response"] = simulate.websocket_sent_text_messages(ws)
+///
+/// // Reset to initial state
+/// let ws = simulate.reset_websocket(ws)
+/// let assert [] = simulate.websocket_sent_text_messages(ws)
+///
+/// // Can send messages again from a clean slate
+/// let assert Ok(ws) = simulate.send_websocket_text(ws, "Hello again")
+/// ```
+///
+pub fn reset_websocket(
+  websocket: WebSocket(selector_message, state),
+) -> WebSocket(selector_message, state) {
   let WebSocket(websocket: internal_websocket, connection:, state: _, subject:) =
     websocket
   let #(init, _, _) = websocket.extract_callbacks(internal_websocket)
-  let state = init(connection)
+  let #(state, _selector) = init(connection)
   process.send(subject, Reset(state))
   WebSocket(websocket: internal_websocket, connection:, state:, subject:)
 }
 
-/// Simulate sending a text message to a websocket handler.
-/// Returns the updated state and any effects that occurred.
+/// Simulate sending a text message to the websocket handler.
+///
+/// This calls the handler's `on_message` callback with a `Text` message. The
+/// handler's state is updated based on the callback's response. Any messages
+/// sent by the handler can be retrieved using `websocket_sent_text_messages`
+/// or `websocket_sent_binary_messages`.
+///
+/// If the websocket has been closed, this function returns the websocket
+/// unchanged without calling the handler.
+///
+/// ## Example
+///
+/// ```gleam
+/// let assert Ok(ws) = simulate.create_websocket(handler)
+/// let assert Ok(ws) = simulate.send_websocket_text(ws, "Hello")
+/// let assert ["Echo: Hello"] = simulate.websocket_sent_text_messages(ws)
+/// ```
+///
+/// ## Returns
+///
+/// - `Ok(WebSocket)` - The websocket with updated state
+/// - `Error(Nil)` - If the handler returns `Stop` or `StopWithError`
 ///
 pub fn send_websocket_text(
-  ws: WebSocket,
+  ws: WebSocket(selector_message, state),
   message: String,
-) -> Result(WebSocket, Nil) {
+) -> Result(WebSocket(selector_message, state), Nil) {
   let WebSocket(websocket:, state:, connection:, subject:) = ws
   let is_closed = process.call(subject, 1000, IsClosed)
   case is_closed {
@@ -561,13 +702,33 @@ pub fn send_websocket_text(
   }
 }
 
-/// Simulate sending a binary message to a websocket handler.
-/// Returns the updated state and any effects that occurred.
+/// Simulate sending a binary message to the websocket handler.
+///
+/// This calls the handler's `on_message` callback with a `Binary` message. The
+/// handler's state is updated based on the callback's response. Any messages
+/// sent by the handler can be retrieved using `websocket_sent_text_messages`
+/// or `websocket_sent_binary_messages`.
+///
+/// If the websocket has been closed, this function returns the websocket
+/// unchanged without calling the handler.
+///
+/// ## Example
+///
+/// ```gleam
+/// let assert Ok(ws) = simulate.create_websocket(handler)
+/// let assert Ok(ws) = simulate.send_websocket_binary(ws, <<1, 2, 3>>)
+/// let assert [<<1, 2, 3>>] = simulate.websocket_sent_binary_messages(ws)
+/// ```
+///
+/// ## Returns
+///
+/// - `Ok(WebSocket)` - The websocket with updated state
+/// - `Error(Nil)` - If the handler returns `Stop` or `StopWithError`
 ///
 pub fn send_websocket_binary(
-  ws: WebSocket,
+  ws: WebSocket(selector_message, state),
   message: BitArray,
-) -> Result(WebSocket, Nil) {
+) -> Result(WebSocket(selector_message, state), Nil) {
   let WebSocket(websocket:, state:, connection:, subject:) = ws
   let is_closed = process.call(subject, 1000, IsClosed)
   case is_closed {
@@ -586,13 +747,37 @@ pub fn send_websocket_binary(
   }
 }
 
-/// Simulate closing a websocket connection.
-/// Returns the updated state representing the closed connection.
+/// Simulate closing the websocket connection.
+///
+/// This calls the handler's `on_close` callback with the current handler state.
+/// After closing, any subsequent calls to `send_websocket_text` or
+/// `send_websocket_binary` will be ignored without calling the handler.
+///
+/// Use `reset_websocket` to re-open the connection for further testing.
+///
+/// ## Example
+///
+/// ```gleam
+/// let assert Ok(ws) = simulate.create_websocket(handler)
+/// let assert Ok(ws) = simulate.send_websocket_text(ws, "Hello")
+///
+/// // Close the connection
+/// let assert Ok(Nil) = simulate.close_websocket(ws)
+///
+/// // Further messages are ignored
+/// let assert Ok(ws) = simulate.send_websocket_text(ws, "After close")
+/// let assert ["Response 1"] = simulate.websocket_sent_text_messages(ws)
+/// ```
+///
+/// ## Returns
+///
+/// - `Ok(Nil)` - If the connection was closed successfully
+/// - `Error(WebSocketError)` - If closing the connection failed
 ///
 pub fn close_websocket(
-  websocket: WebSocket,
+  websocket_arg: WebSocket(selector_message, state),
 ) -> Result(Nil, websocket.WebSocketError) {
-  let WebSocket(websocket: _, state: _, connection:, subject:) = websocket
+  let WebSocket(websocket: _, state: _, connection:, subject:) = websocket_arg
   let current_state = process.call(subject, 1000, GetState)
   process.send(subject, Close(current_state))
   websocket.close_connection(connection)
