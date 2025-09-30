@@ -12,7 +12,7 @@ import gleam/result
 import gleam/string
 import gleam/uri
 import simplifile
-import wisp.{type Request, type Response}
+import wisp.{type Request, type Response, Bytes, File, Text}
 import wisp/websocket
 
 /// Create a test request that can be used to test your request handler
@@ -257,21 +257,21 @@ fn build_multipart_body(
 ///
 pub fn read_body(response: Response) -> String {
   case response.body {
-    wisp.Text(tree) -> tree
-    wisp.Bytes(bytes) -> {
+    Text(tree) -> tree
+    Bytes(bytes) -> {
       let data = bytes_tree.to_bit_array(bytes)
       let assert Ok(string) = bit_array.to_string(data)
         as "the response body was non-UTF8 binary data"
       string
     }
-    wisp.File(path:, offset: 0, limit: None) -> {
+    File(path:, offset: 0, limit: None) -> {
       let assert Ok(data) = simplifile.read_bits(path)
         as "the body was a file, but the file could not be read"
       let assert Ok(contents) = bit_array.to_string(data)
         as "the body file was not valid UTF-8"
       contents
     }
-    wisp.File(path:, offset:, limit:) -> {
+    File(path:, offset:, limit:) -> {
       let assert Ok(data) = simplifile.read_bits(path)
         as "the body was a file, but the file could not be read"
       let byte_length =
@@ -297,14 +297,14 @@ pub fn read_body(response: Response) -> String {
 ///
 pub fn read_body_bits(response: Response) -> BitArray {
   case response.body {
-    wisp.Bytes(tree) -> bytes_tree.to_bit_array(tree)
-    wisp.Text(tree) -> <<tree:utf8>>
-    wisp.File(path:, offset: 0, limit: None) -> {
+    Bytes(tree) -> bytes_tree.to_bit_array(tree)
+    Text(tree) -> <<tree:utf8>>
+    File(path:, offset: 0, limit: None) -> {
       let assert Ok(contents) = simplifile.read_bits(path)
         as "the response body was a file, but the file could not be read"
       contents
     }
-    wisp.File(path:, offset:, limit:) -> {
+    File(path:, offset:, limit:) -> {
       let assert Ok(contents) = simplifile.read_bits(path)
         as "the body was a file, but the file could not be read"
       let limit = limit |> option.unwrap(bit_array.byte_size(contents))
