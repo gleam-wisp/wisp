@@ -1,4 +1,5 @@
 import gleam/int
+import gleam/option
 import wisp.{type Request, type Response}
 import wisp/websocket
 
@@ -114,7 +115,7 @@ fn home_page() -> Response {
 fn websocket_handler(request: Request) -> Response {
   wisp.websocket(
     request,
-    on_init: fn(_connection) { 0 },
+    on_init: fn(_connection) { #(0, option.None) },
     on_message: fn(state, message, connection) {
       case message {
         websocket.Text(text) -> {
@@ -133,6 +134,7 @@ fn websocket_handler(request: Request) -> Response {
         }
         websocket.Closed -> websocket.Stop
         websocket.Shutdown -> websocket.Stop
+        websocket.Custom(_) -> websocket.Stop
       }
     },
     on_close: fn(state) {

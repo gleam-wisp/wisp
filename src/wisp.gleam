@@ -9,6 +9,7 @@ import gleam/dynamic.{type Dynamic}
 import gleam/dynamic/decode
 import gleam/erlang/application
 import gleam/erlang/atom.{type Atom}
+import gleam/erlang/process
 import gleam/http.{type Method}
 import gleam/http/cookie
 import gleam/http/request.{type Request as HttpRequest}
@@ -75,12 +76,19 @@ pub type Body {
   WebSocket(WebSocketUpgrade)
 }
 
-/// A completely type-safe WebSocket upgrade that maintains type safety
-/// throughout the connection lifecycle without any dynamic casts.
-///
-pub opaque type WebSocketUpgrade {
-  WebSocketUpgrade(ws: websocket.WebSocket)
-}
+pub type WebSocketUpgrade
+
+@internal
+pub type Unknown
+
+@external(erlang, "gleam@function", "identity")
+fn erase(callbacks: websocket.WebSocket(state, message)) -> WebSocketUpgrade
+
+@external(erlang, "gleam@function", "identity")
+@internal
+pub fn recover(
+  upgrade: WebSocketUpgrade,
+) -> websocket.WebSocket(Unknown, Unknown)
 
 /// An alias for a HTTP response containing a `Body`.
 pub type Response =
@@ -2054,16 +2062,20 @@ pub fn get_cookie(
 ///
 pub fn websocket(
   request _request: Request,
-  on_init on_init: fn(websocket.Connection) -> state,
-  on_message on_message: fn(state, websocket.Message, websocket.Connection) ->
+  on_init on_init: fn(websocket.Connection) ->
+    #(state, Option(process.Selector(message))),
+  on_message on_message: fn(
+    state,
+    websocket.Message(custom),
+    websocket.Connection,
+  ) ->
     websocket.Next(state),
   on_close on_close: fn(state) -> Nil,
 ) -> Response {
   let ws = websocket.new(on_init, on_message, on_close)
-  let upgrade = WebSocketUpgrade(ws: ws)
 
   response(200)
-  |> set_body(WebSocket(upgrade))
+  |> set_body(WebSocket(erase(ws)))
 }
 
 //
