@@ -105,7 +105,7 @@ fn mist_websocket_upgrade(
   request: HttpRequest(mist.Connection),
   upgrade: wisp.WebSocketUpgrade,
 ) -> HttpResponse(mist.ResponseData) {
-  let #(on_init_fn, on_message_fn, on_close_fn) =
+  let #(on_init, on_message, on_close) =
     upgrade
     |> wisp.upgrade_to_websocket
     |> websocket.extract_callbacks
@@ -126,7 +126,7 @@ fn mist_websocket_upgrade(
           fn() { Ok(Nil) },
         )
 
-      #(on_init_fn(wisp_connection), option.None)
+      #(on_init(wisp_connection), option.None)
     },
     handler: fn(user_state, message, connection) {
       let wisp_connection =
@@ -149,13 +149,13 @@ fn mist_websocket_upgrade(
         mist.Shutdown -> websocket.Shutdown
         mist.Custom(_) -> websocket.Closed
       }
-      let result = on_message_fn(user_state, wisp_message, wisp_connection)
+      let result = on_message(user_state, wisp_message, wisp_connection)
       case result {
         websocket.Continue(new_state) -> mist.continue(new_state)
         websocket.Stop -> mist.stop()
         websocket.StopWithError(reason) -> mist.stop_abnormal(reason)
       }
     },
-    on_close: on_close_fn,
+    on_close:,
   )
 }

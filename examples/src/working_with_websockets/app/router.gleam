@@ -135,9 +135,10 @@ fn websocket_handler(request: Request) -> Response {
         websocket.Shutdown -> websocket.Stop
       }
     },
-    on_close: fn(_state) {
-      // Cleanup when connection closes
-      Nil
+    on_close: fn(state) {
+      wisp.log_info(
+        "Connection closed after: " <> int.to_string(state) <> " messages",
+      )
     },
   )
 }
