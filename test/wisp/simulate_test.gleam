@@ -1,3 +1,4 @@
+import gleam/erlang/process
 import gleam/http
 import gleam/http/response
 import gleam/json
@@ -428,39 +429,66 @@ pub fn mock_websocket_connection_test() {
 
 pub fn websocket_handler_simulation_test() {
   let websocket_handler =
+pub fn websocket_handler_test() {
+  let state_subject = process.new_subject()
+  let handler =
     websocket.new(
-      fn(_conn) { "initial_state" },
+      fn(_conn) {
+        let initial_state = "Initial State"
+        process.send(state_subject, initial_state)
+        initial_state
+      },
       fn(state, message, connection) {
         case message {
           websocket.Text(text) -> {
-            let assert Ok(_) = websocket.send_text(connection, "Echo: " <> text)
-            websocket.Continue(state)
+            let message = "Echo: " <> text
+            let new_state = state <> " | " <> message
+            let assert Ok(_) = websocket.send_text(connection, message)
+            process.send(state_subject, new_state)
+            websocket.Continue(new_state)
           }
           websocket.Binary(data) -> {
+            let new_state = state <> " | " <> "Binary"
             let assert Ok(_) = websocket.send_binary(connection, data)
-            websocket.Continue(state)
+            process.send(state_subject, new_state)
+            websocket.Continue(new_state)
           }
-          websocket.Closed | websocket.Shutdown -> websocket.Stop
+          websocket.Closed | websocket.Shutdown -> {
+            websocket.Stop
+          }
         }
       },
-      fn(_state) { Nil },
+      fn(state) { process.send(state_subject, state) },
     )
 
-  let assert Ok(#(mock, connection)) = simulate.websocket_connection()
+  let assert Ok(websocket) = simulate.create_websocket(handler)
+  let assert Ok("Initial State") = process.receive(state_subject, 1000)
 
-  let #(init_fn, handle_fn, _close_fn) =
-    websocket.extract_callbacks(websocket_handler)
+  let assert Ok(websocket) = simulate.send_websocket_text(websocket, "Hello")
+  let assert [] = simulate.websocket_sent_binary_messages(websocket)
+  let assert ["Echo: Hello"] = simulate.websocket_sent_text_messages(websocket)
+  let assert Ok("Initial State | Echo: Hello") =
+    process.receive(state_subject, 1000)
 
-  let state = init_fn(connection)
+  let assert Ok(websocket) =
+    simulate.send_websocket_binary(websocket, <<1, 2, 3>>)
+  let assert [<<1, 2, 3>>] = simulate.websocket_sent_binary_messages(websocket)
+  let assert ["Echo: Hello"] = simulate.websocket_sent_text_messages(websocket)
+  let assert Ok("Initial State | Echo: Hello | Binary") =
+    process.receive(state_subject, 1000)
 
-  let next = handle_fn(state, websocket.Text("Hello"), connection)
-  let assert websocket.Continue(new_state) = next
+  let assert Ok(Nil) = simulate.close_websocket(websocket)
+  let assert Ok("Initial State | Echo: Hello | Binary") =
+    process.receive(state_subject, 1000)
 
-  assert simulate.get_sent_text_messages(mock) == ["Echo: Hello"]
+  let assert Ok(websocket) =
+    simulate.send_websocket_binary(websocket, <<4, 5, 6>>)
+  let assert [<<1, 2, 3>>] = simulate.websocket_sent_binary_messages(websocket)
 
-  let next = handle_fn(new_state, websocket.Binary(<<"test">>), connection)
-  let assert websocket.Continue(_) = next
-
-  assert simulate.get_sent_text_messages(mock) == ["Echo: Hello"]
-  assert simulate.get_sent_binary_messages(mock) == [<<"test">>]
+  let websocket = simulate.reset_websocket(websocket)
+  let assert Ok("Initial State") = process.receive(state_subject, 1000)
+  let assert Ok(websocket) =
+    simulate.send_websocket_binary(websocket, <<6, 7, 8>>)
+  let assert [<<6, 7, 8>>] = simulate.websocket_sent_binary_messages(websocket)
+  let assert Ok("Initial State | Binary") = process.receive(state_subject, 1000)
 }

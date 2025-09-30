@@ -375,15 +375,21 @@ pub fn websocket_request(method: http.Method, path: String) -> Request {
 /// in response to incoming messages.
 ///
 pub opaque type WebSocket {
-  WebSocket(subject: process.Subject(WebSocketMessage))
+  WebSocket(
+    websocket: websocket.WebSocket,
+    connection: websocket.Connection,
+    state: websocket.State,
+    subject: process.Subject(WebSocketMessage),
+  )
 }
 
 /// Internal state for the websocket mock actor
 type WebSocketState {
-  MockState(
+  State(
+    state: option.Option(websocket.State),
     sent_text_messages: List(String),
     sent_binary_messages: List(BitArray),
-    connection_closed: Bool,
+    closed: Bool,
   )
 }
 
@@ -391,31 +397,33 @@ type WebSocketState {
 type WebSocketMessage {
   SendText(String)
   SendBinary(BitArray)
-  Close
+  Close(websocket.State)
   GetSentTextMessages(reply_with: process.Subject(List(String)))
   GetSentBinaryMessages(reply_with: process.Subject(List(BitArray)))
-  IsConnectionClosed(reply_with: process.Subject(Bool))
-  Reset
+  Reset(state: websocket.State)
+  SetState(state: websocket.State)
+  GetState(reply_with: process.Subject(websocket.State))
+  IsClosed(reply_with: process.Subject(Bool))
 }
 
 /// Create a new websocket mock that captures all sent messages.
-/// Returns both the mock and the websocket connection.
+/// Returns both the websocket and the websocket connection.
 ///
-pub fn websocket_connection() -> Result(
-  #(WebSocket, websocket.WebSocketConnection),
-  actor.StartError,
-) {
+pub fn create_websocket(
+  handler websocket: websocket.WebSocket,
+) -> Result(WebSocket, actor.StartError) {
+  let #(init, _, stop) = websocket.extract_callbacks(websocket)
+
   use started <- result.try(
-    actor.new(MockState(
+    actor.new(State(
+      state: option.None,
       sent_text_messages: [],
       sent_binary_messages: [],
-      connection_closed: False,
+      closed: False,
     ))
-    |> actor.on_message(handle_mock_message)
+    |> actor.on_message(handle_message)
     |> actor.start,
   )
-
-  let mock = WebSocket(subject: started.data)
 
   let connection =
     websocket.make_connection(
@@ -428,38 +436,45 @@ pub fn websocket_connection() -> Result(
         Ok(Nil)
       },
       fn() {
-        process.send(started.data, Close)
+        let state = process.call(started.data, 1000, GetState)
+        stop(state)
         Ok(Nil)
       },
     )
-
-  Ok(#(mock, connection))
+  let state = init(connection)
+  process.send(started.data, SetState(state))
+  let websocket =
+    WebSocket(websocket:, connection:, state:, subject: started.data)
+  Ok(websocket)
 }
 
 /// Handle messages sent to the mock websocket actor
-fn handle_mock_message(
+fn handle_message(
   state: WebSocketState,
   message: WebSocketMessage,
 ) -> actor.Next(WebSocketState, WebSocketMessage) {
   case message {
     SendText(text) -> {
-      let new_state =
-        MockState(..state, sent_text_messages: [
-          text,
-          ..state.sent_text_messages
-        ])
+      let new_state = case state.closed {
+        True -> state
+        False ->
+          State(..state, sent_text_messages: [text, ..state.sent_text_messages])
+      }
       actor.continue(new_state)
     }
     SendBinary(binary) -> {
-      let new_state =
-        MockState(..state, sent_binary_messages: [
-          binary,
-          ..state.sent_binary_messages
-        ])
+      let new_state = case state.closed {
+        True -> state
+        False ->
+          State(..state, sent_binary_messages: [
+            binary,
+            ..state.sent_binary_messages
+          ])
+      }
       actor.continue(new_state)
     }
-    Close -> {
-      let new_state = MockState(..state, connection_closed: True)
+    Close(_) -> {
+      let new_state = State(..state, closed: True)
       actor.continue(new_state)
     }
     GetSentTextMessages(reply_with) -> {
@@ -470,18 +485,28 @@ fn handle_mock_message(
       process.send(reply_with, list.reverse(state.sent_binary_messages))
       actor.continue(state)
     }
-    IsConnectionClosed(reply_with) -> {
-      process.send(reply_with, state.connection_closed)
-      actor.continue(state)
-    }
-    Reset -> {
+    Reset(new_state) -> {
       let new_state =
-        MockState(
+        State(
+          state: option.Some(new_state),
           sent_text_messages: [],
           sent_binary_messages: [],
-          connection_closed: False,
+          closed: False,
         )
       actor.continue(new_state)
+    }
+    SetState(new_state) -> {
+      let new_state = State(..state, state: Some(new_state))
+      actor.continue(new_state)
+    }
+    GetState(reply_with:) -> {
+      let assert Some(s) = state.state
+      process.send(reply_with, s)
+      actor.continue(state)
+    }
+    IsClosed(reply_with:) -> {
+      process.send(reply_with, state.closed)
+      actor.continue(state)
     }
   }
 }
@@ -489,75 +514,86 @@ fn handle_mock_message(
 /// Get all text messages that were sent through the mock connection.
 /// Messages are returned in the order they were sent.
 ///
-pub fn get_sent_text_messages(mock: WebSocket) -> List(String) {
-  process.call(mock.subject, 1000, GetSentTextMessages)
+pub fn websocket_sent_text_messages(websocket: WebSocket) -> List(String) {
+  process.call(websocket.subject, 1000, GetSentTextMessages)
 }
 
 /// Get all binary messages that were sent through the mock connection.
 /// Messages are returned in the order they were sent.
 ///
-pub fn get_sent_binary_messages(mock: WebSocket) -> List(BitArray) {
-  process.call(mock.subject, 1000, GetSentBinaryMessages)
-}
-
-/// Check if the websocket connection was closed.
-///
-pub fn is_connection_closed(mock: WebSocket) -> Bool {
-  process.call(mock.subject, 1000, IsConnectionClosed)
+pub fn websocket_sent_binary_messages(websocket: WebSocket) -> List(BitArray) {
+  process.call(websocket.subject, 1000, GetSentBinaryMessages)
 }
 
 /// Reset the mock to its initial state, clearing all captured messages.
 ///
-pub fn reset_mock(mock: WebSocket) -> Nil {
-  process.send(mock.subject, Reset)
+pub fn reset_websocket(websocket: WebSocket) -> WebSocket {
+  let WebSocket(websocket: internal_websocket, connection:, state: _, subject:) =
+    websocket
+  let #(init, _, _) = websocket.extract_callbacks(internal_websocket)
+  let state = init(connection)
+  process.send(subject, Reset(state))
+  WebSocket(websocket: internal_websocket, connection:, state:, subject:)
 }
 
 /// Simulate sending a text message to a websocket handler.
 /// Returns the updated state and any effects that occurred.
 ///
-pub fn simulate_websocket_text(
-  state: websocket.WebSocketState,
+pub fn send_websocket_text(
+  ws: WebSocket,
   message: String,
-  connection: websocket.WebSocketConnection,
-  handler: fn(
-    websocket.WebSocketState,
-    websocket.WebSocketMessage,
-    websocket.WebSocketConnection,
-  ) ->
-    websocket.WebSocketNext(websocket.WebSocketState),
-) -> websocket.WebSocketNext(websocket.WebSocketState) {
-  handler(state, websocket.Text(message), connection)
+) -> Result(WebSocket, Nil) {
+  let WebSocket(websocket:, state:, connection:, subject:) = ws
+  let is_closed = process.call(subject, 1000, IsClosed)
+  case is_closed {
+    True -> Ok(ws)
+    False -> {
+      let #(_, handle, _) = websocket.extract_callbacks(websocket)
+      case handle(state, websocket.Text(message), connection) {
+        websocket.Continue(state) -> {
+          process.send(subject, SetState(state))
+          Ok(WebSocket(websocket:, state:, connection:, subject:))
+        }
+        websocket.Stop -> Error(Nil)
+        websocket.StopWithError(_) -> Error(Nil)
+      }
+    }
+  }
 }
 
 /// Simulate sending a binary message to a websocket handler.
 /// Returns the updated state and any effects that occurred.
 ///
-pub fn simulate_websocket_binary(
-  state: websocket.WebSocketState,
+pub fn send_websocket_binary(
+  ws: WebSocket,
   message: BitArray,
-  connection: websocket.WebSocketConnection,
-  handler: fn(
-    websocket.WebSocketState,
-    websocket.WebSocketMessage,
-    websocket.WebSocketConnection,
-  ) ->
-    websocket.WebSocketNext(websocket.WebSocketState),
-) -> websocket.WebSocketNext(websocket.WebSocketState) {
-  handler(state, websocket.Binary(message), connection)
+) -> Result(WebSocket, Nil) {
+  let WebSocket(websocket:, state:, connection:, subject:) = ws
+  let is_closed = process.call(subject, 1000, IsClosed)
+  case is_closed {
+    True -> Ok(ws)
+    False -> {
+      let #(_, handle, _) = websocket.extract_callbacks(websocket)
+      case handle(state, websocket.Binary(message), connection) {
+        websocket.Continue(state) -> {
+          process.send(subject, SetState(state))
+          Ok(WebSocket(websocket:, state:, connection:, subject:))
+        }
+        websocket.Stop -> Error(Nil)
+        websocket.StopWithError(_) -> Error(Nil)
+      }
+    }
+  }
 }
 
 /// Simulate closing a websocket connection.
 /// Returns the updated state representing the closed connection.
 ///
-pub fn simulate_websocket_close(
-  state: websocket.WebSocketState,
-  connection: websocket.WebSocketConnection,
-  handler: fn(
-    websocket.WebSocketState,
-    websocket.WebSocketMessage,
-    websocket.WebSocketConnection,
-  ) ->
-    websocket.WebSocketNext(websocket.WebSocketState),
-) -> websocket.WebSocketNext(websocket.WebSocketState) {
-  handler(state, websocket.Closed, connection)
+pub fn close_websocket(
+  websocket: WebSocket,
+) -> Result(Nil, websocket.WebSocketError) {
+  let WebSocket(websocket: _, state: _, connection:, subject:) = websocket
+  let current_state = process.call(subject, 1000, GetState)
+  process.send(subject, Close(current_state))
+  websocket.close_connection(connection)
 }

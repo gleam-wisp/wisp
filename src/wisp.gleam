@@ -2054,13 +2054,9 @@ pub fn get_cookie(
 ///
 pub fn websocket(
   request _request: Request,
-  on_init on_init: fn(websocket.WebSocketConnection) -> state,
-  on_message on_message: fn(
-    state,
-    websocket.WebSocketMessage,
-    websocket.WebSocketConnection,
-  ) ->
-    websocket.WebSocketNext(state),
+  on_init on_init: fn(websocket.Connection) -> state,
+  on_message on_message: fn(state, websocket.Message, websocket.Connection) ->
+    websocket.Next(state),
   on_close on_close: fn(state) -> Nil,
 ) -> Response {
   let ws = websocket.new(on_init, on_message, on_close)

@@ -1,4 +1,4 @@
-pub opaque type WebSocketConnection {
+pub opaque type Connection {
   WebSocketConnection(
     send_text: fn(String) -> Result(Nil, WebSocketError),
     send_binary: fn(BitArray) -> Result(Nil, WebSocketError),
@@ -13,14 +13,14 @@ pub type WebSocketError {
   WebSocketError(String)
 }
 
-pub type WebSocketMessage {
+pub type Message {
   Text(String)
   Binary(BitArray)
   Closed
   Shutdown
 }
 
-pub type WebSocketNext(state) {
+pub type Next(state) {
   Continue(state)
   Stop
   StopWithError(String)
@@ -28,25 +28,23 @@ pub type WebSocketNext(state) {
 
 pub opaque type WebSocket {
   WebSocket(
-    init: fn(WebSocketConnection) -> WebSocketState,
-    handle: fn(WebSocketState, WebSocketMessage, WebSocketConnection) ->
-      WebSocketResult,
-    close: fn(WebSocketState) -> Nil,
+    init: fn(Connection) -> State,
+    handle: fn(State, Message, Connection) -> WebSocketResult,
+    close: fn(State) -> Nil,
   )
 }
 
-pub opaque type WebSocketState {
+pub opaque type State {
   WebSocketState(step: fn(WebSocketAction) -> WebSocketResult)
 }
 
 type WebSocketAction {
-  HandleMessage(WebSocketMessage, WebSocketConnection)
+  HandleMessage(Message, Connection)
   Close
-  GetNext(WebSocketNext(WebSocketState))
 }
 
 pub type WebSocketResult {
-  ContinueWith(WebSocketState)
+  ContinueWith(State)
   StopNow
   StopWithErrorResult(String)
 }
@@ -56,7 +54,7 @@ pub fn make_connection(
   send_text: fn(String) -> Result(Nil, WebSocketError),
   send_binary: fn(BitArray) -> Result(Nil, WebSocketError),
   close: fn() -> Result(Nil, WebSocketError),
-) -> WebSocketConnection {
+) -> Connection {
   WebSocketConnection(
     send_text: send_text,
     send_binary: send_binary,
@@ -65,29 +63,26 @@ pub fn make_connection(
 }
 
 pub fn send_text(
-  connection: WebSocketConnection,
+  connection: Connection,
   message: String,
 ) -> Result(Nil, WebSocketError) {
   connection.send_text(message)
 }
 
 pub fn send_binary(
-  connection: WebSocketConnection,
+  connection: Connection,
   message: BitArray,
 ) -> Result(Nil, WebSocketError) {
   connection.send_binary(message)
 }
 
-pub fn close_connection(
-  connection: WebSocketConnection,
-) -> Result(Nil, WebSocketError) {
+pub fn close_connection(connection: Connection) -> Result(Nil, WebSocketError) {
   connection.close()
 }
 
 pub fn new(
-  on_init: fn(WebSocketConnection) -> state,
-  on_message: fn(state, WebSocketMessage, WebSocketConnection) ->
-    WebSocketNext(state),
+  on_init: fn(Connection) -> state,
+  on_message: fn(state, Message, Connection) -> Next(state),
   on_close: fn(state) -> Nil,
 ) -> WebSocket {
   WebSocket(
@@ -101,14 +96,14 @@ pub fn new(
 }
 
 fn handle(
-  state: WebSocketState,
-  message: WebSocketMessage,
-  connection: WebSocketConnection,
+  state: State,
+  message: Message,
+  connection: Connection,
 ) -> WebSocketResult {
   state.step(HandleMessage(message, connection))
 }
 
-fn close(state: WebSocketState) -> Nil {
+fn close(state: State) -> Nil {
   case state.step(Close) {
     _ -> Nil
   }
@@ -116,16 +111,15 @@ fn close(state: WebSocketState) -> Nil {
 
 fn new_state(
   state: state,
-  on_message: fn(state, WebSocketMessage, WebSocketConnection) ->
-    WebSocketNext(state),
+  on_message: fn(state, Message, Connection) -> Next(state),
   on_close: fn(state) -> Nil,
-) -> WebSocketState {
+) -> State {
   WebSocketState(step: fn(action) {
     case action {
       HandleMessage(message, connection) -> {
         case on_message(state, message, connection) {
-          Continue(state) ->
-            ContinueWith(new_state(state, on_message, on_close))
+          Continue(n_state) ->
+            ContinueWith(new_state(n_state, on_message, on_close))
           Stop -> StopNow
           StopWithError(error) -> StopWithErrorResult(error)
         }
@@ -134,12 +128,6 @@ fn new_state(
         on_close(state)
         StopNow
       }
-      GetNext(next) ->
-        case next {
-          Continue(safe_state) -> ContinueWith(safe_state)
-          Stop -> StopNow
-          StopWithError(error) -> StopWithErrorResult(error)
-        }
     }
   })
 }
@@ -148,10 +136,9 @@ fn new_state(
 pub fn extract_callbacks(
   ws: WebSocket,
 ) -> #(
-  fn(WebSocketConnection) -> WebSocketState,
-  fn(WebSocketState, WebSocketMessage, WebSocketConnection) ->
-    WebSocketNext(WebSocketState),
-  fn(WebSocketState) -> Nil,
+  fn(Connection) -> State,
+  fn(State, Message, Connection) -> Next(State),
+  fn(State) -> Nil,
 ) {
   #(
     ws.init,
@@ -163,7 +150,7 @@ pub fn extract_callbacks(
   )
 }
 
-fn result_to_next(result: WebSocketResult) -> WebSocketNext(WebSocketState) {
+fn result_to_next(result: WebSocketResult) -> Next(State) {
   case result {
     ContinueWith(state) -> Continue(state)
     StopNow -> Stop
