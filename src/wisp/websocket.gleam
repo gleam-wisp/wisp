@@ -76,6 +76,7 @@ pub fn send_binary(
   connection.send_binary(message)
 }
 
+@internal
 pub fn close_connection(connection: Connection) -> Result(Nil, WebSocketError) {
   connection.close()
 }
