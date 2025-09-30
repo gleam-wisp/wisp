@@ -43,7 +43,7 @@ type WebSocketAction {
   Close
 }
 
-pub type WebSocketResult {
+type WebSocketResult {
   ContinueWith(State)
   StopNow
   StopWithErrorResult(String)
