@@ -158,7 +158,7 @@ pub fn json_body(request: Request, data: Json) -> Request {
 /// Represents a file to be uploaded in a multipart form.
 ///
 pub type FileUpload {
-  FileUpload(filename: String, content_type: String, content: BitArray)
+  FileUpload(file_name: String, content_type: String, content: BitArray)
 }
 
 /// Add a multipart/form-data body to the request for testing file uploads
@@ -171,7 +171,7 @@ pub type FileUpload {
 /// 
 /// ```gleam
 /// let file = UploadedFile(
-///   filename: "test.txt", 
+///   file_name: "test.txt", 
 ///   content_type: "text/plain",
 ///   content: <<"Hello, world!":utf8>>
 /// )
@@ -230,7 +230,7 @@ fn build_multipart_body(
         "Content-Disposition: form-data; name=\"":utf8,
         file.0:utf8,
         "\"; filename=\"":utf8,
-        { file.1 }.filename:utf8,
+        { file.1 }.file_name:utf8,
         "\"\r\n":utf8,
         "Content-Type: ":utf8,
         { file.1 }.content_type:utf8,
