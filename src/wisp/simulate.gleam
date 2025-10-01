@@ -171,14 +171,13 @@ pub type FileUpload {
 /// 
 /// ```gleam
 /// let file = UploadedFile(
-///   name: "uploaded-file",
 ///   filename: "test.txt", 
 ///   content_type: "text/plain",
 ///   content: <<"Hello, world!":utf8>>
 /// )
 /// 
 /// simulate.request(http.Post, "/upload")
-/// |> simulate.multipart_body([#("user", "joe")], [file])
+/// |> simulate.multipart_body([#("user", "joe")], [#("file", file)])
 /// ```
 /// 
 pub fn multipart_body(
