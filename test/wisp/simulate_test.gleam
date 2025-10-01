@@ -1,4 +1,3 @@
-import gleam/bit_array
 import gleam/http
 import gleam/http/response
 import gleam/json
@@ -248,15 +247,17 @@ pub fn multipart_generation_validation_test() {
     simulate.browser_request(http.Post, "/upload")
     |> simulate.multipart_body([#("name", "test")], [#("uploaded-file", file)])
 
-  let content_type = list.key_find(request.headers, "content-type")
-  assert case content_type {
-    Ok(ct) -> string.starts_with(ct, "multipart/form-data; boundary=")
-    Error(_) -> False
-  }
+  let assert Ok("multipart/form-data; boundary=" <> boundary) =
+    list.key_find(request.headers, "content-type")
 
-  let body_result = wisp.read_body_bits(request)
-  assert case body_result {
-    Ok(bits) -> bit_array.byte_size(bits) > 50
-    Error(_) -> False
-  }
+  let assert Ok(body) = wisp.read_body_bits(request)
+  let expected_body =
+    "--"
+    <> boundary
+    <> "\r\nContent-Disposition: form-data; name=\"name\"\r\n\r\ntest\r\n--"
+    <> boundary
+    <> "\r\nContent-Disposition: form-data; name=\"uploaded-file\"; filename=\"test.txt\"\r\nContent-Type: text/plain\r\n\r\nHello, world!\r\n--"
+    <> boundary
+    <> "--\r\n"
+  assert body == <<expected_body:utf8>>
 }
