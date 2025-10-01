@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v2.1.0 - 2025-10-01
 
 - The `multipart_body` function and the `FileUpload` type have been added to
   the `simulate` module.
