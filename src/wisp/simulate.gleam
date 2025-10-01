@@ -186,7 +186,7 @@ pub fn multipart_body(
   values values: List(#(String, String)),
   files files: List(#(String, FileUpload)),
 ) -> Request {
-  let boundary = generate_boundary()
+  let boundary = crypto.strong_random_bytes(16) |> bit_array.base16_encode
   let body_data = build_multipart_body(values, files, boundary)
   let body = wisp.create_canned_connection(body_data, default_secret_key_base)
 
@@ -196,12 +196,6 @@ pub fn multipart_body(
     "content-type",
     "multipart/form-data; boundary=" <> boundary,
   )
-}
-
-fn generate_boundary() -> String {
-  let random_bytes = crypto.strong_random_bytes(8)
-  let boundary_suffix = bit_array.base16_encode(random_bytes)
-  "boundary" <> boundary_suffix
 }
 
 fn build_multipart_body(
