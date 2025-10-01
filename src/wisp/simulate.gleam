@@ -158,12 +158,7 @@ pub fn json_body(request: Request, data: Json) -> Request {
 /// Represents a file to be uploaded in a multipart form.
 ///
 pub type FileUpload {
-  FileUpload(
-    name: String,
-    filename: String,
-    content_type: String,
-    content: BitArray,
-  )
+  FileUpload(filename: String, content_type: String, content: BitArray)
 }
 
 /// Add a multipart/form-data body to the request for testing file uploads
@@ -189,7 +184,7 @@ pub type FileUpload {
 pub fn multipart_body(
   request: Request,
   values values: List(#(String, String)),
-  files files: List(FileUpload),
+  files files: List(#(String, FileUpload)),
 ) -> Request {
   let boundary = generate_boundary()
   let body_data = build_multipart_body(values, files, boundary)
@@ -203,39 +198,6 @@ pub fn multipart_body(
   )
 }
 
-/// Create an UploadedFile for testing file uploads.
-/// 
-/// This is a convenience function for creating file upload test data.
-/// 
-pub fn upload_file(
-  name: String,
-  filename: String,
-  content_type: String,
-  content: BitArray,
-) -> FileUpload {
-  FileUpload(
-    name: name,
-    filename: filename,
-    content_type: content_type,
-    content: content,
-  )
-}
-
-/// Create an UploadedFile from a string for testing text file uploads.
-/// 
-pub fn upload_text_file(
-  name: String,
-  filename: String,
-  content: String,
-) -> FileUpload {
-  FileUpload(
-    name: name,
-    filename: filename,
-    content_type: "text/plain",
-    content: bit_array.from_string(content),
-  )
-}
-
 fn generate_boundary() -> String {
   let random_bytes = crypto.strong_random_bytes(8)
   let boundary_suffix = bit_array.base16_encode(random_bytes)
@@ -244,7 +206,7 @@ fn generate_boundary() -> String {
 
 fn build_multipart_body(
   form_values: List(#(String, String)),
-  files: List(FileUpload),
+  files: List(#(String, FileUpload)),
   boundary: String,
 ) -> BitArray {
   // Append form parts
@@ -273,15 +235,15 @@ fn build_multipart_body(
         boundary:utf8,
         "\r\n":utf8,
         "Content-Disposition: form-data; name=\"":utf8,
-        file.name:utf8,
+        file.0:utf8,
         "\"; filename=\"":utf8,
-        file.filename:utf8,
+        { file.1 }.filename:utf8,
         "\"\r\n":utf8,
         "Content-Type: ":utf8,
-        file.content_type:utf8,
+        { file.1 }.content_type:utf8,
         "\r\n":utf8,
         "\r\n":utf8,
-        file.content:bits,
+        { file.1 }.content:bits,
         "\r\n":utf8,
       >>
     })
