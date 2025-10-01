@@ -5,6 +5,7 @@ import gleam/json
 import gleam/list
 import gleam/option.{None}
 import gleam/string
+import simplifile
 import wisp
 import wisp/simulate
 
@@ -211,9 +212,9 @@ pub fn session_test() {
 }
 
 pub fn multipart_body_test() {
-  let file1 = simulate.upload_text_file("file1", "test.txt", "Hello, world!")
+  let file1 = simulate.FileUpload("test.txt", "text/plain", <<"Hello, world!">>)
   let file2 =
-    simulate.upload_file("file2", "data.bin", "application/octet-stream", <<
+    simulate.FileUpload("data.bin", "application/octet-stream", <<
       1,
       2,
       3,
@@ -224,7 +225,7 @@ pub fn multipart_body_test() {
     simulate.request(http.Post, "/upload")
     |> simulate.multipart_body(
       [#("name", "test"), #("description", "A test file")],
-      [file1, file2],
+      [#("file1", file1), #("file2", file2)],
     )
 
   let assert Ok(content_type) = list.key_find(request.headers, "content-type")
@@ -233,40 +234,19 @@ pub fn multipart_body_test() {
   {
     use formdata <- wisp.require_form(request)
     let assert [#("file1", file1), #("file2", file2)] = formdata.files
-    let assert "test.txt" = file1.file_name
-    let assert "data.bin" = file2.file_name
+    assert "test.txt" == file1.file_name
+    assert simplifile.read(file1.path) == Ok("Hello, world!")
+    assert "data.bin" == file2.file_name
+    assert simplifile.read_bits(file2.path) == Ok(<<1, 2, 3, 4>>)
     wisp.ok()
   }
 }
 
-pub fn uploaded_file_test() {
-  let file =
-    simulate.upload_file("test-file", "example.jpg", "image/jpeg", <<
-      "fake image data":utf8,
-    >>)
-
-  assert file.name == "test-file"
-  assert file.filename == "example.jpg"
-  assert file.content_type == "image/jpeg"
-  assert file.content == <<"fake image data":utf8>>
-}
-
-pub fn uploaded_text_file_test() {
-  let file =
-    simulate.upload_text_file("doc", "readme.txt", "Documentation text")
-
-  assert file.name == "doc"
-  assert file.filename == "readme.txt"
-  assert file.content_type == "text/plain"
-  assert file.content == <<"Documentation text":utf8>>
-}
-
 pub fn multipart_generation_validation_test() {
-  let file =
-    simulate.upload_text_file("uploaded-file", "test.txt", "Hello, world!")
+  let file = simulate.FileUpload("test.txt", "text/plain", <<"Hello, world!">>)
   let request =
     simulate.browser_request(http.Post, "/upload")
-    |> simulate.multipart_body([#("name", "test")], [file])
+    |> simulate.multipart_body([#("name", "test")], [#("uploaded-file", file)])
 
   let content_type = list.key_find(request.headers, "content-type")
   assert case content_type {

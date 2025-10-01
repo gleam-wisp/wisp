@@ -53,15 +53,12 @@ pub fn file_from_memory_test() {
 }
 
 pub fn upload_file_test() {
-  let file1 =
-    simulate.upload_text_file("uploaded-file", "test.txt", "Hello, Joe!")
-  let file2 =
-    simulate.upload_file("other-file", "test.txt", "text/plain", <<
-      "Hello, Joe!",
-    >>)
+  let file = simulate.FileUpload("test.txt", "text/plain", <<"Hello, Joe!">>)
   let request =
     simulate.browser_request(http.Post, "/upload-file")
-    |> simulate.multipart_body([], [file1, file2])
+    |> simulate.multipart_body([], [
+      #("uploaded-file", file),
+    ])
 
   let response = router.handle_request(request)
 
