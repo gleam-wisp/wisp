@@ -107,7 +107,7 @@ fn handle_file_upload(req: Request) -> Response {
   // could be successfully handled or not.
   case result {
     Ok(name) -> {
-      { "<p>Thank you for your file!" <> name <> "</p>" <> html }
+      { "<p>Thank you for your file `" <> name <> "`</p>" <> html }
       |> wisp.html_response(200)
     }
     Error(_) -> {

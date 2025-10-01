@@ -1,6 +1,5 @@
 import gleam/http
 import gleam/string
-import wisp
 import wisp/simulate
 import working_with_files/app/router
 
@@ -68,10 +67,6 @@ pub fn upload_file_test() {
 
   assert response.status == 200
   assert response.headers == [#("content-type", "text/html; charset=utf-8")]
-
-  {
-    use form_data <- wisp.require_form(request)
-    let assert [#("other-file", _), #("uploaded-file", _)] = form_data.files
-    response
-  }
+  assert simulate.read_body(response)
+    |> string.contains("Thank you for your file `test.txt`")
 }
