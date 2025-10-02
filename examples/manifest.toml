@@ -28,7 +28,8 @@ packages = [
   { name = "simplifile", version = "2.3.0", build_tools = ["gleam"], requirements = ["filepath", "gleam_stdlib"], otp_app = "simplifile", source = "hex", outer_checksum = "0A868DAC6063D9E983477981839810DC2E553285AB4588B87E3E9C96A7FB4CB4" },
   { name = "telemetry", version = "1.3.0", build_tools = ["rebar3"], requirements = [], otp_app = "telemetry", source = "hex", outer_checksum = "7015FC8919DBE63764F4B4B87A95B7C0996BD539E0D499BE6EC9D7F3875B79E6" },
   { name = "tiny_database", version = "1.0.0", build_tools = ["gleam"], requirements = ["gleam_json", "gleam_stdlib", "simplifile", "youid"], source = "local", path = "utilities/tiny_database" },
-  { name = "wisp", version = "2.0.1", build_tools = ["gleam"], requirements = ["directories", "exception", "filepath", "gleam_crypto", "gleam_erlang", "gleam_http", "gleam_json", "gleam_stdlib", "houdini", "logging", "marceau", "mist", "simplifile"], source = "local", path = ".." },
+  { name = "wisp", version = "2.1.0", build_tools = ["gleam"], requirements = ["directories", "exception", "filepath", "gleam_crypto", "gleam_erlang", "gleam_http", "gleam_json", "gleam_stdlib", "houdini", "logging", "marceau", "simplifile"], source = "local", path = ".." },
+  { name = "wisp_mist", version = "1.0.0", build_tools = ["gleam"], requirements = ["exception", "gleam_http", "gleam_stdlib", "mist", "wisp"], source = "local", path = "../wisp_mist" },
   { name = "youid", version = "1.5.1", build_tools = ["gleam"], requirements = ["gleam_crypto", "gleam_stdlib", "gleam_time"], otp_app = "youid", source = "hex", outer_checksum = "580E909FD704DB16416D5CB080618EDC2DA0F1BE4D21B490C0683335E3FFC5AF" },
 ]
 
@@ -43,3 +44,4 @@ gsv = { version = ">= 4.0.0 and < 5.0.0" }
 mist = { version = ">= 5.0.0 and < 6.0.0" }
 tiny_database = { path = "utilities/tiny_database" }
 wisp = { path = ".." }
+wisp_mist = { path = "../wisp_mist" }
