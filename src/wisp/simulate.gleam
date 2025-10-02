@@ -8,9 +8,11 @@ import gleam/list
 import gleam/option.{None, Some}
 import gleam/result
 import gleam/string
+import gleam/string_tree
 import gleam/uri
+import gleam/yielder
 import simplifile
-import wisp.{type Request, type Response, Bytes, File, Text}
+import wisp.{type Request, type Response, Bytes, Chunks, File, Text}
 
 /// Create a test request that can be used to test your request handler
 /// functions.
@@ -279,6 +281,14 @@ pub fn read_body(response: Response) -> String {
         as "the body file range was not valid UTF-8"
       string
     }
+    Chunks(yield) -> {
+      yielder.fold(yield, "", fn(acc, chunk) {
+        let assert Ok(string) =
+          bytes_tree.to_bit_array(chunk) |> bit_array.to_string
+          as "the response body was non-UTF8 binary data"
+        acc <> string
+      })
+    }
   }
 }
 
@@ -305,6 +315,12 @@ pub fn read_body_bits(response: Response) -> BitArray {
       let assert Ok(sliced) = contents |> bit_array.slice(offset, limit)
         as "the body was a file, but the limit and offset were invalid"
       sliced
+    }
+    Chunks(yield) -> {
+      yielder.fold(yield, bit_array.from_string(""), fn(acc, chunk) {
+        let data = bytes_tree.to_bit_array(chunk)
+        bit_array.append(acc, data)
+      })
     }
   }
 }
