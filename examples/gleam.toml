@@ -4,6 +4,7 @@ description = "A collection of Wisp examples"
 
 [dependencies]
 wisp = { path = ".." }
+wisp_mist = { path = "../wisp_mist" }
 mist = ">= 5.0.0 and < 6.0.0"
 gleam_stdlib = ">= 0.60.0 and < 1.0.0"
 gleam_erlang = ">= 1.0.0 and < 2.0.0"
