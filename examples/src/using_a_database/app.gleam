@@ -4,7 +4,7 @@ import tiny_database
 import using_a_database/app/router
 import using_a_database/app/web
 import wisp
-import wisp/wisp_mist
+import wisp_mist
 
 pub const data_directory = "tmp/data"
 
