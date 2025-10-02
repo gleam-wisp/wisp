@@ -2,7 +2,7 @@ import gleam/erlang/process
 import mist
 import routing/app/router
 import wisp
-import wisp/wisp_mist
+import wisp_mist
 
 pub fn main() {
   wisp.configure_logger()
