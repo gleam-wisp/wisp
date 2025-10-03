@@ -2244,8 +2244,3 @@ pub fn content_security_policy_protection(
   handle_request(nonce)
   |> response.set_header("content-security-policy", header)
 }
-
-@internal
-pub fn upgrade_to_websocket(upgrade: WebSocketUpgrade) -> websocket.WebSocket {
-  upgrade.ws
-}
