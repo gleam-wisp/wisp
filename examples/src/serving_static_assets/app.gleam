@@ -3,7 +3,7 @@ import mist
 import serving_static_assets/app/router
 import serving_static_assets/app/web.{Context}
 import wisp
-import wisp/wisp_mist
+import wisp_mist
 
 pub fn main() {
   wisp.configure_logger()

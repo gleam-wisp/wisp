@@ -1,7 +1,7 @@
 import gleam/erlang/process
 import mist
 import wisp
-import wisp/wisp_mist
+import wisp_mist
 import working_with_files/app/router
 
 pub fn main() {
