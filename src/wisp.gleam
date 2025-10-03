@@ -1425,6 +1425,11 @@ pub fn serve_static(
         |> string.drop_start(string.length(prefix))
         |> string.replace(each: "..", with: "")
         |> filepath.join(directory, _)
+      
+      let path = case uri.percent_decode(path) {
+        Ok(p) -> p
+        Error(_) -> path
+      }
 
       let file_type =
         req.path
