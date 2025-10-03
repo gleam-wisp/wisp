@@ -23,6 +23,7 @@ import gleam/result
 import gleam/string
 import gleam/string_tree.{type StringTree}
 import gleam/uri
+import gleam/yielder.{type Yielder}
 import houdini
 import logging
 import marceau
@@ -52,6 +53,15 @@ pub type Body {
   /// function to convert it.
   ///
   Bytes(BytesTree)
+  /// A body of binary chunked data, stored as a `Yielder(BytesTree)`.
+  ///
+  /// If you have a `BitArray` you can use the `bytes_tree.from_bit_array`
+  /// function to convert it.
+  ///
+  /// If you have a `StringTree` you can use the `bytes_tree.from_string_tree`
+  /// function to convert it.
+  ///
+  Chunks(Yielder(BytesTree))
   /// A body of the contents of a file.
   ///
   /// This will be sent efficiently using the `send_file` function of the
