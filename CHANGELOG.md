@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- The Mist web server related module has been moved to `wisp_mist` adapter package.
+- The Mist response handler has been updated to send Internal Server Error response when failing to create file response body.
+- The Mist README has been updated to use valid function for starting a server.
+- The Ewe web server has been introduced as one of adapter option.
+
 ## v2.1.0 - 2025-10-01
 
 - The `multipart_body` function and the `FileUpload` type have been added to
