@@ -8,7 +8,6 @@
 
 - Fixed a bug where `serve_static` wouldn't handle special characters in paths
   correctly.
-
 ## v2.1.0 - 2025-10-01
 
 - The `multipart_body` function and the `FileUpload` type have been added to
