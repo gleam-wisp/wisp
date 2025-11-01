@@ -26,7 +26,7 @@ import wisp/internal
 ///     |> wisp_mist.handler(secret_key_base)
 ///     |> mist.new
 ///     |> mist.port(8000)
-///     |> mist.start_http
+///     |> mist.start
 ///   process.sleep_forever()
 /// }
 /// ```
@@ -49,12 +49,9 @@ pub fn handler(
       let assert Ok(_) = wisp.delete_temporary_files(request)
     })
 
-    let response =
-      request
-      |> handler
-      |> mist_response
-
-    response
+    request
+    |> handler
+    |> mist_response
   }
 }
 
@@ -80,26 +77,28 @@ fn wrap_mist_chunk(
 }
 
 fn mist_response(response: wisp.Response) -> HttpResponse(mist.ResponseData) {
-  let body = case response.body {
-    wisp.Text(text) -> mist.Bytes(bytes_tree.from_string(text))
-    wisp.Bytes(bytes) -> mist.Bytes(bytes)
-    wisp.File(path:, offset:, limit:) -> mist_send_file(path, offset, limit)
+  case response.body {
+    wisp.Text(text) ->
+      response.set_body(response, mist.Bytes(bytes_tree.from_string(text)))
+    wisp.Bytes(bytes) -> response.set_body(response, mist.Bytes(bytes))
+    wisp.File(path:, offset:, limit:) ->
+      mist_send_file(response, path, offset, limit)
   }
-  response
-  |> response.set_body(body)
 }
 
 fn mist_send_file(
+  response: HttpResponse(wisp.Body),
   path: String,
   offset: Int,
   limit: option.Option(Int),
-) -> mist.ResponseData {
+) -> HttpResponse(mist.ResponseData) {
   case mist.send_file(path, offset:, limit:) {
-    Ok(body) -> body
+    Ok(body) -> response.set_body(response, body)
     Error(error) -> {
       wisp.log_error(string.inspect(error))
-      // TODO: return 500
-      mist.Bytes(bytes_tree.new())
+
+      response.new(500)
+      |> response.set_body(mist.Bytes(bytes_tree.new()))
     }
   }
 }
