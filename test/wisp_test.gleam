@@ -642,6 +642,14 @@ pub fn serve_static_range_header_invalid_test() {
   assert response.status == 416
 }
 
+pub fn serve_static_with_uri_encoding_test() {
+  let response =
+    simulate.request(http.Get, "/fixture+123%26%3F.txt")
+    |> static_file_handler
+
+  assert response.status == 200
+}
+
 pub fn temporary_file_test() {
   // Create tmp files for a first request
   let request1 = simulate.request(http.Get, "/")
