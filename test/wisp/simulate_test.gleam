@@ -20,6 +20,18 @@ pub fn request_test() {
   assert wisp.read_body_bits(request) == Ok(<<>>)
 }
 
+pub fn request_urlencode_test() {
+  let request = simulate.request(http.Patch, "%2Fwibble%2Fwoo%2F%20%21%2A%27%28%29%3B%3A%40%26%3D%2B%24%2C%2F%3F%25%23%5B%5D")
+  assert request.method == http.Patch
+  assert request.headers == [#("host", "wisp.example.com")]
+  assert request.scheme == http.Https
+  assert request.host == "wisp.example.com"
+  assert request.port == None
+  assert request.path == "/wibble/woo/ !*'();:@&=+$,/?%#[]"
+  assert request.query == None
+  assert wisp.read_body_bits(request) == Ok(<<>>)
+}
+
 pub fn browser_request_test() {
   let request = simulate.browser_request(http.Put, "/wibble/woo")
   assert request.method == http.Put
