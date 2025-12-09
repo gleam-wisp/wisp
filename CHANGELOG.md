@@ -28,7 +28,8 @@
 - The `csrf_known_header_protection` middleware has been added.
 - The `Text` body type and associated functions now take a `String` rather than
   a `StringTree`.
-- The `Empty` response body type has been removed.
+- The `Empty` response body type has been removed. Functions that previously
+  returned `Empty` now return a suitable text response for the status code.
 - The `moved_permanently` function has been renamed to `permanent_redirect`.
 - The `bad_request` function now takes a string as an argument.
 

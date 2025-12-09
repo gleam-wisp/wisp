@@ -1,7 +1,7 @@
 # Wisp Example: Hello, world!
 
 ```sh
-gleam run -m hello_world  # Run the server
+gleam run -m hello_world/app  # Run the server
 ```
 
 This example shows a minimal Wisp application, it does nothing but respond with
