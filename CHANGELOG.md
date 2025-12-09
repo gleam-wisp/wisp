@@ -1,4 +1,5 @@
 # Changelog
+- Added uri.percent_decode() to decode static file path
 
 ## v2.1.0 - 2025-10-01
 
