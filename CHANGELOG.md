@@ -1,5 +1,9 @@
 # Changelog
-- Added uri.percent_decode() to decode static file path
+
+## v2.1.1 - 2025-12-11
+
+- Fixed a bug where `serve_static` wouldn't handle special characters in paths
+  correctly.
 
 ## v2.1.0 - 2025-10-01
 
