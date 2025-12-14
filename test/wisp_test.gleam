@@ -1360,3 +1360,26 @@ pub fn get_query_no_query_test() {
     |> wisp.get_query
     == []
 }
+
+pub fn content_security_policy_protection_test() {
+  let handler = fn() {
+    use csp_nonce <- wisp.content_security_policy_protection()
+    wisp.html_response(csp_nonce, 200)
+  }
+
+  let response = handler()
+  let nonce = simulate.read_body(response)
+
+  // Each time the CSP protection middleware is run it generates a new nonce
+  assert nonce != simulate.read_body(handler())
+  assert nonce != simulate.read_body(handler())
+  assert nonce != simulate.read_body(handler())
+
+  // The CSP header is set
+  assert response.get_header(response, "content-security-policy")
+    == Ok(
+      "script-src 'nonce-"
+      <> nonce
+      <> "' 'strict-dynamic'; object-src 'none'; base-uri 'none'",
+    )
+}

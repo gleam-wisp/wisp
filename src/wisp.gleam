@@ -1840,6 +1840,9 @@ pub fn log_debug(message: String) -> Nil {
 
 /// Generate a random string of the given length.
 ///
+/// This string is URL safe and generated in a strong-random fashion, making it
+/// suitable for security purposes.
+///
 pub fn random_string(length: Int) -> String {
   internal.random_string(length)
 }
@@ -2014,8 +2017,8 @@ pub fn create_canned_connection(
   )
 }
 
-/// Cross-Site Request Forgery (CSRF) attacks by checking the `host` request
-/// header against the `origin` header or `referer` header.
+/// Protects against Cross-Site Request Forgery (CSRF) attacks by checking the
+/// `host` request header against the `origin` header or `referer` header.
 ///
 /// - Requests with the `Get` and `Head` methods are accepted.
 /// - Requests with no `host` header are rejected with status 400: Bad Request.
@@ -2102,4 +2105,58 @@ pub fn csrf_known_header_protection(
       }
     }
   }
+}
+
+/// Protects against cross-site-scripting (XSS) attacks using a nonce-based
+/// content-security-policy (CSP).
+///
+/// This middleware will provice a unique single use random string (a nonce) to
+/// the handler, and set this CSP header on the response returned by the handler.
+///
+/// ```txt
+/// Content-Security-Policy:
+///  script-src 'nonce-{NONCE}' 'strict-dynamic';
+///  object-src 'none';
+///  base-uri 'none';
+/// ```
+///
+/// This header causes the browser to be stricted in these ways:
+///
+/// - Any `<script>` tag without a `nonce="..."` property set to the nonce for
+///   this request will not be executed. Any scripts created by scripts with
+///   the correct `nonce` property will be executed.
+///
+/// - Any inline JavaScript event handlers on elements will not be evaluated.
+///   e.g. `<span onclick="doSomething();">Click me</span>` will do nothing
+///   when clicked.
+///
+/// - Any `<object>` or `<embed>` elements will not be executed.
+///
+/// - Any use of `<base>` to change the base for relative URLs will be prevented.
+///
+/// When using this middleware be sure to add the `nonce="..."` property to all
+/// `<script>` elements.
+///
+/// ```gleam
+/// use csp_nonce <- wisp.content_security_policy_protection()
+/// ```
+/// ```html
+/// <script type="module" nonce="RENDER_YOUR_CSP_NONCE_HERE">
+///   console.log("Hello, Joe!")
+/// </script>
+/// ```
+///
+/// It is recommended to use this middleware so that it applies to all routes
+/// in your application.
+///
+pub fn content_security_policy_protection(
+  handle_request: fn(String) -> Response,
+) -> Response {
+  let nonce = random_string(24)
+  let header =
+    "script-src 'nonce-"
+    <> nonce
+    <> "' 'strict-dynamic'; object-src 'none'; base-uri 'none'"
+  handle_request(nonce)
+  |> response.set_header("content-security-policy", header)
 }
