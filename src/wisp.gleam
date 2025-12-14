@@ -2115,9 +2115,9 @@ pub fn csrf_known_header_protection(
 ///
 /// ```txt
 /// Content-Security-Policy:
-///  script-src 'nonce-{NONCE}' 'strict-dynamic';
-///  object-src 'none';
-///  base-uri 'none';
+///   script-src 'nonce-{NONCE}' 'strict-dynamic';
+///   object-src 'none';
+///   base-uri 'none';
 /// ```
 ///
 /// This header causes the browser to be stricted in these ways:
