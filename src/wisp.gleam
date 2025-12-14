@@ -2110,7 +2110,7 @@ pub fn csrf_known_header_protection(
 /// Protects against cross-site-scripting (XSS) attacks using a nonce-based
 /// content-security-policy (CSP).
 ///
-/// This middleware will provice a unique single use random string (a nonce) to
+/// This middleware will provide a unique single use random string (a nonce) to
 /// the handler, and set this CSP header on the response returned by the handler.
 ///
 /// ```txt
@@ -2120,7 +2120,7 @@ pub fn csrf_known_header_protection(
 ///   base-uri 'none';
 /// ```
 ///
-/// This header causes the browser to be stricted in these ways:
+/// This header causes the browser to be restricted in these ways:
 ///
 /// - Any `<script>` tag without a `nonce="..."` property set to the nonce for
 ///   this request will not be executed. Any scripts created by scripts with
