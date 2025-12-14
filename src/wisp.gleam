@@ -1425,7 +1425,7 @@ pub fn serve_static(
         |> string.drop_start(string.length(prefix))
         |> string.replace(each: "..", with: "")
         |> filepath.join(directory, _)
-      
+
       let path = case uri.percent_decode(path) {
         Ok(p) -> p
         Error(_) -> path
@@ -2038,6 +2038,9 @@ pub fn create_canned_connection(
 ///
 /// [1]: https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#using-standard-headers-to-verify-origin
 /// [2]: https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#token-based-mitigation
+///
+/// If you have routes that should be accessible from other origins then you
+/// should not use this middleware for those routes.
 ///
 pub fn csrf_known_header_protection(
   request: Request,
