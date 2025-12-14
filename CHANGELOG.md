@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The `content_security_policy_protection` middleware has been added.
+
 ## v2.1.1 - 2025-12-11
 
 - Fixed a bug where `serve_static` wouldn't handle special characters in paths
