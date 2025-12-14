@@ -2146,8 +2146,13 @@ pub fn csrf_known_header_protection(
 /// </script>
 /// ```
 ///
-/// It is recommended to use this middleware so that it applies to all routes
+/// It is recommended to add this middleware so that it applies to all routes
 /// in your application.
+///
+/// For more information about CSP see these articles:
+///
+/// - <https://web.dev/articles/strict-csp>
+/// - <https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy>
 ///
 pub fn content_security_policy_protection(
   handle_request: fn(String) -> Response,
