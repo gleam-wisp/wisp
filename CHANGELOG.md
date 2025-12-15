@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+
 - The `content_security_policy_protection` middleware has been added.
 - The Mist web server related module has been moved to the `wisp_mist` adapter package.
 - The Mist response handler now sends an Internal Server Error response when failing to create a file response body.
