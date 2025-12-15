@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.2.0 - 2026-01-16
+ ## v2.2.0 - 2026-01-16
 
 - The `content_security_policy_protection` middleware has been added.
 - The Mist web server related module has been moved to the `wisp_mist` adapter package.
