@@ -20,6 +20,14 @@ jobs:
       - name: Test Wisp
         run: gleam test
 
+      - name: Test Mist adapter
+        run: gleam test
+        working-directory: wisp_mist
+
+      - name: Test Ewe adapter
+        run: gleam test
+        working-directory: wisp_ewe
+
       - name: Test examples
         run: gleam test
         working-directory: examples
