@@ -3,17 +3,15 @@
 ## v2.2.0 - 2026-01-16
 
 - The `content_security_policy_protection` middleware has been added.
+- The Mist web server related module has been moved to the `wisp_mist` adapter package.
+- The Mist response handler now sends an Internal Server Error response when failing to create a file response body.
+- The Mist README has been updated to use the correct function for starting a server.
+- The Ewe web server has been introduced as one of the adapter options.
 
 ## v2.1.1 - 2025-12-11
 
 - Fixed a bug where `serve_static` wouldn't handle special characters in paths
   correctly.
-## Unreleased
-
-- The Mist web server related module has been moved to `wisp_mist` adapter package.
-- The Mist response handler has been updated to send Internal Server Error response when failing to create file response body.
-- The Mist README has been updated to use valid function for starting a server.
-- The Ewe web server has been introduced as one of adapter option.
 
 ## v2.1.0 - 2025-10-01
 
