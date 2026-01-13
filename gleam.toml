@@ -21,6 +21,7 @@ logging = ">= 1.2.0 and < 2.0.0"
 directories = ">= 1.0.0 and < 2.0.0"
 houdini = ">= 1.0.0 and < 2.0.0"
 filepath = ">= 1.1.2 and < 2.0.0"
+gleam_otp = ">= 1.2.0 and < 2.0.0"
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
