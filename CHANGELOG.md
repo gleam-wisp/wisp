@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v2.2.0 - 2026-01-16
 
 - The `content_security_policy_protection` middleware has been added.
 
