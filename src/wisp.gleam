@@ -9,6 +9,7 @@ import gleam/dynamic.{type Dynamic}
 import gleam/dynamic/decode
 import gleam/erlang/application
 import gleam/erlang/atom.{type Atom}
+import gleam/erlang/process
 import gleam/http.{type Method}
 import gleam/http/cookie
 import gleam/http/request.{type Request as HttpRequest}
@@ -28,6 +29,7 @@ import logging
 import marceau
 import simplifile
 import wisp/internal
+import wisp/websocket
 
 //
 // Responses
@@ -66,7 +68,27 @@ pub type Body {
     /// The maximum number of bytes to send. Set to `None` for the whole file.
     limit: Option(Int),
   )
+  /// A WebSocket upgrade response.
+  ///
+  /// This will upgrade the HTTP connection to a WebSocket connection.
+  /// The upgrade is handled by the underlying HTTP server adapter.
+  ///
+  WebSocket(WebSocketUpgrade)
 }
+
+pub type WebSocketUpgrade
+
+@internal
+pub type Unknown
+
+@external(erlang, "gleam@function", "identity")
+fn erase(callbacks: websocket.WebSocket(state, message)) -> WebSocketUpgrade
+
+@external(erlang, "gleam@function", "identity")
+@internal
+pub fn recover(
+  upgrade: WebSocketUpgrade,
+) -> websocket.WebSocket(Unknown, Unknown)
 
 /// An alias for a HTTP response containing a `Body`.
 pub type Response =
@@ -1997,6 +2019,63 @@ pub fn get_cookie(
     Signed -> verify_signed_message(request, value)
   })
   bit_array.to_string(value)
+}
+
+//
+// WebSocket
+//
+
+/// Upgrade a HTTP request to a WebSocket connection.
+///
+/// This function creates a response that will upgrade the connection to
+/// WebSocket. The actual WebSocket protocol handling is done by the
+/// web server adapter (such as wisp_mist).
+///
+/// # Examples
+///
+/// ```gleam
+/// fn handle_request(request: Request) -> Response {
+///   case wisp.path_segments(request) {
+///     ["websocket"] -> {
+///       wisp.websocket(
+///         request,
+///         on_init: fn(connection) {
+///           0
+///         },
+///         on_message: fn(state, message, connection) {
+///           case message {
+///             websocket.Text(text) -> {
+///               websocket.send_text(connection, "Echo: " <> text)
+///               websocket.continue(state)
+///             }
+///             websocket.Closed -> websocket.stop()
+///             _ -> websocket.continue(state)
+///           }
+///         },
+///         on_close: fn(_state) { Nil }
+///       )
+///     }
+///     _ -> wisp.not_found()
+///   }
+/// }
+/// ```
+///
+pub fn websocket(
+  request _request: Request,
+  on_init on_init: fn(websocket.Connection) ->
+    #(state, Option(process.Selector(message))),
+  on_message on_message: fn(
+    state,
+    websocket.Message(custom),
+    websocket.Connection,
+  ) ->
+    websocket.Next(state),
+  on_close on_close: fn(state) -> Nil,
+) -> Response {
+  let ws = websocket.new(on_init, on_message, on_close)
+
+  response(200)
+  |> set_body(WebSocket(erase(ws)))
 }
 
 //

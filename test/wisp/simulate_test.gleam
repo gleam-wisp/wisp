@@ -1,3 +1,4 @@
+import gleam/erlang/process
 import gleam/http
 import gleam/http/response
 import gleam/json
@@ -7,6 +8,7 @@ import gleam/string
 import simplifile
 import wisp
 import wisp/simulate
+import wisp/websocket
 
 pub fn request_test() {
   let request = simulate.request(http.Patch, "/wibble/woo")
@@ -260,4 +262,73 @@ pub fn multipart_generation_validation_test() {
     <> boundary
     <> "--\r\n"
   assert body == <<expected_body:utf8>>
+}
+
+pub fn websocket_handler_test() {
+  let state_subject = process.new_subject()
+  let handler =
+    websocket.new(
+      fn(_conn) {
+        let initial_state = "Initial State"
+        process.send(state_subject, initial_state)
+        #(initial_state, option.None)
+      },
+      fn(state, message, connection) {
+        case message {
+          websocket.Text(text) -> {
+            let message = "Echo: " <> text
+            let new_state = state <> " | " <> message
+            let assert Ok(_) = websocket.send_text(connection, message)
+            process.send(state_subject, new_state)
+            websocket.Continue(new_state)
+          }
+          websocket.Binary(data) -> {
+            let new_state = state <> " | " <> "Binary"
+            let assert Ok(_) = websocket.send_binary(connection, data)
+            process.send(state_subject, new_state)
+            websocket.Continue(new_state)
+          }
+          websocket.Closed | websocket.Shutdown -> {
+            websocket.Stop
+          }
+          websocket.Custom(_) -> {
+            let new_state = state <> " | Custom"
+            process.send(state_subject, new_state)
+            websocket.Continue(new_state)
+          }
+        }
+      },
+      fn(state) { process.send(state_subject, state) },
+    )
+
+  let assert Ok(websocket) = simulate.create_websocket(handler)
+  let assert Ok("Initial State") = process.receive(state_subject, 1000)
+
+  let assert Ok(websocket) = simulate.send_websocket_text(websocket, "Hello")
+  let assert [] = simulate.websocket_sent_binary_messages(websocket)
+  let assert ["Echo: Hello"] = simulate.websocket_sent_text_messages(websocket)
+  let assert Ok("Initial State | Echo: Hello") =
+    process.receive(state_subject, 1000)
+
+  let assert Ok(websocket) =
+    simulate.send_websocket_binary(websocket, <<1, 2, 3>>)
+  let assert [<<1, 2, 3>>] = simulate.websocket_sent_binary_messages(websocket)
+  let assert ["Echo: Hello"] = simulate.websocket_sent_text_messages(websocket)
+  let assert Ok("Initial State | Echo: Hello | Binary") =
+    process.receive(state_subject, 1000)
+
+  let assert Ok(Nil) = simulate.close_websocket(websocket)
+  let assert Ok("Initial State | Echo: Hello | Binary") =
+    process.receive(state_subject, 1000)
+
+  let assert Ok(websocket) =
+    simulate.send_websocket_binary(websocket, <<4, 5, 6>>)
+  let assert [<<1, 2, 3>>] = simulate.websocket_sent_binary_messages(websocket)
+
+  let websocket = simulate.reset_websocket(websocket)
+  let assert Ok("Initial State") = process.receive(state_subject, 1000)
+  let assert Ok(websocket) =
+    simulate.send_websocket_binary(websocket, <<6, 7, 8>>)
+  let assert [<<6, 7, 8>>] = simulate.websocket_sent_binary_messages(websocket)
+  let assert Ok("Initial State | Binary") = process.receive(state_subject, 1000)
 }
