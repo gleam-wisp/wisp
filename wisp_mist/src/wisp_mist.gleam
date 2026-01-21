@@ -8,6 +8,7 @@ import gleam/string
 import mist
 import wisp
 import wisp/internal
+import wisp/websocket
 
 //
 // Running the server
@@ -40,18 +41,26 @@ pub fn handler(
   handler: fn(wisp.Request) -> wisp.Response,
   secret_key_base: String,
 ) -> fn(HttpRequest(mist.Connection)) -> HttpResponse(mist.ResponseData) {
-  fn(request: HttpRequest(_)) {
+  fn(mist_request: HttpRequest(_)) {
     let connection =
-      internal.make_connection(mist_body_reader(request), secret_key_base)
-    let request = request.set_body(request, connection)
+      internal.make_connection(mist_body_reader(mist_request), secret_key_base)
+    let wisp_request = request.set_body(mist_request, connection)
 
     use <- exception.defer(fn() {
-      let assert Ok(_) = wisp.delete_temporary_files(request)
+      let assert Ok(_) = wisp.delete_temporary_files(wisp_request)
     })
 
-    request
-    |> handler
-    |> mist_response
+    let response = handler(wisp_request)
+
+    // Handle WebSocket upgrade specially
+    case response.body {
+      wisp.WebSocket(upgrade) -> mist_websocket_upgrade(mist_request, upgrade)
+      wisp.Text(text) ->
+        response.set_body(response, mist.Bytes(bytes_tree.from_string(text)))
+      wisp.Bytes(bytes) -> response.set_body(response, mist.Bytes(bytes))
+      wisp.File(path:, offset:, limit:) ->
+        mist_send_file(response, path, offset, limit)
+    }
   }
 }
 
@@ -76,16 +85,6 @@ fn wrap_mist_chunk(
   })
 }
 
-fn mist_response(response: wisp.Response) -> HttpResponse(mist.ResponseData) {
-  case response.body {
-    wisp.Text(text) ->
-      response.set_body(response, mist.Bytes(bytes_tree.from_string(text)))
-    wisp.Bytes(bytes) -> response.set_body(response, mist.Bytes(bytes))
-    wisp.File(path:, offset:, limit:) ->
-      mist_send_file(response, path, offset, limit)
-  }
-}
-
 fn mist_send_file(
   response: HttpResponse(wisp.Body),
   path: String,
@@ -101,4 +100,69 @@ fn mist_send_file(
       |> response.set_body(mist.Bytes(bytes_tree.new()))
     }
   }
+}
+
+fn mist_websocket_upgrade(
+  request: HttpRequest(mist.Connection),
+  upgrade: wisp.WebSocketUpgrade,
+) -> HttpResponse(mist.ResponseData) {
+  // Recover the type-erased WebSocket handler
+  let ws = wisp.recover(upgrade)
+
+  // Extract the callbacks from the handler
+  let #(on_init, on_message, on_close) = websocket.extract_callbacks(ws)
+
+  // Create mist websocket response
+  mist.websocket(
+    request: request,
+    on_init: fn(mist_connection) {
+      // Create wisp connection from mist connection
+      let wisp_connection =
+        websocket.make_connection(
+          fn(text) {
+            mist.send_text_frame(mist_connection, text)
+            |> result.map_error(fn(_) { websocket.SendFailed })
+          },
+          fn(binary) {
+            mist.send_binary_frame(mist_connection, binary)
+            |> result.map_error(fn(_) { websocket.SendFailed })
+          },
+          fn() { Ok(Nil) },
+        )
+
+      on_init(wisp_connection)
+    },
+    handler: fn(state, message, mist_connection) {
+      // Create wisp connection for the handler
+      let wisp_connection =
+        websocket.make_connection(
+          fn(text) {
+            mist.send_text_frame(mist_connection, text)
+            |> result.map_error(fn(_) { websocket.SendFailed })
+          },
+          fn(binary) {
+            mist.send_binary_frame(mist_connection, binary)
+            |> result.map_error(fn(_) { websocket.SendFailed })
+          },
+          fn() { Ok(Nil) },
+        )
+
+      // Convert mist message to wisp message
+      let wisp_message = case message {
+        mist.Text(text) -> websocket.Text(text)
+        mist.Binary(binary) -> websocket.Binary(binary)
+        mist.Closed -> websocket.Closed
+        mist.Shutdown -> websocket.Shutdown
+        mist.Custom(custom) -> websocket.Custom(custom)
+      }
+
+      // Call wisp handler and convert result
+      case on_message(state, wisp_message, wisp_connection) {
+        websocket.Continue(new_state) -> mist.continue(new_state)
+        websocket.Stop -> mist.stop()
+        websocket.StopWithError(reason) -> mist.stop_abnormal(reason)
+      }
+    },
+    on_close: on_close,
+  )
 }
