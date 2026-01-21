@@ -2,10 +2,9 @@
 
 ## Unreleased
 
-- The Mist web server related module has been moved to the `wisp_mist` adapter package.
-- The Mist response handler now sends an Internal Server Error response when failing to create a file response body.
-- The Mist README has been updated to use the correct function for starting a server.
-- The Ewe web server has been introduced as one of the adapter options.
+- The Mist web server related module has been moved to the `wisp_mist` adapter
+  package. A `wisp_ewe` package has been created too!
+- `send_file` failing will now result in an internal server error being sent.
 
 ## v2.2.0 - 2026-01-16
 
