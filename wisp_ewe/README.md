@@ -1,3 +1,5 @@
+![wisp_ewe](https://github.com/lpil/wisp/blob/main/wisp_ewe/cover.jpg?raw=true)
+
 # wisp_ewe
 
 [![Package Version](https://img.shields.io/hexpm/v/wisp_ewe)](https://hex.pm/packages/wisp_ewe)
