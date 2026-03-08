@@ -7,11 +7,23 @@ repository = { type = "github", user = "gleam-wisp", repo = "wisp" }
 links = [{ title = "Sponsor", href = "https://github.com/sponsors/lpil" }]
 
 [dependencies]
+<<<<<<< HEAD
 gleam_stdlib = ">= 0.70.0 and < 2.0.0"
 wisp = ">= 2.1.0 and < 3.0.0"
 ewe = ">= 3.0.0 and < 4.0.0"
+||||||| parent of ce632d3 (wip)
+gleam_stdlib = ">= 0.44.0 and < 2.0.0"
+wisp = ">= 2.1.0 and < 3.0.0"
+ewe = ">= 2.1.1 and < 3.0.0"
+=======
+gleam_stdlib = ">= 0.44.0 and < 2.0.0"
+# wisp = ">= 2.1.0 and < 3.0.0"
+wisp = { path = "../" }
+ewe = ">= 2.1.1 and < 3.0.0"
+>>>>>>> ce632d3 (wip)
 exception = ">= 2.1.0 and < 3.0.0"
 gleam_http = ">= 4.2.0 and < 5.0.0"
+gleam_otp = ">= 1.2.0 and < 2.0.0"
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"

@@ -1,30 +1,33 @@
-import gleam/http/request
-import gleam/http/response
 import gleam/otp/static_supervisor
 import gleam/otp/supervision
-import mist
 import wisp
 
-pub opaque type Configuration(argument) {
-  Configuration(
-    port: Int,
-    bind: String,
-    handler: fn(wisp.Request, ClientInformation, argument) -> wisp.Response,
+pub type WebServerAdapter(argument) {
+  WebServerAdapter(
+    supervision_specification: fn(WebServerConfiguration) ->
+      supervision.ChildSpecification(Nil),
   )
 }
 
-pub type ClientInformation {
-  RequestInformation(ip_address: IpAddress)
+pub type ApplicationConfiguration(argument) {
+  Configuration(
+    port: Int,
+    bind: String,
+    handler: fn(wisp.Request, wisp.ClientInformation, argument) -> wisp.Response,
+  )
 }
 
-pub type IpAddress {
-  IpV4(Int, Int, Int, Int)
-  IpV6(Int, Int, Int, Int, Int, Int, Int, Int)
+pub type WebServerConfiguration {
+  WebServerConfiguration(
+    port: Int,
+    bind: String,
+    handler: fn(wisp.Request, wisp.ClientInformation) -> wisp.Response,
+  )
 }
 
 pub fn simple(
   handle_request handler: fn(wisp.Request, argument) -> wisp.Response,
-) -> Configuration(argument) {
+) -> ApplicationConfiguration(argument) {
   let handler = fn(request, _client_information, context) {
     handler(request, context)
   }
@@ -33,8 +36,8 @@ pub fn simple(
 
 pub fn advanced(
   handle_request handler: fn(wisp.Request, context) -> wisp.Response,
-  make_context prepare: fn(ClientInformation, argument) -> context,
-) -> Configuration(argument) {
+  make_context prepare: fn(wisp.ClientInformation, argument) -> context,
+) -> ApplicationConfiguration(argument) {
   let handler = fn(request, client_information, argument) {
     let context = prepare(client_information, argument)
     handler(request, context)
@@ -43,41 +46,37 @@ pub fn advanced(
 }
 
 pub fn port(
-  builder: Configuration(argument),
+  builder: ApplicationConfiguration(argument),
   port: Int,
-) -> Configuration(argument) {
+) -> ApplicationConfiguration(argument) {
   Configuration(..builder, port:)
 }
 
 pub fn bind(
-  builder: Configuration(argument),
+  builder: ApplicationConfiguration(argument),
   bind: String,
-) -> Configuration(argument) {
+) -> ApplicationConfiguration(argument) {
   Configuration(..builder, bind:)
 }
 
 pub fn supervised(
-  configuration: Configuration(argument),
-  argument: argument,
+  configuration: ApplicationConfiguration(argument),
+  server adapter: WebServerAdapter(argument),
+  argument argument: argument,
 ) -> supervision.ChildSpecification(Nil) {
   let server =
-    configuration.handler
-    |> to_mist_handler(argument)
-    |> mist.new
-    |> mist.port(configuration.port)
-    |> mist.bind(configuration.bind)
-    |> mist.supervised
+    adapter.supervision_specification(
+      WebServerConfiguration(
+        port: configuration.port,
+        bind: configuration.bind,
+        handler: fn(request, info) {
+          configuration.handler(request, info, argument)
+        },
+      ),
+    )
 
   static_supervisor.new(static_supervisor.RestForOne)
   |> static_supervisor.add(server)
   |> static_supervisor.supervised
   |> supervision.map_data(fn(_) { Nil })
-}
-
-fn to_mist_handler(
-  handle_request: fn(wisp.Request, ClientInformation, argument) -> wisp.Response,
-  argument: argument,
-) -> fn(request.Request(mist.Connection)) ->
-  response.Response(mist.ResponseData) {
-  todo
 }

@@ -68,6 +68,15 @@ pub type Body {
   )
 }
 
+pub type ClientInformation {
+  RequestInformation(ip_address: IpAddress)
+}
+
+pub type IpAddress {
+  IpV4(Int, Int, Int, Int)
+  IpV6(Int, Int, Int, Int, Int, Int, Int, Int)
+}
+
 /// An alias for a HTTP response containing a `Body`.
 pub type Response =
   HttpResponse(Body)
