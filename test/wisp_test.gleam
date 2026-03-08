@@ -503,20 +503,33 @@ pub fn serve_static_not_found_test() {
     |> request.set_path("/stuff/credit_card_details.txt")
   assert {
       use <- wisp.serve_static(request, under: "/stuff", from: "./")
-      wisp.ok()
+      wisp.not_found()
     }
-    == wisp.ok()
+    == wisp.not_found()
 }
 
-pub fn serve_static_go_up_test() {
+pub fn serve_static_path_traversal_attack_test() {
   let request =
     simulate.request(http.Get, "/")
-    |> request.set_path("/../test/fixture.txt")
-  assert {
-      use <- wisp.serve_static(request, under: "/stuff", from: "./src/")
-      wisp.ok()
-    }
-    == wisp.ok()
+    |> request.set_path("/../gleam.toml")
+  let response = {
+    use <- wisp.serve_static(request, under: "/", from: "./src/")
+    wisp.not_found()
+  }
+  assert response == wisp.not_found()
+    as "the file should not be returned as the .. segment should be discarded to prevent path traversals"
+}
+
+pub fn serve_static_path_traversal_attack_uri_encoded_test() {
+  let request =
+    simulate.request(http.Get, "/")
+    |> request.set_path("/%2e%2e/gleam.toml")
+  let response = {
+    use <- wisp.serve_static(request, under: "/", from: "./src/")
+    wisp.not_found()
+  }
+  assert response == wisp.not_found()
+    as "the file should not be returned as the .. segment should be discarded to prevent path traversals"
 }
 
 pub fn serve_static_etags_returns_304_test() {
