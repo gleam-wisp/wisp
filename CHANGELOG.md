@@ -6,6 +6,10 @@
   package. A `wisp_ewe` package has been created too!
 - `send_file` failing will now result in an internal server error being sent.
 
+## v2.2.1 - 2026-03-08
+
+- Fixed a path traversal attack with encoded URI paths in `serve_static`.
+
 ## v2.2.0 - 2026-01-16
 
 - The `content_security_policy_protection` middleware has been added.
