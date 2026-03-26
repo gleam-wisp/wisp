@@ -1,1 +1,88 @@
 @import "tailwindcss";
+
+@theme {
+  --breakpoint-2xl: initial;
+
+  --font-jetbrains: 'JetBrains Mono', sans-serif;
+
+  --color-brand-prime: #90B357;
+  --color-brand-light: #E3FDB9;
+  --color-brand-quitelight: #e2eed3;
+  --color-brand-extralight: #F9FFF2;
+
+  --color-code-red: #B52343;
+  --color-code-orange: #cb6217;
+  --color-code-yellow: #F6E569;
+  --color-code-blue: #7CC8FF;
+
+  --color-text-dark: #262F2B;
+  --color-text-light: #44554E;
+  --color-text-subtle: #85AE9E;
+}
+
+body {
+  font-family: var(--font-jetbrains);
+  background: var(--color-brand-extralight);
+}
+
+@utility container {
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: calc(var(--spacing) * 4) calc(var(--spacing) * 4);
+}
+
+.site-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: calc(var(--spacing) * 4) 0;
+}
+
+.site-nav .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.site-nav .site-links {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 2);
+}
+
+.site-nav .site-links a {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 2);
+  padding: calc(var(--spacing) * 2) calc(var(--spacing) * 4);
+}
+
+.site-nav .site-links a svg {
+  color: var(--color-text-subtle);
+}
+
+.site-nav .site-links .special-link a {
+  background-color: var(--color-brand-prime);
+  color: var(--color-white);
+  border-radius: 100rem;
+}
+
+.site-nav .site-links .special-link a svg {
+  color: var(--color-brand-light);
+}
+
+.site-hero {
+  background: linear-gradient(180deg, --alpha(var(--color-brand-extralight) / 70%) 0%, var(--color-brand-extralight) 100%), conic-gradient(from 180deg at 50% 50%, #90B357 0deg, #B2CF70 135deg, #57B399 237.12deg, #90B357 360deg);
+}
+
+.version-label {
+  background: var(--color-brand-quitelight);
+  border-radius: 100rem;
+  padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 3);
+  line-height: 1;
+  position: absolute;
+  bottom: 0;
+  right: 80px;
+  font-size: .95rem;
+}

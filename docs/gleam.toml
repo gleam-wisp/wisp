@@ -6,7 +6,17 @@ target = "javascript"
 gleam_stdlib = ">= 0.44.0 and < 2.0.0"
 lustre = ">= 5.6.0 and < 6.0.0"
 modem = ">= 2.1.2 and < 3.0.0"
+argv = ">= 1.0.2 and < 2.0.0"
+hoist = ">= 1.0.0 and < 2.0.0"
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
 lustre_dev_tools = ">= 2.3.5 and < 3.0.0"
+
+[tools.lustre.html]
+title = "Wisp - a practical web framework for Gleam"
+stylesheets = [{ href = "https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" }]
+meta = [
+  { name = "description", content = "A practical web framework for Gleam" },
+  { name = "og:description", content = "A practical web framework for Gleam" },
+]
