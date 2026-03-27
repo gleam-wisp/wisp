@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v2.2.2 - 2026-03-27
 
 - Fixed a bug where the max body sizes would not be respected for chunked
   request body streams.
