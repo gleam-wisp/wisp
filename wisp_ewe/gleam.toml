@@ -7,9 +7,9 @@ repository = { type = "github", user = "gleam-wisp", repo = "wisp" }
 links = [{ title = "Sponsor", href = "https://github.com/sponsors/lpil" }]
 
 [dependencies]
-gleam_stdlib = ">= 0.44.0 and < 2.0.0"
+gleam_stdlib = ">= 0.70.0 and < 2.0.0"
 wisp = ">= 2.1.0 and < 3.0.0"
-ewe = ">= 2.1.1 and < 3.0.0"
+ewe = ">= 3.0.0 and < 4.0.0"
 exception = ">= 2.1.0 and < 3.0.0"
 gleam_http = ">= 4.2.0 and < 5.0.0"
 
