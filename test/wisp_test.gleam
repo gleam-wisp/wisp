@@ -885,6 +885,49 @@ Content-Disposition: form-data; name=\"one\"\r
     )
 }
 
+// https://github.com/gleam-wisp/wisp/issues/108
+pub fn multipart_form_body_too_big_across_chunks_test() {
+  let data = "--b\r
+Content-Disposition: form-data; name=\"x\"\r
+\r
+" <> string.repeat("A", 200) <> "\r
+--b--\r
+"
+  assert simulate.request(http.Post, "/")
+    |> simulate.string_body(data)
+    |> request.set_header("content-type", "multipart/form-data; boundary=b")
+    |> wisp.set_max_body_size(120)
+    |> wisp.set_read_chunk_size(100)
+    |> form_handler(fn(_) { panic as "should be unreachable" })
+    == Response(
+      413,
+      [#("content-type", "text/plain")],
+      wisp.Text("Content too large"),
+    )
+}
+
+// https://github.com/gleam-wisp/wisp/issues/108
+pub fn multipart_form_headers_too_big_across_chunks_test() {
+  let data =
+    "--b\r
+Content-Disposition: form-data; name=\"x\"\r
+\r
+1\r
+--b--\r
+"
+  assert simulate.request(http.Post, "/")
+    |> simulate.string_body(data)
+    |> request.set_header("content-type", "multipart/form-data; boundary=b")
+    |> wisp.set_max_body_size(10)
+    |> wisp.set_read_chunk_size(4)
+    |> form_handler(fn(_) { panic as "should be unreachable" })
+    == Response(
+      413,
+      [#("content-type", "text/plain")],
+      wisp.Text("Content too large"),
+    )
+}
+
 pub fn multipart_form_no_boundary_test() {
   let data =
     "--theboundary\r

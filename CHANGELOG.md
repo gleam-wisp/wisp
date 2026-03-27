@@ -5,6 +5,8 @@
 - The Mist web server related module has been moved to the `wisp_mist` adapter
   package. A `wisp_ewe` package has been created too!
 - `send_file` failing will now result in an internal server error being sent.
+- Fixed a bug where the max body sizes would not be respected for chunked
+  request body streams.
 
 ## v2.2.1 - 2026-03-08
 
