@@ -1172,6 +1172,7 @@ fn multipart_body(
     http.MoreRequiredForBody(chunk, parse) -> {
       let parse = fn_with_bad_request_error(parse, invalid_form)
       let reader = BufferedReader(reader, <<>>)
+      use quota <- result.try(decrement_quota(quota, size_read))
       use data <- result.try(append(data, chunk))
       multipart_body(reader, parse, boundary, chunk_size, quota, append, data)
     }
@@ -1242,6 +1243,8 @@ fn multipart_headers(
         }
       }
       let reader = BufferedReader(reader, <<>>)
+      let size_read = bit_array.byte_size(chunk)
+      use quotas <- result.try(decrement_body_quota(quotas, size_read))
       multipart_headers(reader, parse, chunk_size, quotas)
     }
   }
@@ -2000,18 +2003,26 @@ pub fn get_cookie(
 // Testing
 //
 
-// TODO: chunk the body
 @internal
 pub fn create_canned_connection(
   body: BitArray,
   secret_key_base: String,
 ) -> internal.Connection {
-  internal.make_connection(
-    fn(_size) {
-      Ok(internal.Chunk(body, fn(_size) { Ok(internal.ReadingFinished) }))
-    },
-    secret_key_base,
-  )
+  internal.make_connection(canned_reader(body), secret_key_base)
+}
+
+fn canned_reader(data: BitArray) -> internal.Reader {
+  fn(chunk_size) {
+    case bit_array.byte_size(data) {
+      0 -> Ok(internal.ReadingFinished)
+      size -> {
+        let take = int.min(chunk_size, size)
+        let assert Ok(chunk) = bit_array.slice(data, 0, take)
+        let assert Ok(rest) = bit_array.slice(data, take, size - take)
+        Ok(internal.Chunk(chunk, canned_reader(rest)))
+      }
+    }
+  }
 }
 
 /// Protects against Cross-Site Request Forgery (CSRF) attacks by checking the

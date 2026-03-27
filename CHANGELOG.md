@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Fixed a bug where the max body sizes would not be respected for chunked
+  request body streams.
+
 ## v2.2.1 - 2026-03-08
 
 - Fixed a path traversal attack with encoded URI paths in `serve_static`.
