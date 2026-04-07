@@ -14,6 +14,9 @@
   --color-brand-quitelight: #e2eed3;
   --color-brand-extralight: #F9FFF2;
 
+  --color-code-bg: #262F2B;
+  --color-code-header: #2e3633;
+
   --color-code-red: #B52343;
   --color-code-orange: #cb6217;
   --color-code-yellow: #F6E569;
@@ -83,9 +86,15 @@ body.dark {
 }
 
 .site-nav .nav-search input {
-  border: 1px solid var(--color-text-subtle);
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-brand-quitelight);
+  border-radius: 100rem;
+  font-size: var(--text-sm);
   padding: calc(var(--spacing) * 2) calc(var(--spacing) * 4);
+}
+
+.site-nav .nav-search input:focus {
+  outline: 2px solid --alpha(var(--color-brand-prime) / 20%);
+  border-color: var(--color-brand-prime);
 }
 
 .site-hero {
@@ -161,8 +170,8 @@ body.dark {
 }
 
 .prose pre {
-  background: var(--color-gray-900);
-  border-radius: var(--radius-md);
+  background: var(--color-code-bg);
+  border-radius: var(--radius-lg);
   white-space: pre-wrap;
   color: var(--color-gray-100);
   margin: 1.4rem 0;
@@ -171,12 +180,15 @@ body.dark {
 }
 
 .prose pre header {
-  background: var(--color-gray-800);
-  border-radius: var(--radius-md) var(--radius-md) 0 0;
-  padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 5);
+  background: var(--color-code-header);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: calc(var(--spacing) * 3) calc(var(--spacing) * 5);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  color: #d3dfda;
+  font-size: var(--text-sm);
+  line-height: 1;
 }
 
 .prose pre code {
@@ -192,6 +204,14 @@ body.dark {
   padding: calc(var(--spacing) * 12) 0;
 }
 
+.docs-header h4 {
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  font-size: var(--text-sm);
+  margin-bottom: var(--spacing);
+  color: var(--color-text-subtle);
+}
+
 .docs-header h1 {
   color: var(--color-text-dark);
   font-weight: var(--font-weight-extrabold);
@@ -204,7 +224,7 @@ body.dark {
   top: 0;
   left: 0;
   bottom: 0;
-  background: conic-gradient(from 180deg at 50% 50%, --alpha(#90B357 / 10%) 0deg, --alpha(#B2CF70 / 10%) 135deg, --alpha(#57B399 / 10%) 237.12deg, --alpha(#90B357 / 10%) 360deg);
+  background: conic-gradient(from 180deg at 50% 50%, --alpha(#90B357 / 20%) 0deg, --alpha(#B2CF70 / 20%) 135deg, --alpha(#57B399 / 20%) 237.12deg, --alpha(#90B357 / 20%) 360deg);
 }
 
 .docs-sidebar .sidebar-logo {
@@ -233,4 +253,37 @@ body.dark {
   border-left: 1px solid var(--color-text-subtle);
   font-size: var(--text-sm);
   display: block;
+}
+
+/* Highlighting */
+.hl-keyword {
+  color: pink;
+}
+
+.hl-module {
+  color: skyblue;
+}
+
+.hl-variant {
+  color: orange;
+}
+
+.hl-function {
+  color: rosybrown;
+}
+
+.hl-operator {
+  color: white;
+}
+
+.hl-comment {
+  color: gray;
+}
+
+.hl-number {
+  color: #fff;
+}
+
+.hl-string {
+  color: yellow;
 }

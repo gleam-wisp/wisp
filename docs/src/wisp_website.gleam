@@ -145,7 +145,7 @@ pub fn view(route: Route) {
                     html.text("Installation"),
                   ]),
                   html.a([attribute.href("/docs/" <> slug)], [
-                    html.text("Guide Slug"),
+                    html.text("Your First App"),
                   ]),
                 ]),
               ]),
@@ -193,7 +193,8 @@ pub fn view(route: Route) {
             ]),
             html.main([], [
               html.header([attribute.class("docs-header")], [
-                html.h1([], [html.text("Getting started")]),
+                html.h4([], [html.text("Getting Started")]),
+                html.h1([], [html.text("Your First App")]),
               ]),
 
               html.article([attribute.class("prose")], article_content()),
@@ -429,13 +430,66 @@ fn article_content() {
         html.button([], [html.text("Copy")]),
       ]),
       html.code([], [
-        html.text(
-          "import wisp
-
-pub fn main() {
-
-}",
-        ),
+        html.span([attribute.class("hl-comment")], [
+          html.text(
+            "// Recursively create the dist directory structure we want",
+          ),
+        ]),
+        html.text("\n"),
+        html.span([attribute.class("hl-module")], [html.text("simplifile")]),
+        html.text("."),
+        html.span([attribute.class("hl-function")], [
+          html.text("create_directory_all"),
+        ]),
+        html.text("("),
+        html.span([attribute.class("hl-string")], [
+          html.text("\"./dist/pixels\""),
+        ]),
+        html.text(")"),
+        html.text("\n"),
+        html.text("\n"),
+        html.span([attribute.class("hl-comment")], [
+          html.text("// Read a directory"),
+        ]),
+        html.text("\n"),
+        html.span([attribute.class("hl-keyword")], [html.text("let")]),
+        html.span([attribute.class("hl-keyword")], [html.text(" assert ")]),
+        html.span([attribute.class("hl-variant")], [html.text("Ok")]),
+        html.text("(entries) = "),
+        html.span([attribute.class("hl-module")], [html.text("simplifile")]),
+        html.text("."),
+        html.span([attribute.class("hl-function")], [
+          html.text("read_directory"),
+        ]),
+        html.text("("),
+        html.span([attribute.class("hl-string")], [html.text("\"./pixelart\"")]),
+        html.text(")"),
+        html.text("\n"),
+        html.text("\n"),
+        html.span([attribute.class("hl-comment")], [
+          html.text(
+            "// Loop through it and copy all the entries over to a build directory",
+          ),
+        ]),
+        html.text("\n"),
+        html.span([attribute.class("hl-module")], [html.text("list")]),
+        html.text("."),
+        html.span([attribute.class("hl-function")], [html.text("each")]),
+        html.text("(entries,"),
+        html.span([attribute.class("hl-keyword")], [html.text("fn")]),
+        html.text("(entry) {"),
+        html.text("\n"),
+        html.span([attribute.class("hl-module")], [html.text("  simplifile")]),
+        html.text("."),
+        html.span([attribute.class("hl-function")], [html.text("copy")]),
+        html.text("("),
+        html.span([attribute.class("hl-string")], [html.text("\"./pixelart/\"")]),
+        html.span([attribute.class("hl-operator")], [html.text(" <> ")]),
+        html.text("entry, "),
+        html.span([attribute.class("hl-string")], [
+          html.text("\"./dist/pixels/\""),
+        ]),
+        html.text(")\n})"),
       ]),
     ]),
     html.p([], [
