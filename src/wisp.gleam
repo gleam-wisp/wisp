@@ -1618,9 +1618,8 @@ fn handle_etag(
 }
 
 /// A middleware function that converts `HEAD` requests to `GET` requests,
-/// handles the request, and then discards the response body. This is useful so
-/// that your application can handle `HEAD` requests without having to implement
-/// handlers for them.
+/// handles the request. This is useful so that your application can handle
+/// `HEAD` requests without having to implement handlers for them.
 ///
 /// The `x-original-method` header is set to `"HEAD"` for requests that were
 /// originally `HEAD` requests.
