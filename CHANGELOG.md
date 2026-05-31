@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed a bug in the `static_file_handler` where valid requests were rejected
+  because the `range.limit` was incorrectly treated as the end of the range.
 - The Mist web server related module has been moved to the `wisp_mist` adapter
   package. A `wisp_ewe` package has been created too!
 - `send_file` failing will now result in an internal server error being sent.

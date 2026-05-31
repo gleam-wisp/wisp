@@ -1549,15 +1549,16 @@ fn handle_file_range_header(
       False -> range
     }
 
-    let end_is_invalid =
+    let limit_is_invalid =
       range.limit
-      |> option.map(fn(end) {
-        end < 0 || end >= file_info.size || end < range.offset
+      |> option.map(fn(limit) {
+        let end = range.offset + limit - 1
+        limit < 0 || end >= file_info.size
       })
       |> option.unwrap(False)
 
     use <- bool.guard(
-      range.offset < 0 || range.offset >= file_info.size || end_is_invalid,
+      range.offset < 0 || range.offset >= file_info.size || limit_is_invalid,
       Error(
         response(416)
         |> response.prepend_header("range", "bytes=*"),

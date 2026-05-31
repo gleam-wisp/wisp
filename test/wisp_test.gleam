@@ -616,6 +616,15 @@ pub fn serve_static_range_start_limit_test() {
   assert simulate.read_body(response) == "llo, Joe! 👨"
 }
 
+pub fn serve_static_range_short_at_high_offset_test() {
+  let response =
+    simulate.request(http.Get, "/fixture.txt")
+    |> simulate.header("range", "bytes=8-9")
+    |> static_file_handler
+
+  assert simulate.read_body(response) == "oe"
+}
+
 pub fn serve_static_range_negative_test() {
   let response =
     simulate.request(http.Get, "/fixture.txt")
