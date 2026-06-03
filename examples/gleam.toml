@@ -5,13 +5,13 @@ description = "A collection of Wisp examples"
 [dependencies]
 wisp = { path = ".." }
 wisp_mist = { path = "../wisp_mist" }
-mist = ">= 5.0.0 and < 6.0.0"
-gleam_stdlib = ">= 0.60.0 and < 1.0.0"
+mist = ">= 6.0.0 and < 7.0.0"
+gleam_stdlib = ">= 1.0.0 and < 2.0.0"
 gleam_erlang = ">= 1.0.0 and < 2.0.0"
 gleam_http = ">= 4.0.0 and < 5.0.0"
 gleam_json = ">= 3.0.1 and < 4.0.0"
 gleam_crypto = ">= 1.5.0 and < 2.0.0"
-gsv = ">= 4.0.0 and < 5.0.0"
+gsv = ">= 5.0.0 and < 6.0.0"
 tiny_database = { path = "utilities/tiny_database" }
 
 [dev-dependencies]
