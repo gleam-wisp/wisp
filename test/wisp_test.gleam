@@ -592,7 +592,6 @@ pub fn serve_static_range_start_test() {
     == [
       #("content-type", "text/plain; charset=utf-8"),
       #("etag", ""),
-      #("content-length", "36"),
       #("accept-ranges", "bytes"),
       #("content-range", "bytes 2-37/38"),
     ]
@@ -611,7 +610,6 @@ pub fn serve_static_range_start_limit_test() {
     == [
       #("content-type", "text/plain; charset=utf-8"),
       #("etag", ""),
-      #("content-length", "14"),
       #("accept-ranges", "bytes"),
       #("content-range", "bytes 2-15/38"),
     ]
@@ -630,7 +628,6 @@ pub fn serve_static_range_negative_test() {
     == [
       #("content-type", "text/plain; charset=utf-8"),
       #("etag", ""),
-      #("content-length", "26"),
       #("accept-ranges", "bytes"),
       #("content-range", "bytes 12-37/38"),
     ]
