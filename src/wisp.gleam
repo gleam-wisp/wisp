@@ -1010,7 +1010,10 @@ pub fn require_content_type(
 /// If the body cannot be parsed successfully then a response with status
 /// code 400: Bad request will be returned to the client.
 ///
-pub fn require_json(request: Request, next: fn(Dynamic) -> Response) -> Response {
+pub fn require_json(
+  request: Request,
+  next: fn(Dynamic) -> Response,
+) -> Response {
   use <- require_content_type(request, "application/json")
   use body <- require_string_body(request)
   case json.parse(body, decode.dynamic) {
@@ -1575,17 +1578,11 @@ fn handle_file_range_header(
       <> int.to_string(file_info.size)
     }
 
-    let content_length = case range.limit {
-      option.Some(l) -> int.to_string(l)
-      option.None -> int.to_string(file_info.size - range.offset)
-    }
-
     response.Response(
       206,
       resp.headers,
       File(path:, offset: range.offset, limit: range.limit),
     )
-    |> response.set_header("content-length", content_length)
     |> response.set_header("accept-ranges", "bytes")
     |> response.set_header("content-range", content_range)
     |> Ok
