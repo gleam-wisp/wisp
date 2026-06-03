@@ -7,6 +7,8 @@
 - `send_file` failing will now result in an internal server error being sent.
 - Fixed a bug where the max body sizes would not be respected for chunked
   request body streams.
+- Fixed a bug where Wisp would set content length header for range requests
+  instead of letting the web server set it.
 
 ## v2.2.1 - 2026-03-08
 
