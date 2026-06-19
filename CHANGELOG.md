@@ -11,6 +11,8 @@
   request body streams.
 - Fixed a bug where Wisp would set content length header for range requests
   instead of letting the web server set it.
+- The `new_temporary_file` and `delete_temporary_files` functions have been
+  removed.
 
 ## v2.2.1 - 2026-03-08
 

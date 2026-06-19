@@ -19,6 +19,7 @@ import gleam/int
 import gleam/json
 import gleam/list
 import gleam/option.{type Option}
+import gleam/otp/actor
 import gleam/result
 import gleam/string
 import gleam/string_tree.{type StringTree}
@@ -26,8 +27,10 @@ import gleam/uri
 import houdini
 import logging
 import marceau
+import process_file
 import simplifile
 import wisp/internal
+import wisp/internal/supervisor
 
 //
 // Responses
@@ -66,15 +69,6 @@ pub type Body {
     /// The maximum number of bytes to send. Set to `None` for the whole file.
     limit: Option(Int),
   )
-}
-
-pub type ClientInformation {
-  RequestInformation(ip_address: IpAddress)
-}
-
-pub type IpAddress {
-  IpV4(Int, Int, Int, Int)
-  IpV6(Int, Int, Int, Int, Int, Int, Int, Int)
 }
 
 /// An alias for a HTTP response containing a `Body`.
@@ -1091,7 +1085,7 @@ fn read_multipart(
     // There is a file name, so we treat this as a file upload, streaming the
     // contents to a temporary file and using the dedicated files size quota.
     option.Some(file_name) -> {
-      use path <- result.try(or_500(new_temporary_file(request)))
+      let path = request.body.new_temporary_file()
       let append = multipart_file_append
       let q = quotas.files
       let result =
@@ -1658,38 +1652,6 @@ pub fn handle_head(
 // File uploads
 //
 
-/// Create a new temporary directory for the given request.
-///
-/// If you are using the Mist adapter or another compliant web server
-/// adapter then this file will be deleted for you when the request is complete.
-/// Otherwise you will need to call the `delete_temporary_files` function
-/// yourself.
-///
-pub fn new_temporary_file(
-  request: Request,
-) -> Result(String, simplifile.FileError) {
-  let directory = request.body.temporary_directory
-  use _ <- result.try(simplifile.create_directory_all(directory))
-  let path = filepath.join(directory, internal.random_slug())
-  use _ <- result.map(simplifile.create_file(path))
-  path
-}
-
-/// Delete any temporary files created for the given request.
-///
-/// If you are using the Mist adapter or another compliant web server
-/// adapter then this file will be deleted for you when the request is complete.
-/// Otherwise you will need to call this function yourself.
-///
-pub fn delete_temporary_files(
-  request: Request,
-) -> Result(Nil, simplifile.FileError) {
-  case simplifile.delete(request.body.temporary_directory) {
-    Error(simplifile.Enoent) -> Ok(Nil)
-    other -> other
-  }
-}
-
 /// Returns the path of a package's `priv` directory, where extra non-Gleam
 /// or Erlang files are typically kept.
 ///
@@ -2014,7 +1976,16 @@ pub fn create_canned_connection(
   body: BitArray,
   secret_key_base: String,
 ) -> internal.Connection {
-  internal.make_connection(canned_reader(body), secret_key_base)
+  let new_temporary_file = fn() {
+    let assert Ok(directory) = internal.setup_temporary_directory()
+      as "creating temporary directory"
+    filepath.join(directory, internal.random_slug())
+  }
+  internal.make_connection(
+    canned_reader(body),
+    new_temporary_file,
+    secret_key_base,
+  )
 }
 
 fn canned_reader(data: BitArray) -> internal.Reader {
@@ -2178,4 +2149,89 @@ pub fn content_security_policy_protection(
     <> "' 'strict-dynamic'; object-src 'none'; base-uri 'none'"
   handle_request(nonce)
   |> response.set_header("content-security-policy", header)
+}
+
+pub type Application(argument) {
+  Application(
+    port: Int,
+    bind: NetworkInterfaceBinding,
+    handler: fn(Request, TopContext(argument)) -> Response,
+  )
+}
+
+pub type Server(argument) {
+  Server(start: fn(#(argument, Magic)) -> actor.StartResult(Nil))
+}
+
+// TODO: rename
+pub opaque type Magic {
+  Magic(file_manager: process_file.ProcessFileManager)
+}
+
+pub type NetworkInterfaceBinding {
+  BindLocal
+  BindAll
+  Bind(String)
+}
+
+pub type HandlerData(argument)
+
+pub type TopContext(argument) {
+  TopContext(ip_address: IpAddress, argument: argument)
+}
+
+pub type IpAddress {
+  IpV4(Int, Int, Int, Int)
+  IpV6(Int, Int, Int, Int, Int, Int, Int, Int)
+}
+
+pub fn application(
+  handle_request handler: fn(Request, TopContext(argument)) -> Response,
+) -> Application(argument) {
+  Application(handler:, port: 3000, bind: BindLocal)
+}
+
+pub fn port(
+  builder: Application(argument),
+  port: Int,
+) -> Application(argument) {
+  Application(..builder, port:)
+}
+
+pub fn bind(
+  builder: Application(argument),
+  interface: String,
+) -> Application(argument) {
+  Application(..builder, bind: Bind(interface))
+}
+
+pub fn bind_all(builder: Application(argument)) -> Application(argument) {
+  Application(..builder, bind: BindAll)
+}
+
+pub fn start(
+  server: Server(argument),
+  argument: argument,
+) -> actor.StartResult(Nil) {
+  supervisor.new(fn(children) {
+    children
+    |> supervisor.child(
+      from: supervisor.Template(
+        start: fn(_) { process_file.start() },
+        child_type: supervisor.Worker(shutdown_ms: 2000),
+      ),
+      taking: fn(nil) { nil },
+      returning: fn(_, file_manager) { Magic(file_manager) },
+    )
+    |> supervisor.child(
+      from: supervisor.Template(
+        start: server.start,
+        child_type: supervisor.Supervisor,
+      ),
+      taking: fn(magic) { #(argument, magic) },
+      returning: fn(_, _) { Nil },
+    )
+  })
+  |> supervisor.start
+  |> result.map(fn(started) { actor.Started(..started, data: Nil) })
 }

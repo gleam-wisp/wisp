@@ -1,9 +1,10 @@
 import directories
-import filepath
 import gleam/bit_array
 import gleam/crypto
 import gleam/int
+import gleam/result
 import gleam/string
+import simplifile
 
 // HELPERS
 
@@ -23,27 +24,32 @@ pub type Connection {
     max_files_size: Int,
     read_chunk_size: Int,
     secret_key_base: String,
-    temporary_directory: String,
+    new_temporary_file: fn() -> String,
   )
+}
+
+pub fn setup_temporary_directory() -> Result(String, simplifile.FileError) {
+  // Fallback to current working directory when no valid tmp directory exists
+  let temporary_directory = case directories.tmp_dir() {
+    Ok(tmp_dir) -> tmp_dir <> "/gleam-wisp/uploads/"
+    Error(_) -> "./tmp/uploads/"
+  }
+  simplifile.create_directory_all(temporary_directory)
+  |> result.replace(temporary_directory)
 }
 
 pub fn make_connection(
   body_reader: Reader,
+  new_temporary_file: fn() -> String,
   secret_key_base: String,
 ) -> Connection {
-  // Fallback to current working directory when no valid tmp directory exists
-  let prefix = case directories.tmp_dir() {
-    Ok(tmp_dir) -> tmp_dir <> "/gleam-wisp/"
-    Error(_) -> "./tmp/"
-  }
-  let temporary_directory = filepath.join(prefix, random_slug())
   Connection(
     reader: body_reader,
     max_body_size: 8_000_000,
     max_files_size: 32_000_000,
     read_chunk_size: 1_000_000,
-    temporary_directory: temporary_directory,
-    secret_key_base: secret_key_base,
+    new_temporary_file:,
+    secret_key_base:,
   )
 }
 
