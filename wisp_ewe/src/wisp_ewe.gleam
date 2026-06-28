@@ -8,12 +8,20 @@ import wisp.{type Request as WispRequest, type Response as WispResponse}
 import wisp/internal
 
 fn server(application: wisp.Application(argument)) -> wisp.Server(argument) {
-  todo
+  wisp.Server(start: fn(make_connection) { todo })
 }
 
-fn handler(secret_key_base: String) -> fn(EweRequest) -> EweResponse {
+fn handler(
+  secret_key_base: String,
+  new_temporary_file: fn() -> String,
+) -> fn(EweRequest) -> EweResponse {
   fn(req) {
-    let conn = internal.make_connection(ewe_body_reader(req), secret_key_base)
+    let conn =
+      internal.make_connection(
+        ewe_body_reader(req),
+        new_temporary_file,
+        secret_key_base,
+      )
     let req = request.set_body(req, conn)
 
     handler(req)

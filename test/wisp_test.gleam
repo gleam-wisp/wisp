@@ -17,12 +17,15 @@ import gleeunit
 import helper
 import simplifile
 import wisp
-import wisp/internal
 import wisp/simulate
 
 pub fn main() {
   wisp.configure_logger()
   gleeunit.main()
+}
+
+fn generate_etag(file_size: Int, mtime_seconds: Int) -> String {
+  int.to_base16(file_size) <> "-" <> int.to_base16(mtime_seconds)
 }
 
 fn form_handler(
@@ -385,7 +388,7 @@ pub fn serve_static_test() {
     simulate.request(http.Get, "/stuff/test/fixture.txt")
     |> handler
   let assert Ok(file_info) = simplifile.file_info("test/fixture.txt")
-  let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
+  let etag = generate_etag(file_info.size, file_info.mtime_seconds)
 
   assert response.status == 200
   assert response.headers
@@ -401,7 +404,7 @@ pub fn serve_static_test() {
     simulate.request(http.Get, "/stuff/test/fixture.json")
     |> handler
   let assert Ok(file_info) = simplifile.file_info("test/fixture.json")
-  let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
+  let etag = generate_etag(file_info.size, file_info.mtime_seconds)
 
   assert response.status == 200
   assert response.headers
@@ -417,7 +420,7 @@ pub fn serve_static_test() {
     simulate.request(http.Get, "/stuff/test/fixture.dat")
     |> handler
   let assert Ok(file_info) = simplifile.file_info("test/fixture.dat")
-  let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
+  let etag = generate_etag(file_info.size, file_info.mtime_seconds)
 
   assert response.status == 200
   assert response.headers
@@ -464,7 +467,7 @@ pub fn serve_static_under_has_no_trailing_slash_test() {
     wisp.ok()
   }
   let assert Ok(file_info) = simplifile.file_info("test/fixture.txt")
-  let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
+  let etag = generate_etag(file_info.size, file_info.mtime_seconds)
 
   assert response.status == 200
   assert response.headers
@@ -485,7 +488,7 @@ pub fn serve_static_from_has_no_trailing_slash_test() {
     wisp.ok()
   }
   let assert Ok(file_info) = simplifile.file_info("test/fixture.txt")
-  let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
+  let etag = generate_etag(file_info.size, file_info.mtime_seconds)
 
   assert response.status == 200
   assert response.headers
@@ -543,7 +546,7 @@ pub fn serve_static_etags_returns_304_test() {
     simulate.request(http.Get, "/stuff/test/fixture.txt")
     |> handler
   let assert Ok(file_info) = simplifile.file_info("test/fixture.txt")
-  let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
+  let etag = generate_etag(file_info.size, file_info.mtime_seconds)
 
   assert response.status == 200
   assert response.headers

@@ -1,3 +1,4 @@
+import directories
 import exception
 import filepath
 import gleam/bit_array
@@ -29,7 +30,6 @@ import logging
 import marceau
 import process_file
 import simplifile
-import wisp/internal
 import wisp/internal/supervisor
 
 //
@@ -551,11 +551,19 @@ const unexpected_end = "Unexpected end of request body"
 /// The body of the request can be read from this connection using functions
 /// such as `require_multipart_body`.
 ///
-pub type Connection =
-  internal.Connection
+pub opaque type Connection {
+  Connection(
+    reader: Reader,
+    max_body_size: Int,
+    max_files_size: Int,
+    read_chunk_size: Int,
+    secret_key_base: String,
+    new_temporary_file: fn() -> String,
+  )
+}
 
 type BufferedReader {
-  BufferedReader(reader: internal.Reader, buffer: BitArray)
+  BufferedReader(reader: Reader, buffer: BitArray)
 }
 
 type Quotas {
@@ -577,13 +585,10 @@ fn decrement_quota(quota: Int, size: Int) -> Result(Int, Response) {
   }
 }
 
-fn buffered_read(
-  reader: BufferedReader,
-  chunk_size: Int,
-) -> Result(internal.Read, Nil) {
+fn buffered_read(reader: BufferedReader, chunk_size: Int) -> Result(Read, Nil) {
   case reader.buffer {
     <<>> -> reader.reader(chunk_size)
-    _ -> Ok(internal.Chunk(reader.buffer, reader.reader))
+    _ -> Ok(Chunk(reader.buffer, reader.reader))
   }
 }
 
@@ -598,7 +603,7 @@ fn buffered_read(
 /// instead use the `max_files_size` limit.
 ///
 pub fn set_max_body_size(request: Request, size: Int) -> Request {
-  internal.Connection(..request.body, max_body_size: size)
+  Connection(..request.body, max_body_size: size)
   |> request.set_body(request, _)
 }
 
@@ -622,7 +627,7 @@ pub fn set_secret_key_base(request: Request, key: String) -> Request {
   case string.byte_size(key) < 64 {
     True -> panic as "Secret key base must be at least 64 bytes long"
     False ->
-      internal.Connection(..request.body, secret_key_base: key)
+      Connection(..request.body, secret_key_base: key)
       |> request.set_body(request, _)
   }
 }
@@ -644,7 +649,7 @@ pub fn get_secret_key_base(request: Request) -> String {
 /// `max_body_size` limit.
 ///
 pub fn set_max_files_size(request: Request, size: Int) -> Request {
-  internal.Connection(..request.body, max_files_size: size)
+  Connection(..request.body, max_files_size: size)
   |> request.set_body(request, _)
 }
 
@@ -664,7 +669,7 @@ pub fn get_max_files_size(request: Request) -> Int {
 /// been received from the client.
 ///
 pub fn set_read_chunk_size(request: Request, size: Int) -> Request {
-  internal.Connection(..request.body, read_chunk_size: size)
+  Connection(..request.body, read_chunk_size: size)
   |> request.set_body(request, _)
 }
 
@@ -678,7 +683,7 @@ pub fn get_read_chunk_size(request: Request) -> Int {
 /// A convenient alias for a HTTP request with a Wisp connection as the body.
 ///
 pub type Request =
-  HttpRequest(internal.Connection)
+  HttpRequest(Connection)
 
 /// This middleware function ensures that the request has a specific HTTP
 /// method, returning a response with status code 405: Method not allowed
@@ -882,15 +887,15 @@ pub fn read_body_bits(request: Request) -> Result(BitArray, Nil) {
 }
 
 fn read_body_loop(
-  reader: internal.Reader,
+  reader: Reader,
   read_chunk_size: Int,
   max_body_size: Int,
   accumulator: BitArray,
 ) -> Result(BitArray, Nil) {
   use chunk <- result.try(reader(read_chunk_size))
   case chunk {
-    internal.ReadingFinished -> Ok(accumulator)
-    internal.Chunk(chunk, next) -> {
+    ReadingFinished -> Ok(accumulator)
+    Chunk(chunk, next) -> {
       let accumulator = bit_array.append(accumulator, chunk)
       case bit_array.byte_size(accumulator) > max_body_size {
         True -> Error(Nil)
@@ -1214,13 +1219,13 @@ fn multipart_content_disposition(
 fn read_chunk(
   reader: BufferedReader,
   chunk_size: Int,
-) -> Result(#(BitArray, internal.Reader), Response) {
+) -> Result(#(BitArray, Reader), Response) {
   case buffered_read(reader, chunk_size) {
     Error(_) -> Error(bad_request(unexpected_end))
     Ok(chunk) ->
       case chunk {
-        internal.Chunk(chunk, next) -> Ok(#(chunk, next))
-        internal.ReadingFinished -> Error(bad_request(unexpected_end))
+        Chunk(chunk, next) -> Ok(#(chunk, next))
+        ReadingFinished -> Error(bad_request(unexpected_end))
       }
   }
 }
@@ -1425,8 +1430,8 @@ pub fn serve_static(
   from directory: String,
   next handler: fn() -> Response,
 ) -> Response {
-  let path = internal.remove_preceeding_slashes(req.path)
-  let prefix = internal.remove_preceeding_slashes(prefix)
+  let path = remove_preceeding_slashes(req.path)
+  let prefix = remove_preceeding_slashes(prefix)
   case req.method, string.starts_with(path, prefix) {
     http.Get, True -> {
       let path =
@@ -1608,7 +1613,7 @@ fn handle_etag(
   req: Request,
   file_info: simplifile.FileInfo,
 ) -> Response {
-  let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
+  let etag = generate_etag(file_info.size, file_info.mtime_seconds)
 
   case request.get_header(req, "if-none-match") {
     Ok(old_etag) if old_etag == etag ->
@@ -1812,7 +1817,9 @@ pub fn log_debug(message: String) -> Nil {
 /// suitable for security purposes.
 ///
 pub fn random_string(length: Int) -> String {
-  internal.random_string(length)
+  crypto.strong_random_bytes(length)
+  |> bit_array.base64_url_encode(False)
+  |> string.slice(0, length)
 }
 
 /// Sign a message which can later be verified using the `verify_signed_message`
@@ -1975,28 +1982,24 @@ pub fn get_cookie(
 pub fn create_canned_connection(
   body: BitArray,
   secret_key_base: String,
-) -> internal.Connection {
-  let new_temporary_file = fn() {
-    let assert Ok(directory) = internal.setup_temporary_directory()
+) -> Connection {
+  make_connection(canned_reader(body), secret_key_base, fn() {
+    let directory = "./tmp/test/uploads/"
+    let assert Ok(_) = simplifile.create_directory_all(directory)
       as "creating temporary directory"
-    filepath.join(directory, internal.random_slug())
-  }
-  internal.make_connection(
-    canned_reader(body),
-    new_temporary_file,
-    secret_key_base,
-  )
+    filepath.join(directory, random_slug())
+  })
 }
 
-fn canned_reader(data: BitArray) -> internal.Reader {
+fn canned_reader(data: BitArray) -> Reader {
   fn(chunk_size) {
     case bit_array.byte_size(data) {
-      0 -> Ok(internal.ReadingFinished)
+      0 -> Ok(ReadingFinished)
       size -> {
         let take = int.min(chunk_size, size)
         let assert Ok(chunk) = bit_array.slice(data, 0, take)
         let assert Ok(rest) = bit_array.slice(data, take, size - take)
-        Ok(internal.Chunk(chunk, canned_reader(rest)))
+        Ok(Chunk(chunk, canned_reader(rest)))
       }
     }
   }
@@ -2160,12 +2163,7 @@ pub type Application(argument) {
 }
 
 pub type Server(argument) {
-  Server(start: fn(#(argument, Magic)) -> actor.StartResult(Nil))
-}
-
-// TODO: rename
-pub opaque type Magic {
-  Magic(file_manager: process_file.ProcessFileManager)
+  Server(start: fn(fn(Reader) -> Connection) -> actor.StartResult(Nil))
 }
 
 pub type NetworkInterfaceBinding {
@@ -2173,8 +2171,6 @@ pub type NetworkInterfaceBinding {
   BindAll
   Bind(String)
 }
-
-pub type HandlerData(argument)
 
 pub type TopContext(argument) {
   TopContext(ip_address: IpAddress, argument: argument)
@@ -2209,29 +2205,113 @@ pub fn bind_all(builder: Application(argument)) -> Application(argument) {
   Application(..builder, bind: BindAll)
 }
 
+fn setup_temporary_directory() -> Result(String, simplifile.FileError) {
+  // Fallback to current working directory when no valid tmp directory exists
+  let temporary_directory = case directories.tmp_dir() {
+    Ok(tmp_dir) -> tmp_dir <> "/gleam-wisp/uploads/"
+    Error(_) -> "./tmp/uploads/"
+  }
+  simplifile.create_directory_all(temporary_directory)
+  |> result.replace(temporary_directory)
+}
+
 pub fn start(
   server: Server(argument),
   argument: argument,
 ) -> actor.StartResult(Nil) {
+  use temporary_directory <- result.try(
+    setup_temporary_directory()
+    |> result.map_error(fn(error) {
+      let error = simplifile.describe_error(error)
+      actor.InitFailed("Failed to create temporary directory: " <> error)
+    }),
+  )
+
   supervisor.new(fn(children) {
-    children
-    |> supervisor.child(
-      from: supervisor.Template(
+    let file_manager_template =
+      supervisor.Template(
         start: fn(_) { process_file.start() },
         child_type: supervisor.Worker(shutdown_ms: 2000),
-      ),
-      taking: fn(nil) { nil },
-      returning: fn(_, file_manager) { Magic(file_manager) },
-    )
-    |> supervisor.child(
-      from: supervisor.Template(
+      )
+
+    let server_template =
+      supervisor.Template(
         start: server.start,
         child_type: supervisor.Supervisor,
-      ),
-      taking: fn(magic) { #(argument, magic) },
+      )
+
+    // TODO: we need to pass the server information in. port, binding, etc.
+    // TODO: we need the secret key.
+    let server_connection_callback = fn(manager, reader) {
+      make_connection(
+        reader,
+        todo as "secret key. maybe should be moved elsewhere",
+        fn() {
+          let path = filepath.join(temporary_directory, random_slug())
+          // TODO: handle error
+          let assert Ok(_) = process_file.register(manager, path)
+          path
+        },
+      )
+    }
+
+    children
+    |> supervisor.child(
+      from: file_manager_template,
+      taking: fn(nil) { nil },
+      returning: fn(_, file_manager) { file_manager },
+    )
+    |> supervisor.child(
+      from: server_template,
+      taking: fn(manager) { server_connection_callback(manager, _) },
       returning: fn(_, _) { Nil },
     )
   })
   |> supervisor.start
   |> result.map(fn(started) { actor.Started(..started, data: Nil) })
+}
+
+fn remove_preceeding_slashes(string: String) -> String {
+  case string {
+    "/" <> rest -> remove_preceeding_slashes(rest)
+    _ -> string
+  }
+}
+
+@internal
+pub fn make_connection(
+  body_reader: Reader,
+  secret_key_base: String,
+  new_temporary_file: fn() -> String,
+) -> Connection {
+  Connection(
+    reader: body_reader,
+    max_body_size: 8_000_000,
+    max_files_size: 32_000_000,
+    read_chunk_size: 1_000_000,
+    new_temporary_file:,
+    secret_key_base:,
+  )
+}
+
+@internal
+pub type Reader =
+  fn(Int) -> Result(Read, Nil)
+
+@internal
+pub type Read {
+  Chunk(BitArray, next: Reader)
+  ReadingFinished
+}
+
+fn random_slug() -> String {
+  random_string(16)
+}
+
+/// Generates etag using file size + file mtime as seconds
+///
+/// Exmaple etag value: `2C-67A4D2F1`
+@internal
+pub fn generate_etag(file_size: Int, mtime_seconds: Int) -> String {
+  int.to_base16(file_size) <> "-" <> int.to_base16(mtime_seconds)
 }
