@@ -1,6 +1,61 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
-
 @import "tailwindcss";
+
+@font-face {
+  font-family: 'DM Sans';
+  font-style: regular;
+  font-weight: 100-1000;
+  src: url('/fonts/DM Sans_regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  font-style: italic;
+  font-weight: 100-1000;
+  src: url('/fonts/DM Sans_italic.woff2') format('woff2');
+}
+
+
+@font-face {
+  font-family: 'DM Mono';
+  font-style: regular;
+  font-weight: 300;
+  src: url('/fonts/DM Mono_300.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'DM Mono';
+  font-style: italic;
+  font-weight: 300;
+  src: url('/fonts/DM Mono_300italic.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'DM Mono';
+  font-style: regular;
+  font-weight: 400;
+  src: url('/fonts/DM Mono_regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'DM Mono';
+  font-style: italic;
+  font-weight: 400;
+  src: url('/fonts/DM Mono_italic.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'DM Mono';
+  font-style: regular;
+  font-weight: 500;
+  src: url('/fonts/DM Mono_500.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'DM Mono';
+  font-style: italic;
+  font-weight: 500;
+  src: url('/fonts/DM Mono_500italic.woff2') format('woff2');
+}
 
 @theme {
   --breakpoint-2xl: initial;
@@ -245,7 +300,7 @@ body.dark {
 
 .docs-sidebar nav>ul {
   display: grid;
-  margin: calc(0 * 0) 0 calc(0 * 0);
+  margin: 0 calc(var(--spacing) * 2);
 }
 
 .docs-sidebar nav>ul>li a {

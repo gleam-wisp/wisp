@@ -15,7 +15,6 @@ lustre_dev_tools = ">= 2.3.5 and < 3.0.0"
 
 [tools.lustre.html]
 title = "Wisp - a practical web framework for Gleam"
-stylesheets = [{ href = "https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" }]
 meta = [
   { name = "description", content = "A practical web framework for Gleam" },
   { name = "og:description", content = "A practical web framework for Gleam" },

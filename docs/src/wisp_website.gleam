@@ -119,11 +119,18 @@ pub fn view(route: Route) {
                   html.text("v" <> version),
                 ]),
               ]),
-              html.p([attribute.class("leading-relaxed max-w-[50ch] mx-auto")], [
-                html.text(
-                  "Build practical, performant, intuitive web applications with Gleam",
-                ),
-              ]),
+              html.p(
+                [
+                  attribute.class(
+                    "leading-relaxed max-w-[50ch] mx-auto font-dm-mono",
+                  ),
+                ],
+                [
+                  html.text(
+                    "Build practical, performant, intuitive web applications with Gleam",
+                  ),
+                ],
+              ),
             ]),
           ]),
         ])
