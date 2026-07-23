@@ -1,3 +1,5 @@
+import gleam/int
+import gleam/list
 import gleam/result
 import gleam/uri
 import lustre
@@ -17,96 +19,78 @@ pub fn main() {
 
 pub type Route {
   Home
+  DocsIndex
   Docs(slug: String)
   NotFound
+}
+
+pub type Guide {
+  Guide(slug: String, title: String, description: String)
+}
+
+pub type Model {
+  Model(guides: List(#(String, List(Guide))), route: Route)
 }
 
 type Msg {
   OnRouteChange(route: Route)
 }
 
-fn init(_args) -> #(Route, effect.Effect(Msg)) {
+fn init(_args) -> #(Model, effect.Effect(Msg)) {
   let route =
     modem.initial_uri()
     |> result.map(fn(url) { uri.path_segments(url.path) })
     |> fn(path) {
       case path {
         Ok([]) -> Home
-        Ok(["docs"]) -> Docs("getting-started")
+        Ok(["docs"]) -> DocsIndex
         Ok(["docs", slug]) -> Docs(slug)
         _ -> NotFound
       }
     }
 
-  #(route, modem.init(on_url_change))
+  let guides = [
+    #("Getting Started", [
+      Guide(
+        "install",
+        "Installation",
+        "Learn how to install Wisp and a web server",
+      ),
+      Guide(
+        "routing",
+        "Routing",
+        "Use Gleam pattern matching to route a request",
+      ),
+    ]),
+  ]
+
+  #(Model(guides:, route:), modem.init(on_url_change))
 }
 
 fn on_url_change(uri: uri.Uri) -> Msg {
   case uri.path_segments(uri.path) {
     [] -> OnRouteChange(Home)
-    ["docs"] -> OnRouteChange(Docs("getting-started"))
+    ["docs"] -> OnRouteChange(DocsIndex)
     ["docs", slug] -> OnRouteChange(Docs(slug))
     _ -> OnRouteChange(NotFound)
   }
 }
 
-fn update(_route: Route, msg: Msg) {
+fn update(model: Model, msg: Msg) {
   case msg {
-    OnRouteChange(route) -> #(route, effect.none())
+    OnRouteChange(route) -> #(Model(..model, route:), effect.none())
   }
 }
 
-pub fn view(route: Route) {
+pub fn view(model: Model) {
   let version = "5.4.0"
 
   html.div([], [
-    case route {
+    case model.route {
       Home ->
         element.fragment([
           html.header([attribute.class("site-hero")], [
-            html.nav([attribute.class("site-nav")], [
-              html.div([attribute.class("container")], [
-                html.a([attribute.href("/"), attribute.class("site-logo")], [
-                  html.div(
-                    [
-                      attribute.class(
-                        "size-10 rounded-lg border-2 border-dashed border-black",
-                      ),
-                    ],
-                    [],
-                  ),
-                ]),
-                html.ul([attribute.class("site-links")], [
-                  html.li([], [
-                    html.a([attribute.href("/docs")], [
-                      guide_icon([attribute.class("size-5")]),
-                      html.text("Guides"),
-                    ]),
-                  ]),
-                  html.li([], [
-                    html.a(
-                      [attribute.href("https://github.com/gleam-wisp/wisp")],
-                      [
-                        source_icon([attribute.class("size-5")]),
-                        html.text("Source"),
-                      ],
-                    ),
-                  ]),
-                  html.li([], [
-                    html.a([attribute.href("https://hexdocs.pm/wisp")], [
-                      hexdocs_icon([attribute.class("size-5")]),
-                      html.text("HexDocs"),
-                    ]),
-                  ]),
-                  html.li([attribute.class("special-link")], [
-                    html.a([attribute.href("https://github.com/lpil")], [
-                      heart_icon([attribute.class("size-5")]),
-                      html.text("Sponsor"),
-                    ]),
-                  ]),
-                ]),
-              ]),
-            ]),
+            site_nav(Home),
 
             html.div([attribute.class("text-center py-32")], [
               html.figure([attribute.class("mb-8 relative w-max mx-auto")], [
@@ -134,6 +118,58 @@ pub fn view(route: Route) {
             ]),
           ]),
         ])
+
+      DocsIndex ->
+        element.fragment([
+          html.header([attribute.class("site-hero")], [
+            site_nav(DocsIndex),
+            html.div([attribute.class("container")], [
+              html.header([attribute.class("docs-header")], [
+                // html.h4([], [html.text("Getting Started")]),
+                html.h1([], [html.text("Guides")]),
+              ]),
+            ]),
+          ]),
+
+          html.div(
+            [attribute.class("container grid lg:grid-cols-4 gap-6")],
+            list.map(model.guides, fn(section) {
+              let #(title, guides) = section
+              element.fragment([
+                html.aside([], [
+                  html.h2(
+                    [
+                      attribute.class(
+                        "font-bold text-xl text-color-text-strong",
+                      ),
+                    ],
+                    [html.text(title)],
+                  ),
+                ]),
+                html.main([attribute.class("lg:col-span-3")], [
+                  html.ul(
+                    [
+                      attribute.class(
+                        "docs-links grid gap-3 lg:grid-cols-2 guides-overview",
+                      ),
+                    ],
+                    list.map(guides, fn(guide) {
+                      html.li([], [
+                        html.a([attribute.href("/docs/" <> guide.slug)], [
+                          html.h3([], [html.text(guide.title)]),
+                          html.p([], [
+                            html.text(guide.description),
+                          ]),
+                        ]),
+                      ])
+                    }),
+                  ),
+                ]),
+              ])
+            }),
+          ),
+        ])
+
       Docs(slug:) ->
         html.div([attribute.class("docs-layout")], [
           html.aside([attribute.class("docs-sidebar")], [
@@ -144,19 +180,23 @@ pub fn view(route: Route) {
                 attribute.class("h-10"),
               ]),
             ]),
-            html.nav([], [
-              html.h5([], [html.text("Getting Started")]),
-              html.ul([], [
-                html.li([], [
-                  html.a([attribute.href("/docs/a")], [
-                    html.text("Installation"),
-                  ]),
-                  html.a([attribute.href("/docs/" <> slug)], [
-                    html.text("Your First App"),
-                  ]),
-                ]),
-              ]),
-            ]),
+            ..list.map(model.guides, fn(section) {
+              let #(title, guides) = section
+
+              html.nav([], [
+                html.h5([], [html.text(title)]),
+                html.ul(
+                  [],
+                  list.map(guides, fn(guide) {
+                    html.li([], [
+                      html.a([attribute.href("/docs/" <> guide.slug)], [
+                        html.text(guide.title),
+                      ]),
+                    ])
+                  }),
+                ),
+              ])
+            })
           ]),
           html.main([attribute.class("container")], [
             html.nav([attribute.class("site-nav")], [
@@ -205,38 +245,88 @@ pub fn view(route: Route) {
               ]),
 
               html.article([attribute.class("prose")], article_content()),
+
+              site_footer(2026),
             ]),
           ]),
         ])
       NotFound -> element.fragment([])
     },
-    html.footer([attribute.class("site-footer")], [
-      html.div(
-        [
-          attribute.class(
-            "container flex flex-wrap justify-between gap-3 text-sm",
-          ),
-        ],
-        [
-          html.p([], [
-            html.text("© Wisp Contributors 2026, All Rights Reserved"),
-          ]),
-          html.p([], [
-            html.a(
-              [
-                attribute.class(
-                  "underline decoration-brand-prime transition-opacity hover:opacity-75",
-                ),
-                attribute.href(
-                  "https://github.com/gleam-lang/gleam/blob/main/CODE_OF_CONDUCT.md",
-                ),
-              ],
-              [html.text("Code of Conduct")],
+  ])
+}
+
+fn site_nav(_current: Route) {
+  html.nav([attribute.class("site-nav")], [
+    html.div([attribute.class("container")], [
+      html.a([attribute.href("/"), attribute.class("site-logo")], [
+        html.div(
+          [
+            attribute.class(
+              "size-10 rounded-lg border-2 border-dashed border-black",
             ),
+          ],
+          [],
+        ),
+      ]),
+      html.ul([attribute.class("site-links")], [
+        html.li([], [
+          html.a([attribute.href("/docs")], [
+            guide_icon([attribute.class("size-5")]),
+            html.text("Guides"),
           ]),
-        ],
-      ),
+        ]),
+        html.li([], [
+          html.a([attribute.href("https://github.com/gleam-wisp/wisp")], [
+            source_icon([attribute.class("size-5")]),
+            html.text("Source"),
+          ]),
+        ]),
+        html.li([], [
+          html.a([attribute.href("https://hexdocs.pm/wisp")], [
+            hexdocs_icon([attribute.class("size-5")]),
+            html.text("HexDocs"),
+          ]),
+        ]),
+        html.li([attribute.class("special-link")], [
+          html.a([attribute.href("https://github.com/lpil")], [
+            heart_icon([attribute.class("size-5")]),
+            html.text("Sponsor"),
+          ]),
+        ]),
+      ]),
     ]),
+  ])
+}
+
+fn site_footer(year: Int) {
+  html.footer([attribute.class("site-footer")], [
+    html.div(
+      [
+        attribute.class("container flex flex-wrap justify-between gap-3 py-8"),
+      ],
+      [
+        html.p([attribute.class("font-medium text-sm")], [
+          html.text(
+            "© Wisp Contributors "
+            <> int.to_string(year)
+            <> ". All Rights Reserved.",
+          ),
+        ]),
+        html.nav([], [
+          html.a(
+            [
+              attribute.class(
+                "underline decoration-brand-prime transition-opacity hover:opacity-75",
+              ),
+              attribute.href(
+                "https://github.com/gleam-lang/gleam/blob/main/CODE_OF_CONDUCT.md",
+              ),
+            ],
+            [html.text("Code of Conduct")],
+          ),
+        ]),
+      ],
+    ),
   ])
 }
 
@@ -368,45 +458,6 @@ fn heart_icon(attrs) {
         attribute(
           "d",
           "M10.3984 2.14062C11.9088 0.619762 14.3542 0.619812 15.8643 2.14062C17.3785 3.66575 17.3785 6.14187 15.8643 7.66699L9 14.5801L2.13574 7.66699C0.621774 6.14191 0.621774 3.6657 2.13574 2.14062C3.64603 0.619854 6.09148 0.619892 7.60156 2.14062L8.29004 2.83398L9 3.54883L9.70996 2.83398L10.3984 2.14062Z",
-        ),
-      ]),
-    ],
-  )
-}
-
-fn user_icon(attrs) {
-  svg.svg(
-    [
-      attribute("xmlns", "http://www.w3.org/2000/svg"),
-      attribute("fill", "none"),
-      attribute("viewBox", "0 0 14 18"),
-      ..attrs
-    ],
-    [
-      svg.circle([
-        attribute("stroke-width", "2"),
-        attribute("stroke", "currentColor"),
-        attribute("r", "3.66667"),
-        attribute("cy", "4.66667"),
-        attribute("cx", "7.00004"),
-      ]),
-      svg.mask(
-        [attribute("fill", "white"), attribute.id("path-2-inside-1_551_248")],
-        [
-          svg.path([
-            attribute(
-              "d",
-              "M0 12.8889C0 11.7843 0.895431 10.8889 2 10.8889H12C13.1046 10.8889 14 11.7843 14 12.8889V17.1111H0V12.8889Z",
-            ),
-          ]),
-        ],
-      ),
-      svg.path([
-        attribute("mask", "url(#path-2-inside-1_551_248)"),
-        attribute("fill", "currentColor"),
-        attribute(
-          "d",
-          "M-2 12.8889C-2 10.6797 -0.209139 8.88889 2 8.88889H12C14.2091 8.88889 16 10.6797 16 12.8889H12H2H-2ZM2 12.8889M14 17.1111H0H14M-2 17.1111V12.8889C-2 10.6797 -0.209139 8.88889 2 8.88889V12.8889V17.1111H-2ZM12 8.88889C14.2091 8.88889 16 10.6797 16 12.8889V17.1111H12V12.8889V8.88889Z",
         ),
       ]),
     ],

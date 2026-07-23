@@ -77,20 +77,21 @@
   --color-code-yellow: #F6E569;
   --color-code-blue: #7CC8FF;
 
-  --color-text-dark: #262F2B;
+  --color-text-strong: #262F2B;
   --color-text-main: #262F2B;
   --color-text-light: #44554E;
-  --color-text-subtle: #85AE9E;
+  --color-text-subtle: #7F938B;
 }
 
 body {
   font-family: var(--font-dm-sans);
   background: var(--color-brand-extralight);
+  color: var(--color-text-main);
 }
 
 body.dark {
   --color-brand-extralight: #11160d;
-  --color-text-dark: #fff;
+  --color-text-strong: #fff;
   --color-text-main: #dadfd5;
   --color-text-light: #fff;
   --color-text-subtle: #87917e;
@@ -123,6 +124,7 @@ body.dark {
   align-items: center;
   gap: calc(var(--spacing) * 2);
   color: var(--color-text-main);
+  font-weight: var(--font-weight-medium);
   padding: calc(var(--spacing) * 2) calc(var(--spacing) * 4);
 }
 
@@ -174,10 +176,10 @@ body.dark {
 
 .prose a {
   font-weight: semibold;
-  color: var(--color-gray-900);
+  color: var(--color-gray-950);
+  font-weight: var(--font-weight-medium);
   text-decoration: underline;
-  -webkit-text-decoration-color: var(--color-burned-paper);
-  text-decoration-color: var(--color-burned-paper)
+  text-decoration-color: var(--color-brand-prime)
 }
 
 .prose h2,
@@ -185,7 +187,7 @@ body.dark {
 .prose h4,
 .prose h5 {
   font-weight: var(--font-weight-extrabold);
-  color: var(--color-text-dark);
+  color: var(--color-text-strong);
   margin: 1.4rem 0 .4rem
 }
 
@@ -206,7 +208,7 @@ body.dark {
 }
 
 .prose hr {
-  border-color: var(--color-burned-paper)
+  border-color: var(--color-brand-quitelight)
 }
 
 .prose p {
@@ -228,7 +230,7 @@ body.dark {
   background: var(--color-code-bg);
   border-radius: var(--radius-lg);
   white-space: pre-wrap;
-  color: var(--color-gray-100);
+  color: var(--color-gray-200);
   margin: 1.4rem 0;
   font-family: var(--font-dm-mono), Maple Mono, Jetbrains Mono, Roboto Mono, monospace;
   font-size: .9rem
@@ -252,7 +254,7 @@ body.dark {
 }
 
 .docs-layout {
-  padding-left: 280px;
+  padding-left: 300px;
 }
 
 .docs-header {
@@ -268,14 +270,14 @@ body.dark {
 }
 
 .docs-header h1 {
-  color: var(--color-text-dark);
+  color: var(--color-text-strong);
   font-weight: var(--font-weight-extrabold);
   font-size: var(--text-3xl);
 }
 
 .docs-sidebar {
   position: fixed;
-  width: 280px;
+  width: 300px;
   top: 0;
   left: 0;
   bottom: 0;
@@ -289,56 +291,85 @@ body.dark {
 }
 
 .docs-sidebar nav {
-  padding: calc(var(--spacing) * 4) calc(var(--spacing) * 3);
+  padding: calc(var(--spacing) * 4) calc(var(--spacing) * 5);
 }
 
 .docs-sidebar h5 {
-  font-weight: var(--font-weight-bold);
-  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
   margin-bottom: calc(var(--spacing) * 2);
+  color: var(--color-text-strong);
 }
 
 .docs-sidebar nav>ul {
   display: grid;
-  margin: 0 calc(var(--spacing) * 2);
 }
 
 .docs-sidebar nav>ul>li a {
-  padding: calc(var(--spacing) * 2) calc(var(--spacing) * 4);
-  border-left: 1px solid var(--color-text-subtle);
+  padding: calc(var(--spacing) * 2) 0;
+  color: var(--color-text-main);
   font-size: var(--text-sm);
   display: block;
 }
 
+/* Docs index */
+
+.docs-links li>a {
+  display: block;
+  padding: calc(var(--spacing) * 4) calc(var(--spacing) * 6);
+  border-radius: var(--radius-md);
+  border: 2px solid var(--color-brand-quitelight);
+  transition-duration: var(--default-transition-duration);
+  transition-timing-function: var(--default-transition-timing-function);
+  transition-property: border-color, transform;
+  transform: translateY(0);
+}
+
+.docs-links li>a:hover {
+  transform: translateY(calc(var(--spacing) * -1));
+  border-color: var(--color-brand-prime);
+  cursor: pointer;
+}
+
+.docs-links li>a h3 {
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-strong);
+  font-size: var(--text-lg);
+}
+
+.docs-links li>a p {
+  font-size: var(--text-sm);
+  color: var(--color-text-main);
+}
+
 /* Highlighting */
 .hl-keyword {
-  color: pink;
+  color: #c0a7f1;
 }
 
 .hl-module {
-  color: skyblue;
+  color: #ddebf1;
 }
 
 .hl-variant {
-  color: orange;
+  color: #d38064;
 }
 
 .hl-function {
-  color: rosybrown;
+  color: #94b4ed;
 }
 
 .hl-operator {
-  color: white;
+  color: #95e2fc;
 }
 
 .hl-comment {
-  color: gray;
+  color: #a3aca9;
 }
 
 .hl-number {
-  color: #fff;
+  color: #d38064;
 }
 
 .hl-string {
-  color: yellow;
+  color: #a0d086;
 }
