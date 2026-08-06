@@ -354,7 +354,7 @@ fn site_nav(_current: Route) {
           ]),
         ]),
         html.li([], [
-          html.a([attribute.href("https://hexdocs.pm/wisp")], [
+          html.a([attribute.href("https://wisp.hexdocs.pm/")], [
             hexdocs_icon([attribute.class("size-5")]),
             html.text("HexDocs"),
           ]),
