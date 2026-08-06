@@ -1,10 +1,11 @@
+import gleam/option
 import lustre/attribute
 import lustre/element
 import lustre/element/html
 import wisp_website
 
 pub fn main() {
-  wisp_website.view(wisp_website.Model([], wisp_website.Home))
+  wisp_website.view(wisp_website.Model([], option.None, wisp_website.Home))
   |> element.to_document_string
   |> echo
 }

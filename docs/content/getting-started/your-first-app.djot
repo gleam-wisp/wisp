@@ -1,0 +1,25 @@
+---
+title = "Your first app"
+published = "2026-08-01"
+updated = "2026-08-01"
+order = 1
+---
+Hello world, this is my post and you will LIKE IT!
+
+## Hello? 
+
+Heyyy :)
+
+```gleam
+pub fn main() {
+  echo "Hello world!"
+}
+```
+
+## Hello there
+
+testing
+
+### Heiiiii
+
+testing

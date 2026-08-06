@@ -8,6 +8,9 @@ lustre = ">= 5.6.0 and < 6.0.0"
 modem = ">= 2.1.2 and < 3.0.0"
 argv = ">= 1.0.2 and < 2.0.0"
 hoist = ">= 1.0.0 and < 2.0.0"
+jot = ">= 12.1.0 and < 13.0.0"
+tom = ">= 2.1.0 and < 3.0.0"
+frontmatter = ">= 1.0.1 and < 2.0.0"
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
