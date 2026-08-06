@@ -273,7 +273,7 @@ pub fn view(model: Model) {
                       ),
                     ]),
                     html.li([], [
-                      html.a([attribute.href("https://hexdocs.pm/wisp")], [
+                      html.a([attribute.href("https://wisp.hexdocs.pm/")], [
                         hexdocs_icon([attribute.class("size-5")]),
                         html.text("HexDocs"),
                       ]),
@@ -334,14 +334,11 @@ fn site_nav(_current: Route) {
   html.nav([attribute.class("site-nav")], [
     html.div([attribute.class("container")], [
       html.a([attribute.href("/"), attribute.class("site-logo")], [
-        html.div(
-          [
-            attribute.class(
-              "size-10 rounded-lg border-2 border-dashed border-black",
-            ),
-          ],
-          [],
-        ),
+        html.img([
+          attribute.src("/images/logo.svg"),
+          attribute.alt("Wisp logo"),
+          attribute.class("h-12"),
+        ]),
       ]),
       html.ul([attribute.class("site-links")], [
         html.li([], [
