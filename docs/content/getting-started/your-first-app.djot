@@ -1,10 +1,11 @@
 ---
 title = "Your first app"
+description = "Starting with Wisp and building your very first app"
 published = "2026-08-01"
 updated = "2026-08-01"
 order = 1
 ---
-Hello world, this is my post and you will LIKE IT!
+Ready to serve your first Hello World over HTTP using Wisp? Let's go!
 
 ## Hello? 
 

@@ -24,24 +24,25 @@ pub fn main() {
 pub type Route {
   Home
   DocsIndex
-  Docs(slug: String)
+  DocPage(slug: String, content: option.Option(jot.Document))
   NotFound
 }
 
 pub type GuideSection {
-  GuideSection(title: String, guides: List(Guide))
+  GuideSection(title: String, slug: String, guides: List(Guide))
 }
 
 pub type Guide {
-  Guide(slug: String, title: String, description: String)
+  Guide(
+    slug: String,
+    title: String,
+    description: String,
+    content: option.Option(jot.Document),
+  )
 }
 
 pub type Model {
-  Model(
-    guides: List(GuideSection),
-    guide_content: option.Option(jot.Document),
-    route: Route,
-  )
+  Model(guides: List(GuideSection), route: Route)
 }
 
 type Msg {
@@ -58,58 +59,64 @@ fn init(_args) -> #(Model, effect.Effect(Msg)) {
       case path {
         Ok([]) -> Home
         Ok(["docs"]) -> DocsIndex
-        Ok(["docs", slug]) -> Docs(slug)
+        Ok(["docs", _, slug]) -> DocPage(slug, option.None)
         _ -> NotFound
       }
     }
 
   let guides = [
-    GuideSection("Getting Started", [
+    GuideSection("Getting Started", "/getting-started", [
       Guide(
         "install",
         "Installation",
         "Learn how to install Wisp and a web server",
+        guide_content,
       ),
       Guide(
         "routing",
         "Routing",
         "Use Gleam pattern matching to route a request",
+        guide_content,
       ),
     ]),
-    GuideSection("Included Middleware", [
+    GuideSection("Included Middleware", "/middleware", [
       Guide(
         "install",
         "Installation",
         "Learn how to install Wisp and a web server",
+        guide_content,
       ),
       Guide(
         "routing",
         "Routing",
         "Use Gleam pattern matching to route a request",
+        guide_content,
       ),
     ]),
-    GuideSection("Best Practices", [
+    GuideSection("Best Practices", "/best-practices", [
       Guide(
         "install",
         "Installation",
         "Learn how to install Wisp and a web server",
+        guide_content,
       ),
       Guide(
         "routing",
         "Routing",
         "Use Gleam pattern matching to route a request",
+        guide_content,
       ),
     ]),
   ]
 
-  #(Model(guides:, guide_content:, route:), modem.init(on_url_change))
+  #(Model(guides:, route:), modem.init(on_url_change))
 }
 
 fn on_url_change(uri: uri.Uri) -> Msg {
   case uri.path_segments(uri.path) {
     [] -> OnRouteChange(Home)
     ["docs"] -> OnRouteChange(DocsIndex)
-    ["docs", slug] -> OnRouteChange(Docs(slug))
+    ["docs", _, slug] -> OnRouteChange(DocPage(slug, option.None))
     _ -> OnRouteChange(NotFound)
   }
 }
@@ -192,12 +199,15 @@ pub fn view(model: Model) {
                     ],
                     list.map(section.guides, fn(guide) {
                       html.li([], [
-                        html.a([href("/docs/" <> guide.slug)], [
-                          html.h3([], [html.text(guide.title)]),
-                          html.p([], [
-                            html.text(guide.description),
-                          ]),
-                        ]),
+                        html.a(
+                          [href("/docs" <> section.slug <> "/" <> guide.slug)],
+                          [
+                            html.h3([], [html.text(guide.title)]),
+                            html.p([], [
+                              html.text(guide.description),
+                            ]),
+                          ],
+                        ),
                       ])
                     }),
                   ),
@@ -213,7 +223,7 @@ pub fn view(model: Model) {
           ),
         ])
 
-      Docs(slug:) ->
+      DocPage(slug:, content:) ->
         html.div([class("docs-layout")], [
           html.aside([class("docs-sidebar")], [
             html.a([href("/"), class("sidebar-logo")], [
@@ -230,9 +240,12 @@ pub fn view(model: Model) {
                   [],
                   list.map(section.guides, fn(guide) {
                     html.li([], [
-                      html.a([href("/docs/" <> guide.slug)], [
-                        html.text(guide.title),
-                      ]),
+                      html.a(
+                        [href("/docs" <> section.slug <> "/" <> guide.slug)],
+                        [
+                          html.text(guide.title),
+                        ],
+                      ),
                     ])
                   }),
                 ),
@@ -287,8 +300,7 @@ pub fn view(model: Model) {
                 "",
                 "article",
                 [class("prose")],
-                option.unwrap(model.guide_content, jot.parse(""))
-                  |> jot.document_to_html,
+                jot.document_to_html(option.unwrap(content, demo.post_content())),
               ),
             ]),
 
@@ -297,7 +309,7 @@ pub fn view(model: Model) {
                 html.ul([], [
                   html.li([], [html.text("On this page")]),
                   ..list.map(
-                    page_contents_from_markup(model.guide_content),
+                    page_contents_from_markup(option.Some(demo.post_content())),
                     fn(title) {
                       html.li([], [
                         html.a([href("#" <> title.1)], [
