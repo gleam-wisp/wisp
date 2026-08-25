@@ -81,7 +81,7 @@ pub fn main() {
   io.print(ansi.green("-") <> " Generating docs ")
 
   let guides =
-    [GuideSection("Getting Started", "/getting-started", [])]
+    [GuideSection("Getting Started", "getting-started", [])]
     |> list.map(fn(category) {
       let assert Ok(files) =
         simplifile.read_directory("./content/" <> category.slug)
@@ -137,7 +137,7 @@ pub fn main() {
       list.fold(section.guides, acc, fn(acc, guide) {
         [
           #(
-            "docs" <> section.slug <> "/" <> guide.slug <> ".html",
+            "docs/" <> section.slug <> "/" <> guide.slug <> ".html",
             Model(guides, DocPage(slug: guide.slug, content: guide.content)),
             Meta(
               title: guide.title,

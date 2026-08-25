@@ -65,7 +65,7 @@ fn init(_args) -> #(Model, effect.Effect(Msg)) {
     }
 
   let guides = [
-    GuideSection("Getting Started", "/getting-started", [
+    GuideSection("Getting Started", "getting-started", [
       Guide(
         "install",
         "Installation",
@@ -79,7 +79,7 @@ fn init(_args) -> #(Model, effect.Effect(Msg)) {
         guide_content,
       ),
     ]),
-    GuideSection("Included Middleware", "/middleware", [
+    GuideSection("Included Middleware", "middleware", [
       Guide(
         "install",
         "Installation",
@@ -93,7 +93,7 @@ fn init(_args) -> #(Model, effect.Effect(Msg)) {
         guide_content,
       ),
     ]),
-    GuideSection("Best Practices", "/best-practices", [
+    GuideSection("Best Practices", "best-practices", [
       Guide(
         "install",
         "Installation",
@@ -200,7 +200,7 @@ pub fn view(model: Model) {
                     list.map(section.guides, fn(guide) {
                       html.li([], [
                         html.a(
-                          [href("/docs" <> section.slug <> "/" <> guide.slug)],
+                          [href("/docs/" <> section.slug <> "/" <> guide.slug)],
                           [
                             html.h3([], [html.text(guide.title)]),
                             html.p([], [
@@ -241,7 +241,7 @@ pub fn view(model: Model) {
                   list.map(section.guides, fn(guide) {
                     html.li([], [
                       html.a(
-                        [href("/docs" <> section.slug <> "/" <> guide.slug)],
+                        [href("/docs/" <> section.slug <> "/" <> guide.slug)],
                         [
                           html.text(guide.title),
                         ],
