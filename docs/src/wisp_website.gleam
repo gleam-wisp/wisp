@@ -1,24 +1,513 @@
+import contour
+import frontmatter
 import gleam/dict
+import gleam/float
 import gleam/int
+import gleam/io
 import gleam/list
 import gleam/option
 import gleam/result
-import gleam/uri
+import gleam/string
+import gleam/time/duration
+import gleam/time/timestamp
+import gleam_community/ansi
 import jot
-import lustre
 import lustre/attribute.{attribute as attr, class, href} as attr
-import lustre/effect
 import lustre/element
 import lustre/element/html
 import lustre/element/svg
-import modem
+import simplifile
+import tom
 import wisp_website/demo
 
-pub fn main() {
-  let app = lustre.application(init, update, view)
-  let assert Ok(_) = lustre.start(app, "#app", Nil)
+type Meta {
+  Meta(title: String, description: String)
+}
 
-  Nil
+const version = "5.4.0"
+
+pub fn main() {
+  let start_time = timestamp.system_time()
+
+  // Use the build time timestamp seconds as a hash for asset file names.
+  // This allows extra-long caching while ensuring we never serve out-of-date assets.
+  let hash =
+    start_time
+    |> timestamp.to_unix_seconds
+    |> float.round
+    |> int.to_string
+
+  io.println(ansi.green("[Wisp]") <> " Building static docs site...")
+  // Create the dist directory. We void the error here because it's fine if
+  // the directory already exists.
+  let _ = simplifile.create_directory("./dist")
+
+  // Clear the dist directory so it's ready for our newly built files.
+  let assert Ok(_) = simplifile.clear_directory("./dist")
+
+  io.println(ansi.green("✓") <> " Cleared and created dist directory")
+
+  io.println(ansi.green("✓") <> " Building output CSS file")
+  let assert Ok(static_asset_files) = simplifile.read_directory("./assets")
+
+  // Wastefully run lustre dev tools to build CSS
+  // TODO: Find a cheaper way of doing this.
+  // let assert Ok(_) =
+  //   shellout.command(
+  //     "gleam",
+  //     [
+  //       "run",
+  //       "-m",
+  //       "lustre/dev",
+  //       "build",
+  //       "--outdir=tmpdist",
+  //     ],
+  //     ".",
+  //     [],
+  //   )
+  // let assert Ok(_) =
+  //   simplifile.copy(
+  //     src: "./tmpdist/wisp_website.css",
+  //     dest: "./dist/style-" <> hash <> ".css",
+  //   )
+  //
+  // let assert Ok(_) = simplifile.delete("./tmpdist")
+
+  let static_assets =
+    list.map(static_asset_files, fn(asset) {
+      let assert Ok(is_dir) = simplifile.is_directory("./assets/" <> asset)
+      let assert Ok(_) =
+        simplifile.copy(src: "./assets/" <> asset, dest: "./dist/" <> asset)
+
+      #(asset, is_dir)
+    })
+
+  io.print(ansi.green("-") <> " Generating docs ")
+
+  let guides =
+    [GuideSection("Getting Started", "getting-started", [])]
+    |> list.map(fn(category) {
+      let assert Ok(files) =
+        simplifile.read_directory("./content/" <> category.slug)
+
+      // Create the output directory
+      let assert Ok(_) =
+        simplifile.create_directory_all("./dist/docs/" <> category.slug)
+
+      let guides =
+        list.map(files, fn(file_name) {
+          let assert Ok(content) =
+            simplifile.read("./content/" <> category.slug <> "/" <> file_name)
+          let assert frontmatter.Extracted(option.Some(frontmatter), content) =
+            frontmatter.extract(content)
+
+          let assert Ok(frontmatter) = tom.parse(frontmatter)
+          let assert Ok(title) = tom.get_string(frontmatter, ["title"])
+          let assert Ok(description) =
+            tom.get_string(frontmatter, ["description"])
+
+          let slug = string.replace(file_name, ".djot", "")
+
+          let document = jot.parse(content)
+          let document =
+            jot.Document(
+              ..document,
+              content: list.map(document.content, fn(item) {
+                case item {
+                  jot.Codeblock(language: option.Some("gleam"), content:, ..) ->
+                    jot.RawBlock(
+                      "<pre><code>"
+                      <> contour.to_html(content)
+                      <> "</code></pre>",
+                    )
+                  _ -> item
+                }
+              }),
+            )
+
+          Guide(slug:, title:, description:, content: document)
+        })
+
+      GuideSection(..category, guides:)
+    })
+
+  let guide_pages =
+    list.fold(guides, [], fn(acc, section) {
+      list.fold(section.guides, acc, fn(acc, guide) {
+        [
+          #(
+            "docs/" <> section.slug <> "/" <> guide.slug <> ".html",
+            doc_page(guides, section.title, guide.title, guide.content),
+            Meta(
+              title: guide.title,
+              description: "Wisp: The go-to web server framework for Gleam, from beginners to scale.",
+            ),
+          ),
+          ..acc
+        ]
+      })
+    })
+
+  io.print(ansi.green("-") <> " Building static pages ")
+
+  let pages =
+    [
+      #(
+        "index.html",
+        home(),
+        Meta(
+          title: "Wisp: Build practical, performant, intuitive web applications with Gleam",
+          description: "The go-to web server framework for Gleam, from beginners to scale.",
+        ),
+      ),
+      #(
+        "404.html",
+        not_found(),
+        Meta(
+          title: "Page not found",
+          description: "Wisp: The go-to web server framework for Gleam, from beginners to scale.",
+        ),
+      ),
+      #(
+        "docs/index.html",
+        docs_index(guides),
+        Meta(
+          title: "Wisp Guides and Documentation",
+          description: "Wisp: The go-to web server framework for Gleam, from beginners to scale.",
+        ),
+      ),
+      ..guide_pages
+    ]
+    |> list.map(fn(page) {
+      let #(path, view, meta) = page
+
+      let html =
+        layout(view, meta, hash)
+        |> element.to_document_string
+
+      let assert Ok(_) = simplifile.write(to: "./dist/" <> path, contents: html)
+      io.print(ansi.bold(ansi.yellow("•")))
+
+      path
+    })
+
+  // Print a blank line to leave a gap after pages
+  io.println("")
+
+  io.println(ansi.green("✓") <> ansi.bold(" Success! Output:"))
+  list.each(static_assets, fn(static) {
+    case static {
+      #(folder_name, True) ->
+        io.println(
+          " - " <> ansi.grey("dist/") <> ansi.cyan(folder_name <> "/*"),
+        )
+      #(file_name, False) ->
+        io.println(" - " <> ansi.grey("dist/") <> ansi.cyan(file_name))
+    }
+  })
+  list.each(pages, fn(page) {
+    io.println(" - " <> ansi.grey("dist/") <> ansi.cyan(page))
+  })
+
+  let end_time = timestamp.system_time()
+  let difference =
+    duration.to_milliseconds(timestamp.difference(start_time, end_time))
+
+  io.println(
+    "\n"
+    <> ansi.green("🛈")
+    <> ansi.bold(" Finished in " <> int.to_string(difference) <> "ms"),
+  )
+}
+
+fn home() {
+  element.fragment([
+    html.header([class("site-hero")], [
+      site_nav(Home),
+
+      html.div([class("text-center py-32")], [
+        html.figure([class("mb-8 relative w-max mx-auto")], [
+          html.img([
+            attr.alt("Wisp Logo"),
+            attr.src("/images/logo.svg"),
+            class("mx-auto"),
+          ]),
+          html.span([class("version-label")], [
+            html.text("v" <> version),
+          ]),
+        ]),
+        html.p(
+          [
+            class("leading-relaxed max-w-[50ch] mx-auto font-dm-mono"),
+          ],
+          [
+            html.text(
+              "Build practical, performant, intuitive web applications with Gleam",
+            ),
+          ],
+        ),
+      ]),
+    ]),
+  ])
+}
+
+fn docs_index(sections: List(GuideSection)) {
+  element.fragment([
+    html.header([class("site-hero")], [
+      site_nav(DocsIndex),
+      html.div([class("container")], [
+        html.header([class("docs-header")], [
+          html.h1([], [html.text("Guides")]),
+          html.p([], [
+            html.text(
+              "Whether you're creating your first Gleam project or looking for best practices, check out the Wisp guides.",
+            ),
+          ]),
+        ]),
+      ]),
+    ]),
+
+    html.div(
+      [class("container grid lg:grid-cols-4 gap-6 lg:gap-y-12")],
+      list.map(sections, fn(section) {
+        element.fragment([
+          html.aside([], [
+            html.h2(
+              [
+                class("font-bold text-xl text-color-text-strong"),
+              ],
+              [html.text(section.title)],
+            ),
+          ]),
+          html.main([class("lg:col-span-3")], [
+            html.ul(
+              [
+                class("docs-links grid gap-3 lg:grid-cols-2 guides-overview"),
+              ],
+              list.map(section.guides, fn(guide) {
+                html.li([], [
+                  html.a([href("/docs/" <> section.slug <> "/" <> guide.slug)], [
+                    html.h3([], [html.text(guide.title)]),
+                    html.p([], [
+                      html.text(guide.description),
+                    ]),
+                  ]),
+                ])
+              }),
+            ),
+          ]),
+          html.div(
+            [
+              class("h-px bg-brand-quitelight lg:col-span-4 last:hidden"),
+            ],
+            [],
+          ),
+        ])
+      }),
+    ),
+  ])
+}
+
+fn doc_page(
+  guides: List(GuideSection),
+  section_name: String,
+  title: String,
+  content: jot.Document,
+) {
+  html.div([class("docs-layout")], [
+    html.aside([class("docs-sidebar")], [
+      html.a([href("/"), class("sidebar-logo")], [
+        html.img([
+          attr.src("/images/logo.svg"),
+          attr.alt("Wisp"),
+          class("h-10"),
+        ]),
+      ]),
+      ..list.map(guides, fn(section) {
+        html.nav([], [
+          html.h5([], [html.text(section.title)]),
+          html.ul(
+            [],
+            list.map(section.guides, fn(guide) {
+              html.li([], [
+                html.a([href("/docs/" <> section.slug <> "/" <> guide.slug)], [
+                  html.text(guide.title),
+                ]),
+              ])
+            }),
+          ),
+        ])
+      })
+    ]),
+    html.main([class("container grid gap-4 lg:gap-8 lg:grid-cols-4")], [
+      html.nav([class("site-nav lg:col-span-4")], [
+        html.div([class("container")], [
+          html.form([class("nav-search")], [
+            html.input([
+              attr.type_("text"),
+              attr.placeholder("Search..."),
+            ]),
+          ]),
+          html.ul([class("site-links ml-auto")], [
+            html.li([], [
+              html.a([href("/docs")], [
+                guide_icon([class("size-5")]),
+                html.text("Guides"),
+              ]),
+            ]),
+            html.li([], [
+              html.a([href("https://github.com/gleam-wisp/wisp")], [
+                source_icon([class("size-5")]),
+                html.text("Source"),
+              ]),
+            ]),
+            html.li([], [
+              html.a([href("https://wisp.hexdocs.pm/")], [
+                hexdocs_icon([class("size-5")]),
+                html.text("HexDocs"),
+              ]),
+            ]),
+            html.li([class("special-link")], [
+              html.a([href("https://github.com/lpil")], [
+                heart_icon([class("size-5")]),
+                html.text("Sponsor"),
+              ]),
+            ]),
+          ]),
+        ]),
+      ]),
+
+      html.header([class("docs-header lg:col-span-4")], [
+        html.h4([], [html.text(section_name)]),
+        html.h1([], [html.text(title)]),
+      ]),
+
+      html.main([class("lg:col-span-3")], [
+        element.unsafe_raw_html(
+          "",
+          "article",
+          [class("prose")],
+          jot.document_to_html(content),
+        ),
+      ]),
+
+      html.aside([], [
+        html.nav([class("table-of-contents")], [
+          html.ul([], [
+            html.li([], [html.text("On this page")]),
+            ..list.map(
+              page_contents_from_markup(option.Some(demo.post_content())),
+              fn(title) {
+                html.li([], [
+                  html.a([href("#" <> title.1)], [
+                    html.text(title.0),
+                  ]),
+                ])
+              },
+            )
+          ]),
+        ]),
+      ]),
+
+      site_footer(2026, [class("lg:col-span-4")]),
+    ]),
+  ])
+}
+
+fn not_found() {
+  element.fragment([
+    html.header([class("site-hero")], [
+      site_nav(Home),
+
+      html.div([class("text-center py-32")], [
+        html.figure([class("mb-8 relative w-max mx-auto")], [
+          html.img([
+            attr.alt("Wisp Logo"),
+            attr.src("/images/logo.svg"),
+            class("mx-auto"),
+          ]),
+          html.span([class("version-label")], [
+            html.text("v" <> version),
+          ]),
+        ]),
+        html.h1([class("font-bold text-3xl mb-3")], [
+          html.text("Page not found"),
+        ]),
+        html.p(
+          [
+            class("leading-relaxed max-w-[50ch] mx-auto"),
+          ],
+          [
+            html.text(
+              "Sorry! It looks like the page you were looking for could not be found. Check the address bar to see if there is a clear mistake, or ",
+            ),
+            html.a(
+              [
+                href("/"),
+                class("underline decoration-brand-prime font-medium"),
+              ],
+              [
+                html.text("return home"),
+              ],
+            ),
+          ],
+        ),
+      ]),
+    ]),
+    site_footer(2026, []),
+  ])
+}
+
+fn layout(
+  body: element.Element(a),
+  meta: Meta,
+  asset_hash: String,
+) -> element.Element(a) {
+  html.html([attr.lang("en")], [
+    html.head([], [
+      html.meta([attr("charset", "UTF-8")]),
+      html.meta([
+        attr("content", "width=device-width, initial-scale=1.0"),
+        attr.name("viewport"),
+      ]),
+      html.meta([
+        attr("content", "ie=edge"),
+        attr("http-equiv", "X-UA-Compatible"),
+      ]),
+      html.title([], meta.title),
+      html.link([
+        attr.href("favicon.ico"),
+        attr.rel("icon"),
+        attr.type_("image/svg"),
+      ]),
+      html.link([attr.href("icon.svg"), attr.rel("apple-touch-icon")]),
+      html.meta([
+        attr("content", meta.description),
+        attr.name("description"),
+      ]),
+      html.meta([
+        attr("content", "My Web Project"),
+        attr("property", "og:title"),
+      ]),
+      html.meta([
+        attr("content", "website"),
+        attr("property", "og:type"),
+      ]),
+      html.meta([
+        attr("content", "https://gleam-wisp.github.io/wisp/"),
+        attr("property", "og:url"),
+      ]),
+      html.meta([
+        attr("content", "icon.png"),
+        attr("property", "og:image"),
+      ]),
+      html.link([
+        attr.rel("stylesheet"),
+        attr.href("/style-" <> asset_hash <> ".css"),
+      ]),
+    ]),
+    html.body([], [body]),
+  ])
 }
 
 pub type Route {
@@ -33,342 +522,11 @@ pub type GuideSection {
 }
 
 pub type Guide {
-  Guide(
-    slug: String,
-    title: String,
-    description: String,
-    content: option.Option(jot.Document),
-  )
+  Guide(slug: String, title: String, description: String, content: jot.Document)
 }
 
 pub type Model {
   Model(guides: List(GuideSection), route: Route)
-}
-
-type Msg {
-  OnRouteChange(route: Route)
-}
-
-fn init(_args) -> #(Model, effect.Effect(Msg)) {
-  let guide_content = option.Some(demo.post_content())
-
-  let route =
-    modem.initial_uri()
-    |> result.map(fn(url) { uri.path_segments(url.path) })
-    |> fn(path) {
-      case path {
-        Ok([]) -> Home
-        Ok(["docs"]) -> DocsIndex
-        Ok(["docs", _, slug]) -> DocPage(slug, option.None)
-        _ -> NotFound
-      }
-    }
-
-  let guides = [
-    GuideSection("Getting Started", "getting-started", [
-      Guide(
-        "install",
-        "Installation",
-        "Learn how to install Wisp and a web server",
-        guide_content,
-      ),
-      Guide(
-        "routing",
-        "Routing",
-        "Use Gleam pattern matching to route a request",
-        guide_content,
-      ),
-    ]),
-    GuideSection("Included Middleware", "middleware", [
-      Guide(
-        "install",
-        "Installation",
-        "Learn how to install Wisp and a web server",
-        guide_content,
-      ),
-      Guide(
-        "routing",
-        "Routing",
-        "Use Gleam pattern matching to route a request",
-        guide_content,
-      ),
-    ]),
-    GuideSection("Best Practices", "best-practices", [
-      Guide(
-        "install",
-        "Installation",
-        "Learn how to install Wisp and a web server",
-        guide_content,
-      ),
-      Guide(
-        "routing",
-        "Routing",
-        "Use Gleam pattern matching to route a request",
-        guide_content,
-      ),
-    ]),
-  ]
-
-  #(Model(guides:, route:), modem.init(on_url_change))
-}
-
-fn on_url_change(uri: uri.Uri) -> Msg {
-  case uri.path_segments(uri.path) {
-    [] -> OnRouteChange(Home)
-    ["docs"] -> OnRouteChange(DocsIndex)
-    ["docs", _, slug] -> OnRouteChange(DocPage(slug, option.None))
-    _ -> OnRouteChange(NotFound)
-  }
-}
-
-fn update(model: Model, msg: Msg) {
-  case msg {
-    OnRouteChange(route) -> #(Model(..model, route:), effect.none())
-  }
-}
-
-pub fn view(model: Model) {
-  let version = "5.4.0"
-
-  html.div([], [
-    case model.route {
-      Home ->
-        element.fragment([
-          html.header([class("site-hero")], [
-            site_nav(Home),
-
-            html.div([class("text-center py-32")], [
-              html.figure([class("mb-8 relative w-max mx-auto")], [
-                html.img([
-                  attr.alt("Wisp Logo"),
-                  attr.src("/images/logo.svg"),
-                  class("mx-auto"),
-                ]),
-                html.span([class("version-label")], [
-                  html.text("v" <> version),
-                ]),
-              ]),
-              html.p(
-                [
-                  class("leading-relaxed max-w-[50ch] mx-auto font-dm-mono"),
-                ],
-                [
-                  html.text(
-                    "Build practical, performant, intuitive web applications with Gleam",
-                  ),
-                ],
-              ),
-            ]),
-          ]),
-        ])
-
-      DocsIndex ->
-        element.fragment([
-          html.header([class("site-hero")], [
-            site_nav(DocsIndex),
-            html.div([class("container")], [
-              html.header([class("docs-header")], [
-                html.h1([], [html.text("Guides")]),
-                html.p([], [
-                  html.text(
-                    "Whether you're creating your first Gleam project or looking for best practices, check out the Wisp guides.",
-                  ),
-                ]),
-              ]),
-            ]),
-          ]),
-
-          html.div(
-            [class("container grid lg:grid-cols-4 gap-6 lg:gap-y-12")],
-            list.map(model.guides, fn(section) {
-              element.fragment([
-                html.aside([], [
-                  html.h2(
-                    [
-                      class("font-bold text-xl text-color-text-strong"),
-                    ],
-                    [html.text(section.title)],
-                  ),
-                ]),
-                html.main([class("lg:col-span-3")], [
-                  html.ul(
-                    [
-                      class(
-                        "docs-links grid gap-3 lg:grid-cols-2 guides-overview",
-                      ),
-                    ],
-                    list.map(section.guides, fn(guide) {
-                      html.li([], [
-                        html.a(
-                          [href("/docs/" <> section.slug <> "/" <> guide.slug)],
-                          [
-                            html.h3([], [html.text(guide.title)]),
-                            html.p([], [
-                              html.text(guide.description),
-                            ]),
-                          ],
-                        ),
-                      ])
-                    }),
-                  ),
-                ]),
-                html.div(
-                  [
-                    class("h-px bg-brand-quitelight lg:col-span-4 last:hidden"),
-                  ],
-                  [],
-                ),
-              ])
-            }),
-          ),
-        ])
-
-      DocPage(slug:, content:) ->
-        html.div([class("docs-layout")], [
-          html.aside([class("docs-sidebar")], [
-            html.a([href("/"), class("sidebar-logo")], [
-              html.img([
-                attr.src("/images/logo.svg"),
-                attr.alt("Wisp"),
-                class("h-10"),
-              ]),
-            ]),
-            ..list.map(model.guides, fn(section) {
-              html.nav([], [
-                html.h5([], [html.text(section.title)]),
-                html.ul(
-                  [],
-                  list.map(section.guides, fn(guide) {
-                    html.li([], [
-                      html.a(
-                        [href("/docs/" <> section.slug <> "/" <> guide.slug)],
-                        [
-                          html.text(guide.title),
-                        ],
-                      ),
-                    ])
-                  }),
-                ),
-              ])
-            })
-          ]),
-          html.main([class("container grid gap-4 lg:gap-8 lg:grid-cols-4")], [
-            html.nav([class("site-nav lg:col-span-4")], [
-              html.div([class("container")], [
-                html.form([class("nav-search")], [
-                  html.input([
-                    attr.type_("text"),
-                    attr.placeholder("Search..."),
-                  ]),
-                ]),
-                html.ul([class("site-links ml-auto")], [
-                  html.li([], [
-                    html.a([href("/docs")], [
-                      guide_icon([class("size-5")]),
-                      html.text("Guides"),
-                    ]),
-                  ]),
-                  html.li([], [
-                    html.a([href("https://github.com/gleam-wisp/wisp")], [
-                      source_icon([class("size-5")]),
-                      html.text("Source"),
-                    ]),
-                  ]),
-                  html.li([], [
-                    html.a([href("https://wisp.hexdocs.pm/")], [
-                      hexdocs_icon([class("size-5")]),
-                      html.text("HexDocs"),
-                    ]),
-                  ]),
-                  html.li([class("special-link")], [
-                    html.a([href("https://github.com/lpil")], [
-                      heart_icon([class("size-5")]),
-                      html.text("Sponsor"),
-                    ]),
-                  ]),
-                ]),
-              ]),
-            ]),
-
-            html.header([class("docs-header lg:col-span-4")], [
-              html.h4([], [html.text("Getting Started")]),
-              html.h1([], [html.text("Your First App")]),
-            ]),
-
-            html.main([class("lg:col-span-3")], [
-              element.unsafe_raw_html(
-                "",
-                "article",
-                [class("prose")],
-                jot.document_to_html(option.unwrap(content, demo.post_content())),
-              ),
-            ]),
-
-            html.aside([], [
-              html.nav([class("table-of-contents")], [
-                html.ul([], [
-                  html.li([], [html.text("On this page")]),
-                  ..list.map(
-                    page_contents_from_markup(option.Some(demo.post_content())),
-                    fn(title) {
-                      html.li([], [
-                        html.a([href("#" <> title.1)], [
-                          html.text(title.0),
-                        ]),
-                      ])
-                    },
-                  )
-                ]),
-              ]),
-            ]),
-
-            site_footer(2026, [class("lg:col-span-4")]),
-          ]),
-        ])
-      NotFound ->
-        element.fragment([
-          html.header([class("site-hero")], [
-            site_nav(Home),
-
-            html.div([class("text-center py-32")], [
-              html.figure([class("mb-8 relative w-max mx-auto")], [
-                html.img([
-                  attr.alt("Wisp Logo"),
-                  attr.src("/images/logo.svg"),
-                  class("mx-auto"),
-                ]),
-                html.span([class("version-label")], [
-                  html.text("v" <> version),
-                ]),
-              ]),
-              html.h1([class("font-bold text-3xl mb-3")], [
-                html.text("Page not found"),
-              ]),
-              html.p(
-                [
-                  class("leading-relaxed max-w-[50ch] mx-auto"),
-                ],
-                [
-                  html.text(
-                    "Sorry! It looks like the page you were looking for could not be found. Check the address bar to see if there is a clear mistake, or ",
-                  ),
-                  html.a(
-                    [
-                      href("/"),
-                      class("underline decoration-brand-prime font-medium"),
-                    ],
-                    [
-                      html.text("return home"),
-                    ],
-                  ),
-                ],
-              ),
-            ]),
-          ]),
-          site_footer(2026, []),
-        ])
-    },
-  ])
 }
 
 fn site_nav(_current: Route) {
@@ -594,267 +752,4 @@ fn page_contents_from_markup(
     option.None -> []
   }
   |> list.reverse()
-}
-
-fn article_content() {
-  [
-    html.p([], [
-      html.text(
-        "This is a fun silly post about something that’s bought me joy, but I want to practice blogging and have had this thought on my mind: I've been really enjoying making small things lately. Little web toys, simple Discord bots, super basic shell scripts, and bits and bobs around the house. I find this to be so enjoyable, and so freeing. It’s been really empowering to use the more basic building blocks to create things.",
-      ),
-    ]),
-    html.pre([], [
-      html.header([], [
-        html.text("shell"),
-        html.button([], [html.text("Copy")]),
-      ]),
-      html.code([], [html.text("$ gleam add wisp")]),
-    ]),
-    html.p([], [
-      html.text("We need to do sometihng relating to "),
-      html.code([], [html.text("inline code")]),
-    ]),
-    html.pre([], [
-      html.header([], [
-        html.text("main.gleam"),
-        html.button([], [html.text("Copy")]),
-      ]),
-      html.code([], [
-        html.span([class("hl-comment")], [
-          html.text(
-            "// Recursively create the dist directory structure we want",
-          ),
-        ]),
-        html.text("\n"),
-        html.span([class("hl-module")], [html.text("simplifile")]),
-        html.text("."),
-        html.span([class("hl-function")], [
-          html.text("create_directory_all"),
-        ]),
-        html.text("("),
-        html.span([class("hl-string")], [
-          html.text("\"./dist/pixels\""),
-        ]),
-        html.text(")"),
-        html.text("\n"),
-        html.text("\n"),
-        html.span([class("hl-comment")], [
-          html.text("// Read a directory"),
-        ]),
-        html.text("\n"),
-        html.span([class("hl-keyword")], [html.text("let")]),
-        html.span([class("hl-keyword")], [html.text(" assert ")]),
-        html.span([class("hl-variant")], [html.text("Ok")]),
-        html.text("(entries) = "),
-        html.span([class("hl-module")], [html.text("simplifile")]),
-        html.text("."),
-        html.span([class("hl-function")], [
-          html.text("read_directory"),
-        ]),
-        html.text("("),
-        html.span([class("hl-string")], [html.text("\"./pixelart\"")]),
-        html.text(")"),
-        html.text("\n"),
-        html.text("\n"),
-        html.span([class("hl-comment")], [
-          html.text(
-            "// Loop through it and copy all the entries over to a build directory",
-          ),
-        ]),
-        html.text("\n"),
-        html.span([class("hl-module")], [html.text("list")]),
-        html.text("."),
-        html.span([class("hl-function")], [html.text("each")]),
-        html.text("(entries,"),
-        html.span([class("hl-keyword")], [html.text("fn")]),
-        html.text("(entry) {"),
-        html.text("\n"),
-        html.span([class("hl-module")], [html.text("  simplifile")]),
-        html.text("."),
-        html.span([class("hl-function")], [html.text("copy")]),
-        html.text("("),
-        html.span([class("hl-string")], [html.text("\"./pixelart/\"")]),
-        html.span([class("hl-operator")], [html.text(" <> ")]),
-        html.text("entry, "),
-        html.span([class("hl-string")], [
-          html.text("\"./dist/pixels/\""),
-        ]),
-        html.text(")\n})"),
-      ]),
-    ]),
-    html.p([], [
-      html.text(
-        "While I’ve needed to focus more on productive work, I sort of lost touch with that part of myself a few years ago, and I’ve been very much in a state of rolling with the punches, I suppose. For example, if I needed a piece of software, I’d try to find something off the shelf before I tried to build my own. I don’t think the DIY attitude is ‘normal’ or always a good idea. Of course, you can end up stuck in a loop of building existing things, having to relearn a bunch of lessons others have already learned.",
-      ),
-    ]),
-    html.p([], [
-      html.text(
-        "It’s important to me, for my own joy and growth, to rip things apart and build things from scratch, to understand the underlying structure of the world. Rediscovering that drive has been so fun. I think fun is really important. I can tend to get very bogged-down in thinking about the pain of the world, and it can be quite paralysing. I don’t think getting immobilised by that pain is productive at all.",
-      ),
-    ]),
-    html.p([], [
-      html.text(
-        "Here’s a list of the small-scale stuff I’ve been doing over the past few months, I really hope you feel a bit inspired to bodge together some stuff of your own.",
-      ),
-    ]),
-    html.h2([attr.id("Pablo-Pixarto")], [
-      html.text("Pablo Pixarto"),
-    ]),
-    html.p([], [
-      html.text(
-        "For a bit over a year now, I’ve been doing a piece of pixel art every day, following the @pixeldailies.bsky.app prompts, which I used to get delivered from their Discord server. Unfortunately, one of the moderators of that server got phished a few months ago, and their account was used to phish a number of other moderators (and others) in the server. Numerous regular posters (including me) were also banned.",
-      ),
-    ]),
-    html.p([], [
-      html.text(
-        "Unfortunately, the server was totally vandalised and used to spread a virus, in the form of the old classic ‘download our new game!’ trick. Despite a moderator or two since regaining access to their accounts, the vast majority of the server history is gone and it is still in an unusable state. This was such a blow to me, because that pixel art community has made the daily prompts so much more engaging to follow, and has given it a real sense of purpose.",
-      ),
-    ]),
-    html.p([], [
-      html.text(
-        "After waiting to see if the server could be recovered, I decided to just",
-      ),
-      html.a([href("https://isaac.zone/pixel-paradise")], [
-        html.text("create a new server"),
-      ]),
-      html.text(
-        ", which has been really quite successful! I’m very grateful to have numerous regular, active artists in the server, and no matter what level you’re at, I’d love to have you in there too!",
-      ),
-    ]),
-    html.p([], [
-      html.text(
-        "I decided it would be fun to make a tiny Discord bot (which, arguably, could currently just be a webhook) to retrieve the latest prompt from the Bluesky account, then post and publish it to the theme channel in the server. This works super well, and was really easy to make! I used",
-      ),
-      html.a([href("https://gleam.run")], [html.text("Gleam")]),
-      html.text(", and the fairly young"),
-      html.a([href("https://hexdocs.pm/grom/")], [
-        html.text("grom"),
-      ]),
-      html.text(
-        "library, which was quite pleasant. There’s some other ideas I have for the bot, but for now it’s already been quite valuable. It’s a great example of a project that I could easily over-engineer, plugging it into a database, doing some funky ATProto stuff, doing better filtering to ensure the right posts are put through, the list goes on!",
-      ),
-    ]),
-    html.p([], [
-      html.text(
-        "While it’s fun to think about all those possibilities, just checking for a couple of key words in the post and caching the already-posted prompts in a JSON file was enough to get off the ground. The only meaningful problem I ran into was that the account sometimes posts a theme and then retracts it within 5-10 seconds. This occasionally lead to more than one post going in the themes channel of the server, but was solved by just ensuring the themes I post are more than 60 seconds old.",
-      ),
-    ]),
-    html.h2([attr.id("I-forgot…")], [html.text("I forgot…")]),
-    html.p([], [
-      html.text(
-        "I’ve had Zeppelin, the Discord bot, a few servers I frequent for a few years now, and one of the most surprisingly useful features is the !remind command. Setting short term reminders that tag me on a platform I have on both my desktop computer & phone is super handy to me. It also means I can set shared reminders for things I need to check in with friends for.",
-      ),
-    ]),
-    html.p([], [
-      html.text(
-        "The only gap I found was that all reminders are public to some degree, because you have to set them in a server channel. I really wanted to have a similar interface but for personal reminders. Things like ‘take your washing out’ because apparently the machine sound isn’t enough to remind me of this.",
-      ),
-    ]),
-    html.p([], [
-      html.text("I decided to try out the"),
-      html.a([href("https://serenity-rs.github.io/")], [
-        html.text("Serenity"),
-      ]),
-      html.text(
-        "Discord library and Rust for this project, which was super super fun. I find Rust to be too heavy-handed for a lot of my projects and don’t often reach for it, but I am such a fan of much of Rust and it’s ecosystem. The performance characteristics, such as low memory usage and relatively small binaries, are a massive plus to me also.",
-      ),
-    ]),
-    html.p([], [
-      html.text(
-        "I’m a container fan. If I can, I will run just about anything in a container. I use Docker (and Podman) for both development and production deployments of databases, APIs, webservers, bots, you name it! I would normally default to just slapping together a Dockerfile and calling it a day, but in the spirit of bodging, I decided to write a shell script to deploy it to my home server, and run it as a systemd service.",
-      ),
-    ]),
-    html.p([], [
-      html.text(
-        "This was so much fun. My sort of naive security assumption was that I should probably have a user account for deployment and a second account for actually running the service. I can only hope this is smart enough for me to get away with it, but either way my local network is locked down pretty hard to incoming requests. I also fully locked the runner account to only have access to the necessary systemd commands to restart the service, and the deploy account to only have access to the specific location of the binary.",
-      ),
-    ]),
-    html.p([], [
-      html.text("I was inspired to try this out after watching a"),
-      html.a([href("https://www.youtube.com/watch?v=7VSVfQcaxFY")], [
-        html.text("video about Lichess"),
-      ]),
-      html.text(
-        ", which deploys it’s central service in a very similar way. It feels so cool to use the basic tech like this. Build the binary, rsync to the server, run with systemd. Nothing complex, no Python, no Ansible, just good old shell scripts and unix command line tools. I highly recommend doing something like this, it feels really cool.",
-      ),
-    ]),
-    html.h2([attr.id("Hy-there")], [html.text("Hy there")]),
-    html.p([], [
-      html.text(
-        "To my surprise, the game Hytale actually released recently, thanks to Simon from Hypixel buying it back off Riot Games. I’m super interested to see what might come of Hytale, I think it shows a lot of promise as a platform for making games on, sort of similar to Minecraft or Roblox (or so I’m told, I’ve never played it or used it, but go Lua!)",
-      ),
-    ]),
-    html.p([], [
-      html.text(
-        "A friend of mine started a Hytale server and wanted a way to show the playercount on the server website, which Hytale currently doesn’t (really) support. My janky solution was to make a CloudFlare Workers/D1 powered HTTP API to act as a leap pad between the actual Hytale server and the website for the server. This meant getting my hands dirty by writing a Java plugin too, which was both exciting and had me let out a bit of a groan.",
-      ),
-    ]),
-    html.p([], [
-      html.text(
-        "Honestly though, the Java plugin was super fun to make. It is super simple, it just gets the player count and sends a request to the API every 60 seconds, authorised with a key. The worker then stores the host IP of the request from the server and the playercount. Then on the other end, when you GET the endpoint and public address, it resolves the server IP and gives you the count. It’s janky, I know, but it was super fun to make.",
-      ),
-    ]),
-    html.p([], [
-      html.text("I used Gleam for the worker which was fun, using the"),
-      html.a(
-        [
-          href("https://hexdocs.pm/plinth_cloudflare/index.html"),
-        ],
-        [html.text("plinth_cloudflare")],
-      ),
-      html.text(
-        "package. It was alright, but I think in the future I might prefer to write my own FFI. The Hytale server API feels a heck of a lot nicer than what I remember of the Minecraft (/ Bukkit / Spigot / Paper / NMS / boy there’s too many of these) plugin space. Really cool stuff, I hope people make cool things on Hytale. I’d love to play around with it a bit more too. If you’d like to check it out, feel free to send me a message and I can authorise your Discord account to create servers on",
-      ),
-      html.a([href("https://hytapi.com")], [
-        html.text("the site"),
-      ]),
-      html.text("."),
-    ]),
-    html.h2([attr.id("Do-count-on-it")], [
-      html.text("Do count on it"),
-    ]),
-    html.p([], [
-      html.text(
-        "My partner is a primary school teacher, and their class is made up of 5-year-old students this year. For that cohort, they need to spend a lot of time on basic literacy and numeracy skills, like subitizing, counting, and building up quick recognition of numbers in forms like dominoes, tally marks, etc. For teaching this, they’ve made a stack of slide presentations, which are great, but not easy to mix and match.",
-      ),
-    ]),
-    html.p([], [
-      html.text(
-        "This is such a great usecase for a little website. Take a bunch of images and show them in random order? I can totally do that! I wrote a simple",
-      ),
-      html.a([href("https://hexdocs.pm/lustre")], [
-        html.text("Lustre"),
-      ]),
-      html.text(
-        "application that does just this – and it has been working out well for my partner and the rest of their team. I also tried to add support for a presentation clicker, but I haven’t quite locked down what events to listen for there, because so many of the clickers work in different ways. It’s really exciting to make something like this which is technologically straight-forward and has real-world impact. One of the best types of projects for me, despite being a simple problem with an obvious solution.",
-      ),
-    ]),
-    html.h2([attr.id("Listen-here…")], [html.text("Listen here…")]),
-    html.p([], [
-      html.text(
-        "My primary headphones, a near-10-year-old pair of M50x’s, have suffered through a few thousand drops and other forms of battering, and unfortunately finally took a hit they couldn’t just jump back up from, as I snapped the little piece of plastic that prevents the ear from folding out beyond a certain point. With this bit gone, they wouldn’t close around my ears and were very uncomfortable.",
-      ),
-    ]),
-    html.p([], [
-      html.text(
-        "After a few attempts at tying it together with tape or elastic, I disassembled them and tried to resolve the underlying issue. I’m embarrassed to admit that I spent twenty minutes totally tunnel-visioned on little screws and didn’t realise I was taking apart the wrong side. A long sigh and short while later, I was actually down to the right part of the right side, and managed to get it back to an acceptable state with an overly generous drizzle of Superglue (which also coated all 10 of my fingers, somehow).",
-      ),
-    ]),
-    html.p([], [
-      html.text(
-        "This is the second fix I’ve done to these headphones – other than cable replacements, which I have to do far too often. I despise the non-standard input – the other fix being a new cover for the headband part. After so many years, the majority of the leather (faux leather, perhaps?) had peeled off and gotten stuck into my floor, so it was time to replace it. After numerous attempts at cutting and sewing some material, I finally got a piece that fit nicely and stayed in the right spot.",
-      ),
-    ]),
-    html.p([], [
-      html.text(
-        "Fixing these two things, as well as making a new mount to store them on so I’m less likely to drop them, was super satisfying. The thought of getting a new pair did cross my mind, but it felt wrong to give up on something that was still in a working, repairable state. Beyond the money savings, I feel like I’ve gained a new appreciation for the complexity of making a nice pair of headphones and how long they’ve survived my torment. Overall, very satisfied.",
-      ),
-    ]),
-    html.hr([]),
-    html.p([], [
-      html.text(
-        "Thanks for reading, if you’ve made it this far, I appreciate you. If you just skipped to the end, I still appreciate you, but maybe a little less ;) Get some water and stretch!",
-      ),
-    ]),
-  ]
 }
