@@ -6,7 +6,7 @@ import gleam/result
 import gleam/uri
 import jot
 import lustre
-import lustre/attribute.{attribute}
+import lustre/attribute.{attribute as attr, class, href} as attr
 import lustre/effect
 import lustre/element
 import lustre/element/html
@@ -127,25 +127,23 @@ pub fn view(model: Model) {
     case model.route {
       Home ->
         element.fragment([
-          html.header([attribute.class("site-hero")], [
+          html.header([class("site-hero")], [
             site_nav(Home),
 
-            html.div([attribute.class("text-center py-32")], [
-              html.figure([attribute.class("mb-8 relative w-max mx-auto")], [
+            html.div([class("text-center py-32")], [
+              html.figure([class("mb-8 relative w-max mx-auto")], [
                 html.img([
-                  attribute.alt("Wisp Logo"),
-                  attribute.src("/images/logo.svg"),
-                  attribute.class("mx-auto"),
+                  attr.alt("Wisp Logo"),
+                  attr.src("/images/logo.svg"),
+                  class("mx-auto"),
                 ]),
-                html.span([attribute.class("version-label")], [
+                html.span([class("version-label")], [
                   html.text("v" <> version),
                 ]),
               ]),
               html.p(
                 [
-                  attribute.class(
-                    "leading-relaxed max-w-[50ch] mx-auto font-dm-mono",
-                  ),
+                  class("leading-relaxed max-w-[50ch] mx-auto font-dm-mono"),
                 ],
                 [
                   html.text(
@@ -159,10 +157,10 @@ pub fn view(model: Model) {
 
       DocsIndex ->
         element.fragment([
-          html.header([attribute.class("site-hero")], [
+          html.header([class("site-hero")], [
             site_nav(DocsIndex),
-            html.div([attribute.class("container")], [
-              html.header([attribute.class("docs-header")], [
+            html.div([class("container")], [
+              html.header([class("docs-header")], [
                 html.h1([], [html.text("Guides")]),
                 html.p([], [
                   html.text(
@@ -174,29 +172,27 @@ pub fn view(model: Model) {
           ]),
 
           html.div(
-            [attribute.class("container grid lg:grid-cols-4 gap-6 lg:gap-y-12")],
+            [class("container grid lg:grid-cols-4 gap-6 lg:gap-y-12")],
             list.map(model.guides, fn(section) {
               element.fragment([
                 html.aside([], [
                   html.h2(
                     [
-                      attribute.class(
-                        "font-bold text-xl text-color-text-strong",
-                      ),
+                      class("font-bold text-xl text-color-text-strong"),
                     ],
                     [html.text(section.title)],
                   ),
                 ]),
-                html.main([attribute.class("lg:col-span-3")], [
+                html.main([class("lg:col-span-3")], [
                   html.ul(
                     [
-                      attribute.class(
+                      class(
                         "docs-links grid gap-3 lg:grid-cols-2 guides-overview",
                       ),
                     ],
                     list.map(section.guides, fn(guide) {
                       html.li([], [
-                        html.a([attribute.href("/docs/" <> guide.slug)], [
+                        html.a([href("/docs/" <> guide.slug)], [
                           html.h3([], [html.text(guide.title)]),
                           html.p([], [
                             html.text(guide.description),
@@ -208,9 +204,7 @@ pub fn view(model: Model) {
                 ]),
                 html.div(
                   [
-                    attribute.class(
-                      "h-px bg-brand-quitelight lg:col-span-4 last:hidden",
-                    ),
+                    class("h-px bg-brand-quitelight lg:col-span-4 last:hidden"),
                   ],
                   [],
                 ),
@@ -220,13 +214,13 @@ pub fn view(model: Model) {
         ])
 
       Docs(slug:) ->
-        html.div([attribute.class("docs-layout")], [
-          html.aside([attribute.class("docs-sidebar")], [
-            html.a([attribute.href("/"), attribute.class("sidebar-logo")], [
+        html.div([class("docs-layout")], [
+          html.aside([class("docs-sidebar")], [
+            html.a([href("/"), class("sidebar-logo")], [
               html.img([
-                attribute.src("/images/logo.svg"),
-                attribute.alt("Wisp"),
-                attribute.class("h-10"),
+                attr.src("/images/logo.svg"),
+                attr.alt("Wisp"),
+                class("h-10"),
               ]),
             ]),
             ..list.map(model.guides, fn(section) {
@@ -236,7 +230,7 @@ pub fn view(model: Model) {
                   [],
                   list.map(section.guides, fn(guide) {
                     html.li([], [
-                      html.a([attribute.href("/docs/" <> guide.slug)], [
+                      html.a([href("/docs/" <> guide.slug)], [
                         html.text(guide.title),
                       ]),
                     ])
@@ -245,123 +239,158 @@ pub fn view(model: Model) {
               ])
             })
           ]),
-          html.main(
-            [attribute.class("container grid gap-4 lg:gap-8 lg:grid-cols-4")],
-            [
-              html.nav([attribute.class("site-nav lg:col-span-4")], [
-                html.div([attribute.class("container")], [
-                  html.form([attribute.class("nav-search")], [
-                    html.input([
-                      attribute.type_("text"),
-                      attribute.placeholder("Search..."),
+          html.main([class("container grid gap-4 lg:gap-8 lg:grid-cols-4")], [
+            html.nav([class("site-nav lg:col-span-4")], [
+              html.div([class("container")], [
+                html.form([class("nav-search")], [
+                  html.input([
+                    attr.type_("text"),
+                    attr.placeholder("Search..."),
+                  ]),
+                ]),
+                html.ul([class("site-links ml-auto")], [
+                  html.li([], [
+                    html.a([href("/docs")], [
+                      guide_icon([class("size-5")]),
+                      html.text("Guides"),
                     ]),
                   ]),
-                  html.ul([attribute.class("site-links ml-auto")], [
-                    html.li([], [
-                      html.a([attribute.href("/docs")], [
-                        guide_icon([attribute.class("size-5")]),
-                        html.text("Guides"),
-                      ]),
+                  html.li([], [
+                    html.a([href("https://github.com/gleam-wisp/wisp")], [
+                      source_icon([class("size-5")]),
+                      html.text("Source"),
                     ]),
-                    html.li([], [
-                      html.a(
-                        [attribute.href("https://github.com/gleam-wisp/wisp")],
-                        [
-                          source_icon([attribute.class("size-5")]),
-                          html.text("Source"),
-                        ],
-                      ),
+                  ]),
+                  html.li([], [
+                    html.a([href("https://wisp.hexdocs.pm/")], [
+                      hexdocs_icon([class("size-5")]),
+                      html.text("HexDocs"),
                     ]),
-                    html.li([], [
-                      html.a([attribute.href("https://wisp.hexdocs.pm/")], [
-                        hexdocs_icon([attribute.class("size-5")]),
-                        html.text("HexDocs"),
-                      ]),
-                    ]),
-                    html.li([attribute.class("special-link")], [
-                      html.a([attribute.href("https://github.com/lpil")], [
-                        heart_icon([attribute.class("size-5")]),
-                        html.text("Sponsor"),
-                      ]),
+                  ]),
+                  html.li([class("special-link")], [
+                    html.a([href("https://github.com/lpil")], [
+                      heart_icon([class("size-5")]),
+                      html.text("Sponsor"),
                     ]),
                   ]),
                 ]),
               ]),
+            ]),
 
-              html.header([attribute.class("docs-header lg:col-span-4")], [
-                html.h4([], [html.text("Getting Started")]),
-                html.h1([], [html.text("Your First App")]),
-              ]),
+            html.header([class("docs-header lg:col-span-4")], [
+              html.h4([], [html.text("Getting Started")]),
+              html.h1([], [html.text("Your First App")]),
+            ]),
 
-              html.main([attribute.class("lg:col-span-3")], [
-                element.unsafe_raw_html(
-                  "",
-                  "article",
-                  [attribute.class("prose")],
-                  option.unwrap(model.guide_content, jot.parse(""))
-                    |> jot.document_to_html,
-                ),
-              ]),
+            html.main([class("lg:col-span-3")], [
+              element.unsafe_raw_html(
+                "",
+                "article",
+                [class("prose")],
+                option.unwrap(model.guide_content, jot.parse(""))
+                  |> jot.document_to_html,
+              ),
+            ]),
 
-              html.aside([], [
-                html.nav([attribute.class("table-of-contents")], [
-                  html.ul([], [
-                    html.li([], [html.text("On this page")]),
-                    ..list.map(
-                      page_contents_from_markup(model.guide_content),
-                      fn(title) {
-                        html.li([], [
-                          html.a([attribute.href("#" <> title.1)], [
-                            html.text(title.0),
-                          ]),
-                        ])
-                      },
-                    )
-                  ]),
+            html.aside([], [
+              html.nav([class("table-of-contents")], [
+                html.ul([], [
+                  html.li([], [html.text("On this page")]),
+                  ..list.map(
+                    page_contents_from_markup(model.guide_content),
+                    fn(title) {
+                      html.li([], [
+                        html.a([href("#" <> title.1)], [
+                          html.text(title.0),
+                        ]),
+                      ])
+                    },
+                  )
                 ]),
               ]),
+            ]),
 
-              site_footer(2026, [attribute.class("lg:col-span-4")]),
-            ],
-          ),
+            site_footer(2026, [class("lg:col-span-4")]),
+          ]),
         ])
-      NotFound -> element.fragment([])
+      NotFound ->
+        element.fragment([
+          html.header([class("site-hero")], [
+            site_nav(Home),
+
+            html.div([class("text-center py-32")], [
+              html.figure([class("mb-8 relative w-max mx-auto")], [
+                html.img([
+                  attr.alt("Wisp Logo"),
+                  attr.src("/images/logo.svg"),
+                  class("mx-auto"),
+                ]),
+                html.span([class("version-label")], [
+                  html.text("v" <> version),
+                ]),
+              ]),
+              html.h1([class("font-bold text-3xl mb-3")], [
+                html.text("Page not found"),
+              ]),
+              html.p(
+                [
+                  class("leading-relaxed max-w-[50ch] mx-auto"),
+                ],
+                [
+                  html.text(
+                    "Sorry! It looks like the page you were looking for could not be found. Check the address bar to see if there is a clear mistake, or ",
+                  ),
+                  html.a(
+                    [
+                      href("/"),
+                      class("underline decoration-brand-prime font-medium"),
+                    ],
+                    [
+                      html.text("return home"),
+                    ],
+                  ),
+                ],
+              ),
+            ]),
+          ]),
+          site_footer(2026, []),
+        ])
     },
   ])
 }
 
 fn site_nav(_current: Route) {
-  html.nav([attribute.class("site-nav")], [
-    html.div([attribute.class("container")], [
-      html.a([attribute.href("/"), attribute.class("site-logo")], [
+  html.nav([class("site-nav")], [
+    html.div([class("container")], [
+      html.a([href("/"), class("site-logo")], [
         html.img([
-          attribute.src("/images/logo.svg"),
-          attribute.alt("Wisp logo"),
-          attribute.class("h-12"),
+          attr.src("/images/logo.svg"),
+          attr.alt("Wisp logo"),
+          class("h-12"),
         ]),
       ]),
-      html.ul([attribute.class("site-links")], [
+      html.ul([class("site-links")], [
         html.li([], [
-          html.a([attribute.href("/docs")], [
-            guide_icon([attribute.class("size-5")]),
+          html.a([href("/docs")], [
+            guide_icon([class("size-5")]),
             html.text("Guides"),
           ]),
         ]),
         html.li([], [
-          html.a([attribute.href("https://github.com/gleam-wisp/wisp")], [
-            source_icon([attribute.class("size-5")]),
+          html.a([href("https://github.com/gleam-wisp/wisp")], [
+            source_icon([class("size-5")]),
             html.text("Source"),
           ]),
         ]),
         html.li([], [
-          html.a([attribute.href("https://wisp.hexdocs.pm/")], [
-            hexdocs_icon([attribute.class("size-5")]),
+          html.a([href("https://wisp.hexdocs.pm/")], [
+            hexdocs_icon([class("size-5")]),
             html.text("HexDocs"),
           ]),
         ]),
-        html.li([attribute.class("special-link")], [
-          html.a([attribute.href("https://github.com/lpil")], [
-            heart_icon([attribute.class("size-5")]),
+        html.li([class("special-link")], [
+          html.a([href("https://github.com/lpil")], [
+            heart_icon([class("size-5")]),
             html.text("Sponsor"),
           ]),
         ]),
@@ -372,15 +401,15 @@ fn site_nav(_current: Route) {
 
 fn site_footer(
   year: Int,
-  attrs: List(attribute.Attribute(a)),
+  attrs: List(attr.Attribute(a)),
 ) -> element.Element(a) {
-  html.footer([attribute.class("site-footer"), ..attrs], [
+  html.footer([class("site-footer"), ..attrs], [
     html.div(
       [
-        attribute.class("container flex flex-wrap justify-between gap-3 py-8"),
+        class("container flex flex-wrap justify-between gap-3 py-8"),
       ],
       [
-        html.p([attribute.class("font-medium text-sm")], [
+        html.p([class("font-medium text-sm")], [
           html.text(
             "© Wisp Contributors "
             <> int.to_string(year)
@@ -390,10 +419,10 @@ fn site_footer(
         html.nav([], [
           html.a(
             [
-              attribute.class(
+              class(
                 "underline decoration-brand-prime transition-opacity hover:opacity-75",
               ),
-              attribute.href(
+              href(
                 "https://github.com/gleam-lang/gleam/blob/main/CODE_OF_CONDUCT.md",
               ),
             ],
@@ -408,62 +437,56 @@ fn site_footer(
 fn guide_icon(attrs) {
   svg.svg(
     [
-      attribute("xmlns", "http://www.w3.org/2000/svg"),
-      attribute("fill", "none"),
-      attribute("viewBox", "0 0 14 18"),
+      attr("xmlns", "http://www.w3.org/2000/svg"),
+      attr("fill", "none"),
+      attr("viewBox", "0 0 14 18"),
       ..attrs
     ],
     [
-      svg.mask(
-        [attribute("fill", "white"), attribute.id("path-1-inside-1_542_330")],
-        [
-          svg.rect([
-            attribute("rx", "1"),
-            attribute("height", "16"),
-            attribute("width", "14"),
-          ]),
-        ],
-      ),
-      svg.rect([
-        attribute("mask", "url(#path-1-inside-1_542_330)"),
-        attribute("stroke-width", "4"),
-        attribute("stroke", "currentColor"),
-        attribute("rx", "1"),
-        attribute("height", "16"),
-        attribute("width", "14"),
+      svg.mask([attr("fill", "white"), attr.id("path-1-inside-1_542_330")], [
+        svg.rect([
+          attr("rx", "1"),
+          attr("height", "16"),
+          attr("width", "14"),
+        ]),
       ]),
-      svg.mask(
-        [attribute("fill", "white"), attribute.id("path-2-inside-2_542_330")],
-        [
-          svg.rect([
-            attribute("rx", "1"),
-            attribute("height", "5"),
-            attribute("width", "14"),
-            attribute("y", "11"),
-          ]),
-        ],
-      ),
       svg.rect([
-        attribute("mask", "url(#path-2-inside-2_542_330)"),
-        attribute("stroke-width", "4"),
-        attribute("stroke", "currentColor"),
-        attribute("rx", "1"),
-        attribute("height", "5"),
-        attribute("width", "14"),
-        attribute("y", "11"),
+        attr("mask", "url(#path-1-inside-1_542_330)"),
+        attr("stroke-width", "4"),
+        attr("stroke", "currentColor"),
+        attr("rx", "1"),
+        attr("height", "16"),
+        attr("width", "14"),
+      ]),
+      svg.mask([attr("fill", "white"), attr.id("path-2-inside-2_542_330")], [
+        svg.rect([
+          attr("rx", "1"),
+          attr("height", "5"),
+          attr("width", "14"),
+          attr("y", "11"),
+        ]),
+      ]),
+      svg.rect([
+        attr("mask", "url(#path-2-inside-2_542_330)"),
+        attr("stroke-width", "4"),
+        attr("stroke", "currentColor"),
+        attr("rx", "1"),
+        attr("height", "5"),
+        attr("width", "14"),
+        attr("y", "11"),
       ]),
       svg.path([
-        attribute("fill", "currentColor"),
-        attribute(
+        attr("fill", "currentColor"),
+        attr(
           "d",
           "M3 13H7V17C7 17.5523 6.55228 18 6 18H4C3.44772 18 3 17.5523 3 17V13Z",
         ),
       ]),
       svg.path([
-        attribute("stroke-linecap", "round"),
-        attribute("stroke-width", "2"),
-        attribute("stroke", "currentColor"),
-        attribute("d", "M4 5H10M4 8H6H8"),
+        attr("stroke-linecap", "round"),
+        attr("stroke-width", "2"),
+        attr("stroke", "currentColor"),
+        attr("d", "M4 5H10M4 8H6H8"),
       ]),
     ],
   )
@@ -472,17 +495,17 @@ fn guide_icon(attrs) {
 fn source_icon(attrs) {
   svg.svg(
     [
-      attribute("xmlns", "http://www.w3.org/2000/svg"),
-      attribute("fill", "none"),
-      attribute("viewBox", "0 0 20 14"),
+      attr("xmlns", "http://www.w3.org/2000/svg"),
+      attr("fill", "none"),
+      attr("viewBox", "0 0 20 14"),
       ..attrs
     ],
     [
       svg.path([
-        attribute("stroke-linecap", "round"),
-        attribute("stroke-width", "2"),
-        attribute("stroke", "currentColor"),
-        attribute(
+        attr("stroke-linecap", "round"),
+        attr("stroke-width", "2"),
+        attr("stroke", "currentColor"),
+        attr(
           "d",
           "M4.61231 1.00025L1.15417 7.00025L4.61231 13.0002M7.99778 13.0002L11.2076 1.00025M14.696 1.00025L18.1542 7.00025L14.696 13.0002",
         ),
@@ -494,25 +517,25 @@ fn source_icon(attrs) {
 fn hexdocs_icon(attrs) {
   svg.svg(
     [
-      attribute("xmlns", "http://www.w3.org/2000/svg"),
-      attribute("fill", "none"),
-      attribute("viewBox", "0 0 16 19"),
+      attr("xmlns", "http://www.w3.org/2000/svg"),
+      attr("fill", "none"),
+      attr("viewBox", "0 0 16 19"),
       ..attrs
     ],
     [
       svg.path([
-        attribute("stroke-width", "2"),
-        attribute("stroke", "currentColor"),
-        attribute(
+        attr("stroke-width", "2"),
+        attr("stroke", "currentColor"),
+        attr(
           "d",
           "M7.48926 1.46582C7.80397 1.27896 8.19603 1.27896 8.51074 1.46582L14.5107 5.02832C14.8142 5.20849 15 5.53577 15 5.88867V13.1113C15 13.4642 14.8142 13.7915 14.5107 13.9717L8.51074 17.5342C8.19603 17.721 7.80397 17.721 7.48926 17.5342L1.48926 13.9717C1.18582 13.7915 1 13.4642 1 13.1113V5.88867L1.00879 5.75781C1.04849 5.45631 1.2237 5.18601 1.48926 5.02832L7.48926 1.46582Z",
         ),
       ]),
       svg.path([
-        attribute("stroke-linecap", "round"),
-        attribute("stroke-width", "2"),
-        attribute("stroke", "currentColor"),
-        attribute("d", "M5 8H11M5 11.5H7H9"),
+        attr("stroke-linecap", "round"),
+        attr("stroke-width", "2"),
+        attr("stroke", "currentColor"),
+        attr("d", "M5 8H11M5 11.5H7H9"),
       ]),
     ],
   )
@@ -521,16 +544,16 @@ fn hexdocs_icon(attrs) {
 fn heart_icon(attrs) {
   svg.svg(
     [
-      attribute("xmlns", "http://www.w3.org/2000/svg"),
-      attribute("fill", "none"),
-      attribute("viewBox", "0 0 18 16"),
+      attr("xmlns", "http://www.w3.org/2000/svg"),
+      attr("fill", "none"),
+      attr("viewBox", "0 0 18 16"),
       ..attrs
     ],
     [
       svg.path([
-        attribute("stroke-width", "2"),
-        attribute("stroke", "currentColor"),
-        attribute(
+        attr("stroke-width", "2"),
+        attr("stroke", "currentColor"),
+        attr(
           "d",
           "M10.3984 2.14062C11.9088 0.619762 14.3542 0.619812 15.8643 2.14062C17.3785 3.66575 17.3785 6.14187 15.8643 7.66699L9 14.5801L2.13574 7.66699C0.621774 6.14191 0.621774 3.6657 2.13574 2.14062C3.64603 0.619854 6.09148 0.619892 7.60156 2.14062L8.29004 2.83398L9 3.54883L9.70996 2.83398L10.3984 2.14062Z",
         ),
@@ -550,7 +573,7 @@ fn page_contents_from_markup(
             if level == 1 || level == 3 || level == 2
           -> {
             let href = dict.get(attributes, "id") |> result.unwrap("unknown")
-            // let href = d(attributes, "id")
+            // let href = d(attrs, "id")
             [#(title, href), ..acc]
           }
           _ -> acc
@@ -585,63 +608,63 @@ fn article_content() {
         html.button([], [html.text("Copy")]),
       ]),
       html.code([], [
-        html.span([attribute.class("hl-comment")], [
+        html.span([class("hl-comment")], [
           html.text(
             "// Recursively create the dist directory structure we want",
           ),
         ]),
         html.text("\n"),
-        html.span([attribute.class("hl-module")], [html.text("simplifile")]),
+        html.span([class("hl-module")], [html.text("simplifile")]),
         html.text("."),
-        html.span([attribute.class("hl-function")], [
+        html.span([class("hl-function")], [
           html.text("create_directory_all"),
         ]),
         html.text("("),
-        html.span([attribute.class("hl-string")], [
+        html.span([class("hl-string")], [
           html.text("\"./dist/pixels\""),
         ]),
         html.text(")"),
         html.text("\n"),
         html.text("\n"),
-        html.span([attribute.class("hl-comment")], [
+        html.span([class("hl-comment")], [
           html.text("// Read a directory"),
         ]),
         html.text("\n"),
-        html.span([attribute.class("hl-keyword")], [html.text("let")]),
-        html.span([attribute.class("hl-keyword")], [html.text(" assert ")]),
-        html.span([attribute.class("hl-variant")], [html.text("Ok")]),
+        html.span([class("hl-keyword")], [html.text("let")]),
+        html.span([class("hl-keyword")], [html.text(" assert ")]),
+        html.span([class("hl-variant")], [html.text("Ok")]),
         html.text("(entries) = "),
-        html.span([attribute.class("hl-module")], [html.text("simplifile")]),
+        html.span([class("hl-module")], [html.text("simplifile")]),
         html.text("."),
-        html.span([attribute.class("hl-function")], [
+        html.span([class("hl-function")], [
           html.text("read_directory"),
         ]),
         html.text("("),
-        html.span([attribute.class("hl-string")], [html.text("\"./pixelart\"")]),
+        html.span([class("hl-string")], [html.text("\"./pixelart\"")]),
         html.text(")"),
         html.text("\n"),
         html.text("\n"),
-        html.span([attribute.class("hl-comment")], [
+        html.span([class("hl-comment")], [
           html.text(
             "// Loop through it and copy all the entries over to a build directory",
           ),
         ]),
         html.text("\n"),
-        html.span([attribute.class("hl-module")], [html.text("list")]),
+        html.span([class("hl-module")], [html.text("list")]),
         html.text("."),
-        html.span([attribute.class("hl-function")], [html.text("each")]),
+        html.span([class("hl-function")], [html.text("each")]),
         html.text("(entries,"),
-        html.span([attribute.class("hl-keyword")], [html.text("fn")]),
+        html.span([class("hl-keyword")], [html.text("fn")]),
         html.text("(entry) {"),
         html.text("\n"),
-        html.span([attribute.class("hl-module")], [html.text("  simplifile")]),
+        html.span([class("hl-module")], [html.text("  simplifile")]),
         html.text("."),
-        html.span([attribute.class("hl-function")], [html.text("copy")]),
+        html.span([class("hl-function")], [html.text("copy")]),
         html.text("("),
-        html.span([attribute.class("hl-string")], [html.text("\"./pixelart/\"")]),
-        html.span([attribute.class("hl-operator")], [html.text(" <> ")]),
+        html.span([class("hl-string")], [html.text("\"./pixelart/\"")]),
+        html.span([class("hl-operator")], [html.text(" <> ")]),
         html.text("entry, "),
-        html.span([attribute.class("hl-string")], [
+        html.span([class("hl-string")], [
           html.text("\"./dist/pixels/\""),
         ]),
         html.text(")\n})"),
@@ -662,7 +685,7 @@ fn article_content() {
         "Here’s a list of the small-scale stuff I’ve been doing over the past few months, I really hope you feel a bit inspired to bodge together some stuff of your own.",
       ),
     ]),
-    html.h2([attribute.id("Pablo-Pixarto")], [
+    html.h2([attr.id("Pablo-Pixarto")], [
       html.text("Pablo Pixarto"),
     ]),
     html.p([], [
@@ -679,7 +702,7 @@ fn article_content() {
       html.text(
         "After waiting to see if the server could be recovered, I decided to just",
       ),
-      html.a([attribute.href("https://isaac.zone/pixel-paradise")], [
+      html.a([href("https://isaac.zone/pixel-paradise")], [
         html.text("create a new server"),
       ]),
       html.text(
@@ -690,9 +713,9 @@ fn article_content() {
       html.text(
         "I decided it would be fun to make a tiny Discord bot (which, arguably, could currently just be a webhook) to retrieve the latest prompt from the Bluesky account, then post and publish it to the theme channel in the server. This works super well, and was really easy to make! I used",
       ),
-      html.a([attribute.href("https://gleam.run")], [html.text("Gleam")]),
+      html.a([href("https://gleam.run")], [html.text("Gleam")]),
       html.text(", and the fairly young"),
-      html.a([attribute.href("https://hexdocs.pm/grom/")], [
+      html.a([href("https://hexdocs.pm/grom/")], [
         html.text("grom"),
       ]),
       html.text(
@@ -704,7 +727,7 @@ fn article_content() {
         "While it’s fun to think about all those possibilities, just checking for a couple of key words in the post and caching the already-posted prompts in a JSON file was enough to get off the ground. The only meaningful problem I ran into was that the account sometimes posts a theme and then retracts it within 5-10 seconds. This occasionally lead to more than one post going in the themes channel of the server, but was solved by just ensuring the themes I post are more than 60 seconds old.",
       ),
     ]),
-    html.h2([attribute.id("I-forgot…")], [html.text("I forgot…")]),
+    html.h2([attr.id("I-forgot…")], [html.text("I forgot…")]),
     html.p([], [
       html.text(
         "I’ve had Zeppelin, the Discord bot, a few servers I frequent for a few years now, and one of the most surprisingly useful features is the !remind command. Setting short term reminders that tag me on a platform I have on both my desktop computer & phone is super handy to me. It also means I can set shared reminders for things I need to check in with friends for.",
@@ -717,7 +740,7 @@ fn article_content() {
     ]),
     html.p([], [
       html.text("I decided to try out the"),
-      html.a([attribute.href("https://serenity-rs.github.io/")], [
+      html.a([href("https://serenity-rs.github.io/")], [
         html.text("Serenity"),
       ]),
       html.text(
@@ -736,14 +759,14 @@ fn article_content() {
     ]),
     html.p([], [
       html.text("I was inspired to try this out after watching a"),
-      html.a([attribute.href("https://www.youtube.com/watch?v=7VSVfQcaxFY")], [
+      html.a([href("https://www.youtube.com/watch?v=7VSVfQcaxFY")], [
         html.text("video about Lichess"),
       ]),
       html.text(
         ", which deploys it’s central service in a very similar way. It feels so cool to use the basic tech like this. Build the binary, rsync to the server, run with systemd. Nothing complex, no Python, no Ansible, just good old shell scripts and unix command line tools. I highly recommend doing something like this, it feels really cool.",
       ),
     ]),
-    html.h2([attribute.id("Hy-there")], [html.text("Hy there")]),
+    html.h2([attr.id("Hy-there")], [html.text("Hy there")]),
     html.p([], [
       html.text(
         "To my surprise, the game Hytale actually released recently, thanks to Simon from Hypixel buying it back off Riot Games. I’m super interested to see what might come of Hytale, I think it shows a lot of promise as a platform for making games on, sort of similar to Minecraft or Roblox (or so I’m told, I’ve never played it or used it, but go Lua!)",
@@ -763,19 +786,19 @@ fn article_content() {
       html.text("I used Gleam for the worker which was fun, using the"),
       html.a(
         [
-          attribute.href("https://hexdocs.pm/plinth_cloudflare/index.html"),
+          href("https://hexdocs.pm/plinth_cloudflare/index.html"),
         ],
         [html.text("plinth_cloudflare")],
       ),
       html.text(
         "package. It was alright, but I think in the future I might prefer to write my own FFI. The Hytale server API feels a heck of a lot nicer than what I remember of the Minecraft (/ Bukkit / Spigot / Paper / NMS / boy there’s too many of these) plugin space. Really cool stuff, I hope people make cool things on Hytale. I’d love to play around with it a bit more too. If you’d like to check it out, feel free to send me a message and I can authorise your Discord account to create servers on",
       ),
-      html.a([attribute.href("https://hytapi.com")], [
+      html.a([href("https://hytapi.com")], [
         html.text("the site"),
       ]),
       html.text("."),
     ]),
-    html.h2([attribute.id("Do-count-on-it")], [
+    html.h2([attr.id("Do-count-on-it")], [
       html.text("Do count on it"),
     ]),
     html.p([], [
@@ -787,14 +810,14 @@ fn article_content() {
       html.text(
         "This is such a great usecase for a little website. Take a bunch of images and show them in random order? I can totally do that! I wrote a simple",
       ),
-      html.a([attribute.href("https://hexdocs.pm/lustre")], [
+      html.a([href("https://hexdocs.pm/lustre")], [
         html.text("Lustre"),
       ]),
       html.text(
         "application that does just this – and it has been working out well for my partner and the rest of their team. I also tried to add support for a presentation clicker, but I haven’t quite locked down what events to listen for there, because so many of the clickers work in different ways. It’s really exciting to make something like this which is technologically straight-forward and has real-world impact. One of the best types of projects for me, despite being a simple problem with an obvious solution.",
       ),
     ]),
-    html.h2([attribute.id("Listen-here…")], [html.text("Listen here…")]),
+    html.h2([attr.id("Listen-here…")], [html.text("Listen here…")]),
     html.p([], [
       html.text(
         "My primary headphones, a near-10-year-old pair of M50x’s, have suffered through a few thousand drops and other forms of battering, and unfortunately finally took a hit they couldn’t just jump back up from, as I snapped the little piece of plastic that prevents the ear from folding out beyond a certain point. With this bit gone, they wouldn’t close around my ears and were very uncomfortable.",
