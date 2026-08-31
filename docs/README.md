@@ -1,24 +1,23 @@
-# docs
+![Wisp Logo][/assets/logo.svg]
 
-[![Package Version](https://img.shields.io/hexpm/v/docs)](https://hex.pm/packages/docs)
-[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/docs/)
+# Wisp Documentation Site
 
-```sh
-gleam add docs@1
+Simple, static site, with the documentation content written in djot,
+and generated to static HTML using Gleam. We use [TailwindCSS](https://tailwindcss.com/) 
+for styling, and [Pagefind](https://pagefind.app/) to generate search documents to run in 
+the front-end without needing a server. Unfortunately these both require 
+us to bring in dependencies, but it's worth it to avoid reinventing the universe.
+
+### Documentation structure
+content/`{section}`/`{slug}`.djot 
+
+### Building
+
+```bash
+gleam run # Build the static HTML content
+
+# Can also use npm or Bun if you so prefer.
+pnpm run build # Build the stylesheet and Pagefind content
 ```
-```gleam
-import docs
 
-pub fn main() -> Nil {
-  // TODO: An example of the project in use
-}
-```
-
-Further documentation can be found at <https://hexdocs.pm/docs>.
-
-## Development
-
-```sh
-gleam run   # Run the project
-gleam test  # Run the tests
-```
+Once the above has been run, the `dist` directory can be served as-is.
