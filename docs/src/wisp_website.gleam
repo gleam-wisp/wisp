@@ -222,7 +222,7 @@ pub fn main() {
 fn home() {
   element.fragment([
     html.header([class("site-hero")], [
-      site_nav(True),
+      site_nav(False),
 
       html.div([class("text-center py-32")], [
         html.figure([class("mb-8 relative w-max mx-auto")], [
@@ -464,17 +464,11 @@ fn layout(body: element.Element(a), meta: Meta(a)) -> element.Element(a) {
         attr.rel("stylesheet"),
         attr.href("/styles.css"),
       ]),
+      html.script([attr.src("/script.mjs"), attr.type_("module")], ""),
       ..meta.extra
     ]),
     html.body([], [body]),
   ])
-}
-
-pub type Route {
-  Home
-  DocsIndex
-  DocPage(slug: String, content: option.Option(jot.Document))
-  NotFound
 }
 
 pub type GuideSection {
@@ -491,10 +485,6 @@ pub type Guide {
     order: Int,
     content: jot.Document,
   )
-}
-
-pub type Model {
-  Model(guides: List(GuideSection), route: Route)
 }
 
 fn site_nav(is_content is_content: Bool) {
