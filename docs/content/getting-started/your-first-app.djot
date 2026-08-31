@@ -1,8 +1,8 @@
 ---
-title = "Your first app"
+title = "Your First App"
 description = "Starting with Wisp and building your very first app"
-published = "2026-08-01"
-updated = "2026-08-01"
+published_at = 2026-08-01
+updated_at = 2026-08-01
 order = 1
 ---
 Ready to serve your first Hello World over HTTP using Wisp? Let's go!

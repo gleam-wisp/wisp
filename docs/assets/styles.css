@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@source "../dist/*.html";
+
 @font-face {
   font-family: 'DM Sans';
   font-style: regular;
@@ -87,6 +89,81 @@ body {
   font-family: var(--font-dm-sans);
   background: var(--color-brand-extralight);
   color: var(--color-text-main);
+
+  /*
+  * Styles for pagefind 
+  * Ripped from their documentation: https://pagefind.app/docs/css-variables/
+  * */
+
+  /* Colors */
+  --pf-text: #1a1a1a;
+  --pf-text-secondary: #666;
+  --pf-text-muted: #767676;
+  --pf-background: #fff;
+  --pf-border: var(--color-brand-quitelight);
+  --pf-border-focus: var(--color-brand-prime);
+  --pf-skeleton: #eee;
+  --pf-skeleton-shine: #f5f5f5;
+  --pf-hover: #f5f5f5;
+  --pf-mark: #1a1a1a;
+  --pf-scroll-shadow: rgba(0, 0, 0, 0.08);
+
+  /* Shadows */
+  --pf-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --pf-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --pf-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.2);
+
+  /* Error states */
+  --pf-error-bg: #fef2f2;
+  --pf-error-border: #fecaca;
+  --pf-error-text: #dc2626;
+  --pf-error-text-secondary: #b91c1c;
+
+  /* Focus ring */
+  --pf-outline-focus: var(--color-brand-prime);
+  --pf-outline-width: 2px;
+  --pf-outline-offset: 2px;
+
+  /* Typography */
+  --pf-font: var(--font-dm-sans);
+
+  /* Sizing */
+  --pf-input-height: 36px;
+  --pf-input-font-size: 16px;
+  /* Keep at 16px+ to prevent iOS auto-zoom on focus */
+  --pf-summary-font-size: 12px;
+  --pf-result-title-font-size: 14px;
+  --pf-result-excerpt-font-size: 13px;
+
+  /* Results layout */
+  --pf-results-display: flex;
+  --pf-results-flex-direction: column;
+  --pf-results-flex-wrap: nowrap;
+  --pf-results-columns: none;
+  /* grid-template-columns value, used when display is grid */
+  --pf-results-gap: 8px;
+
+  --pf-border-radius: .6rem;
+  --pf-image-width: 64px;
+  --pf-image-height: 48px;
+
+  /* Icons (SVG data URIs) */
+  /* --pf-icon-search: url("data:image/svg+xml,..."); */
+  /* --pf-icon-arrow: url("data:image/svg+xml,..."); */
+
+  /* Modal */
+  --pf-modal-backdrop: rgba(0, 0, 0, 0.5);
+  --pf-modal-max-width: 560px;
+  --pf-modal-max-height: min(80dvh, 800px);
+  --pf-modal-top: 10dvh;
+
+  /* Searchbox dimensions */
+  --pf-searchbox-max-width: 280px;
+  --pf-searchbox-dropdown-max-height: 320px;
+
+  /* Dropdown settings */
+  --pf-dropdown-max-height: 280px;
+  --pf-dropdown-z-index: 9999;
 }
 
 body.dark {
@@ -142,16 +219,12 @@ body.dark {
   color: var(--color-brand-light);
 }
 
-.site-nav .nav-search input {
-  border: 1px solid var(--color-brand-quitelight);
-  border-radius: 100rem;
-  font-size: var(--text-sm);
-  padding: --spacing(2) --spacing(4);
+.site-nav .nav-search {
+  width: 260px;
 }
 
-.site-nav .nav-search input:focus {
-  outline: 2px solid --alpha(var(--color-brand-prime) / 20%);
-  border-color: var(--color-brand-prime);
+.site-nav .nav-search pagefind-modal-trigger {
+  width: 100%;
 }
 
 .site-hero {
