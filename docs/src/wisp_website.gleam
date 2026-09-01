@@ -13,7 +13,7 @@ import gleam_community/ansi
 import jot
 import lustre/attribute.{attribute as attr, class, href} as attr
 import lustre/element
-import lustre/element/html
+import lustre/element/html.{text}
 import simplifile
 import tom
 
@@ -21,7 +21,7 @@ type Meta(a) {
   Meta(title: String, description: String, extra: List(element.Element(a)))
 }
 
-const version = "2.2.0"
+const version = "2.2.2"
 
 const guide_sections = [
   GuideSection("Getting Started", "getting-started", []),
@@ -220,11 +220,109 @@ pub fn main() {
 }
 
 fn home() {
+  let feature_grid = [
+    #(
+      "Perfectly productive",
+      "Wisp is simple, type safe, and entirely free from confusing magic. Make development as stress-free as possible whether you're starting a new prototype or maintaining a large system.",
+    ),
+    #(
+      "Flipping fast",
+      "Thanks to the Mist HTTP server and the mighty multithreaded BEAM runtime Wisp applications are fast, even at the 99th percentile during a big burst of traffic.",
+    ),
+    #(
+      "Totally testable",
+      "If your application matters, you're going to want to test it. A Wisp web application is as easy to test as any regular Gleam function, and an assortment of useful test helpers are provided to keep your tests concise.",
+    ),
+    #(
+      "Really reliable",
+      "Scrambling to fix problems in production is stressful, so Wisp uses Gleam's type safety and the BEAM's fault tolerance help prevent those panicked late night phone calls from your boss.",
+    ),
+  ]
+
+  let spotlight_features = [
+    #(
+      "Easy middleware",
+      "Use Wisp's built-in middleware and write your own, with ease.",
+    ),
+    #(
+      "Simple, fast routing",
+      "Good old-fashioned pattern matching to direct your requests.",
+    ),
+    #(
+      "Request parsers",
+      "Easily parse JSON, urlencoded data, or multipart form bodies with built-in parsers.",
+    ),
+    #(
+      "Tamper-proof cookies",
+      "Signed cookies, suitable for authentication, work right out of the box.",
+    ),
+    #(
+      "Simple static assets",
+      "Serve CSS, JavaScript, and any other static assets you need with included middleware.",
+    ),
+    #(
+      "Logs a-plenty",
+      "Use the BEAM logger to log requests with middleware and ad-hoc logging inside requests",
+    ),
+    #(
+      "Backed by Gleam",
+      "Regular Gleam programming with no special magic. Use any Gleam package you want, with ease.",
+    ),
+    #(
+      "Well documented",
+      "Follow the Wisp guides and examples whether you're just starting out or maintaining a big project.",
+    ),
+    #(
+      "Recommended structure",
+      "We supply a recommended project structure so you can focus on the issues your app is trying to solve.",
+    ),
+  ]
+
+  let header_code =
+    contour.to_html(
+      "use <- wisp.log_request(req)
+use json <- wisp.require_json(req)  
+
+let result = {
+  use params <- try(people.parse_params(json)) 
+  use person <- try(people.save(params, ctx.db))
+  Ok(people.to_json(person))
+}
+
+case result {
+  Ok(body) -> wisp.json_response(body, 201)
+  Error(_) -> wisp.bad_request()
+}",
+    )
+
+  let code_example =
+    contour.to_html(
+      "import my_app/people
+import my_app/web.{Context}
+import gleam/result.{try}
+import wisp.{Request, Response}
+
+pub fn handle_request(req: Request, ctx: Context) -> Response {
+  use json <- wisp.require_json(req) // Built in middleware
+
+  let result = {
+    use params <- try(people.parse_params(json))
+    use person <- try(people.save(params, ctx.db))
+    Ok(people.to_json(person))
+  }
+
+  case result {
+    Ok(body) -> wisp.json_response(body, 201) // Encode your JSON response
+    Error(_) -> wisp.bad_request() // Helpers for common error responses
+  }
+}",
+    )
+
   element.fragment([
     html.header([class("site-hero")], [
       site_nav(False),
 
-      html.div([class("text-center py-32")], [
+      html.section([class("text-center py-32")], [
         html.figure([class("mb-8 relative w-max mx-auto")], [
           html.img([
             attr.alt("Wisp Logo"),
@@ -232,21 +330,167 @@ fn home() {
             class("mx-auto"),
           ]),
           html.span([class("version-label")], [
-            html.text("v" <> version),
+            text("v" <> version),
           ]),
         ]),
         html.p(
           [
-            class("leading-relaxed max-w-[50ch] mx-auto font-dm-mono"),
+            class(
+              "leading-relaxed text-prose-strong max-w-[50ch] mx-auto font-mono",
+            ),
           ],
           [
-            html.text(
+            text(
               "Build practical, performant, intuitive web applications with Gleam",
             ),
           ],
         ),
       ]),
     ]),
+
+    html.section([class("container")], [
+      html.img([
+        attr.src("/images/handler-graphic.svg"),
+        attr.alt(
+          "Graphic showing requests, a basic Wisp function, and some users making requests, all connected with squigglies.",
+        ),
+        class("max-lg:hidden"),
+      ]),
+      html.div([class("lg:hidden")], [
+        html.ul(
+          [
+            class(
+              "flex items-center justify-center flex-wrap gap-3 mb-4 text-sm",
+            ),
+          ],
+          [
+            html.li(
+              [
+                class(
+                  "bg-white rounded-md border border-brand-quitelight font-mono py-2 px-3",
+                ),
+              ],
+              [
+                html.span([class("text-brand-prime")], [text("GET")]),
+                text(" /dashboard"),
+              ],
+            ),
+            html.li(
+              [
+                class(
+                  "bg-white rounded-md border border-brand-quitelight font-mono py-2 px-3",
+                ),
+              ],
+              [
+                html.span([class("text-amber-700")], [text("POST")]),
+                text(" /api/people"),
+              ],
+            ),
+            html.li(
+              [
+                class(
+                  "bg-white rounded-md border border-brand-quitelight font-mono py-2 px-3",
+                ),
+              ],
+              [
+                html.span([class("text-red-700")], [text("DELETE")]),
+                text(" /api/people/lucy"),
+              ],
+            ),
+            html.li(
+              [
+                class(
+                  "bg-white rounded-md border border-brand-quitelight font-mono py-2 px-3",
+                ),
+              ],
+              [
+                html.span([class("text-brand-prime")], [text("GET")]),
+                text(" /static/main.css"),
+              ],
+            ),
+          ],
+        ),
+        html.div([class("prose")], [
+          html.pre([], [element.unsafe_raw_html("", "code", [], header_code)]),
+        ]),
+      ]),
+    ]),
+
+    html.section([class("py-16 lg:py-24 xl:py-32")], [
+      html.h3([class("font-bold text-3xl text-center mb-8 font-mono")], [
+        text("Why use Wisp?"),
+      ]),
+
+      html.div(
+        [
+          class("container"),
+        ],
+        [
+          html.ul(
+            [class("feature-grid")],
+            list.map(feature_grid, fn(feature) {
+              let #(title, body) = feature
+              html.li([], [
+                html.h4([], [text(title)]),
+                html.p([], [
+                  text(body),
+                ]),
+              ])
+            }),
+          ),
+        ],
+      ),
+    ]),
+
+    html.section([class("bg-white py-16 lg:py-24 xl:py-32")], [
+      html.h3([class("font-bold text-3xl text-center mb-8 font-mono")], [
+        text("What does Wisp give me?"),
+      ]),
+
+      html.div([class("container")], [
+        html.ul(
+          [class("highlights-list")],
+          list.map(spotlight_features, fn(spotlight) {
+            let #(title, body) = spotlight
+            html.li([], [
+              html.h4([], [text(title)]),
+              html.p([], [text(body)]),
+            ])
+          }),
+        ),
+      ]),
+    ]),
+
+    html.section([class("py-16 lg:py-24 xl:py-32")], [
+      html.h3([class("font-bold text-3xl text-center mb-8 font-mono")], [
+        text("Okay, I'm in. How does it look?"),
+      ]),
+
+      html.div(
+        [
+          class("container"),
+        ],
+        [
+          html.p([class("text-center max-w-3xl mx-auto mb-3")], [
+            text(
+              "Here's a JSON API request handler that saves an item in a database:",
+            ),
+          ]),
+          html.pre([class("code-example")], [
+            element.unsafe_raw_html("", "code", [], code_example),
+          ]),
+        ],
+      ),
+    ]),
+
+    html.section([class("container")], [
+      html.div([class("guide-cta")], [
+        html.p([], [text("Ready to learn more?")]),
+        html.a([attr.href("/docs")], [text("Read the Guides")]),
+      ]),
+    ]),
+
+    site_footer(2026, [class("lg:col-span-4")]),
   ])
 }
 
@@ -256,9 +500,9 @@ fn docs_index(sections: List(GuideSection)) {
       site_nav(is_content: False),
       html.div([class("container")], [
         html.header([class("docs-header")], [
-          html.h1([], [html.text("Guides")]),
+          html.h1([], [text("Guides")]),
           html.p([], [
-            html.text(
+            text(
               "Whether you're creating your first Gleam project or looking for best practices, check out the Wisp guides.",
             ),
           ]),
@@ -275,7 +519,7 @@ fn docs_index(sections: List(GuideSection)) {
               [
                 class("font-bold text-xl text-color-text-strong"),
               ],
-              [html.text(section.title)],
+              [text(section.title)],
             ),
           ]),
           html.main([class("lg:col-span-3")], [
@@ -286,9 +530,9 @@ fn docs_index(sections: List(GuideSection)) {
               list.map(section.guides, fn(guide) {
                 html.li([], [
                   html.a([href("/docs/" <> section.slug <> "/" <> guide.slug)], [
-                    html.h3([], [html.text(guide.title)]),
+                    html.h3([], [text(guide.title)]),
                     html.p([], [
-                      html.text(guide.description),
+                      text(guide.description),
                     ]),
                   ]),
                 ])
@@ -304,6 +548,7 @@ fn docs_index(sections: List(GuideSection)) {
         ])
       }),
     ),
+    site_footer(2026, []),
   ])
 }
 
@@ -324,13 +569,13 @@ fn doc_page(
       ]),
       ..list.map(guides, fn(section) {
         html.nav([], [
-          html.h5([], [html.text(section.title)]),
+          html.h5([], [text(section.title)]),
           html.ul(
             [],
             list.map(section.guides, fn(guide) {
               html.li([], [
                 html.a([href("/docs/" <> section.slug <> "/" <> guide.slug)], [
-                  html.text(guide.title),
+                  text(guide.title),
                 ]),
               ])
             }),
@@ -342,8 +587,8 @@ fn doc_page(
       site_nav(is_content: True),
 
       html.header([class("docs-header")], [
-        html.h4([], [html.text(section_name)]),
-        html.h1([], [html.text(title)]),
+        html.h4([], [text(section_name)]),
+        html.h1([], [text(title)]),
       ]),
 
       html.div([class("grid gap-4 lg:gap-8 lg:grid-cols-4")], [
@@ -359,11 +604,11 @@ fn doc_page(
         html.aside([], [
           html.nav([class("table-of-contents")], [
             html.ul([], [
-              html.li([], [html.text("On this page")]),
+              html.li([], [text("On this page")]),
               ..list.map(page_contents_from_markup(content), fn(title) {
                 html.li([], [
                   html.a([href("#" <> title.1)], [
-                    html.text(title.0),
+                    text(title.0),
                   ]),
                 ])
               })
@@ -390,18 +635,18 @@ fn not_found() {
             class("mx-auto"),
           ]),
           html.span([class("version-label")], [
-            html.text("v" <> version),
+            text("v" <> version),
           ]),
         ]),
         html.h1([class("font-bold text-3xl mb-3")], [
-          html.text("Page not found"),
+          text("Page not found"),
         ]),
         html.p(
           [
-            class("leading-relaxed max-w-[50ch] mx-auto"),
+            class("leading-relaxed text-prose-strong max-w-[50ch] mx-auto"),
           ],
           [
-            html.text(
+            text(
               "Sorry! It looks like the page you were looking for could not be found. Check the address bar to see if there is a clear mistake, or ",
             ),
             html.a(
@@ -410,7 +655,7 @@ fn not_found() {
                 class("underline decoration-brand-prime font-medium"),
               ],
               [
-                html.text("return home"),
+                text("return home"),
               ],
             ),
           ],
@@ -514,7 +759,7 @@ fn site_nav(is_content is_content: Bool) {
               attr.class("size-5"),
               attr.alt("Guides Icon"),
             ]),
-            html.text("Guides"),
+            text("Guides"),
           ]),
         ]),
         html.li([], [
@@ -524,7 +769,7 @@ fn site_nav(is_content is_content: Bool) {
               attr.class("size-5"),
               attr.alt("Source Icon"),
             ]),
-            html.text("Source"),
+            text("Source"),
           ]),
         ]),
         html.li([], [
@@ -534,7 +779,7 @@ fn site_nav(is_content is_content: Bool) {
               attr.class("size-5"),
               attr.alt("HexDocs (unofficial) Icon"),
             ]),
-            html.text("HexDocs"),
+            text("HexDocs"),
           ]),
         ]),
         html.li([class("special-link")], [
@@ -544,7 +789,7 @@ fn site_nav(is_content is_content: Bool) {
               attr.class("size-5"),
               attr.alt("Heart Icon"),
             ]),
-            html.text("Sponsor"),
+            text("Sponsor"),
           ]),
         ]),
       ]),
@@ -563,7 +808,7 @@ fn site_footer(
       ],
       [
         html.p([class("font-medium text-sm")], [
-          html.text(
+          text(
             "© Wisp Contributors "
             <> int.to_string(year)
             <> ". All Rights Reserved.",
@@ -579,7 +824,7 @@ fn site_footer(
                 "https://github.com/gleam-lang/gleam/blob/main/CODE_OF_CONDUCT.md",
               ),
             ],
-            [html.text("Code of Conduct")],
+            [text("Code of Conduct")],
           ),
         ]),
       ],

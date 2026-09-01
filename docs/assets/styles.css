@@ -63,13 +63,17 @@
   --breakpoint-2xl: initial;
   --breakpoint-xl: initial;
 
-  --font-dm-sans: 'DM Sans', sans-serif;
-  --font-dm-mono: 'DM Mono', sans-serif;
+  --font-family-sans: 'DM Sans', sans-serif;
+  --font-family-mono: 'DM Mono', Maple Mono, Jetbrains Mono, Roboto Mono, monospace;
 
+  --color-brand-dark: #227157;
   --color-brand-prime: #90B357;
   --color-brand-light: #E3FDB9;
   --color-brand-quitelight: #e2eed3;
   --color-brand-extralight: #F9FFF2;
+
+  --color-surface-main: #FFFFFF;
+  --color-surface-edge: #e9e9e9;
 
   --color-code-bg: #262F2B;
   --color-code-header: #2e3633;
@@ -79,16 +83,16 @@
   --color-code-yellow: #F6E569;
   --color-code-blue: #7CC8FF;
 
-  --color-text-strong: #262F2B;
-  --color-text-main: #262F2B;
-  --color-text-light: #44554E;
-  --color-text-subtle: #7F938B;
+  --color-prose-strong: #262F2B;
+  --color-prose-main: #262F2B;
+  --color-prose-light: #44554E;
+  --color-prose-subtle: #7F938B;
 }
 
 body {
-  font-family: var(--font-dm-sans);
+  font-family: var(--font-family-sans);
   background: var(--color-brand-extralight);
-  color: var(--color-text-main);
+  color: var(--color-prose-main);
 
   /*
   * Styles for pagefind 
@@ -125,7 +129,7 @@ body {
   --pf-outline-offset: 2px;
 
   /* Typography */
-  --pf-font: var(--font-dm-sans);
+  --pf-font: var(--font-family-sans);
 
   /* Sizing */
   --pf-input-height: 36px;
@@ -166,33 +170,41 @@ body {
   --pf-dropdown-z-index: 9999;
 }
 
-body.dark {
-  --color-brand-extralight: #11160d;
-  --color-text-strong: #fff;
-  --color-text-main: #dadfd5;
-  --color-text-light: #fff;
-  --color-text-subtle: #87917e;
-}
-
 @utility container {
   margin-left: auto;
   margin-right: auto;
-  padding-left: --spacing(4) --spacing(4);
+  padding-inline: --spacing(4);
 }
 
 .site-nav {
   padding: --spacing(4) 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .site-nav .container {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+
+  @variant md {
+    justify-content: space-between;
+  }
+}
+
+.site-nav .site-logo {
+  display: none;
+
+  @variant md {
+    display: block;
+  }
 }
 
 .site-nav .site-links {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: --spacing(2);
 }
 
@@ -200,13 +212,13 @@ body.dark {
   display: flex;
   align-items: center;
   gap: --spacing(2);
-  color: var(--color-text-main);
+  color: var(--color-prose-main);
   font-weight: var(--font-weight-medium);
   padding: --spacing(2) --spacing(4);
 }
 
 .site-nav .site-links a svg {
-  color: var(--color-text-subtle);
+  color: var(--color-prose-subtle);
 }
 
 .site-nav .site-links .special-link a {
@@ -232,6 +244,8 @@ body.dark {
 }
 
 .version-label {
+  font-family: var(--font-family-mono);
+  font-weight: var(--font-weight-bold);
   background: var(--color-brand-quitelight);
   border-radius: 100rem;
   padding: calc(var(--spacing) * 1.5) --spacing(3);
@@ -242,8 +256,125 @@ body.dark {
   font-size: .95rem;
 }
 
+/* Feature grid */
+
+.feature-grid {
+  display: grid;
+  gap: 1px;
+  background: var(--color-brand-quitelight);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-brand-quitelight);
+  /* Hide overflow to prevent the white of the boxes from overflowing */
+  overflow: hidden;
+
+  @variant lg {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.feature-grid li {
+  background: var(--color-white);
+  padding: --spacing(5);
+  color: var(--color-prose-main);
+  line-height: var(--leading-relaxed);
+
+  @variant lg {
+    padding: --spacing(7);
+  }
+}
+
+.feature-grid li h4 {
+  font-family: var(--font-family-mono);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--text-2xl);
+  color: var(--color-prose-strong);
+  margin-bottom: --spacing(2);
+}
+
+.highlights-list {
+  display: flex;
+  justify-content: center;
+  gap: --spacing(5);
+  flex-wrap: wrap;
+  color: var(--color-prose-main);
+  line-height: var(--leading-relaxed);
+}
+
+.highlights-list li {
+  padding: --spacing(5);
+  border: 2px solid var(--color-surface-edge);
+  border-radius: var(--radius-md);
+  position: relative;
+  flex: 1 0 100%;
+
+  @variant lg {
+    flex: 1 0 45%;
+  }
+}
+
+.highlights-list li:before {
+  content: '';
+  background: var(--color-brand-prime);
+  width: 4px;
+  position: absolute;
+  top: 10px;
+  left: -3px;
+  bottom: 10px;
+  border-radius: 2px;
+}
+
+.highlights-list h4 {
+  font-family: var(--font-family-mono);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--text-lg);
+  color: var(--color-prose-strong);
+  margin-bottom: --spacing(2);
+}
+
+/* Code example */
+
+.code-example {
+  max-width: var(--container-3xl);
+  background: var(--color-code-bg);
+  border-radius: var(--radius-lg);
+  white-space: pre-wrap;
+  color: var(--color-gray-200);
+  margin: 1.4rem 0;
+  font-family: var(--font-family-mono);
+  font-size: .9rem;
+  margin-inline: auto;
+  padding: --spacing(4);
+}
+
+/* Guide call-to-action */
+
+.guide-cta {
+  background: var(--color-brand-prime);
+  border-radius: 50rem;
+  padding: --spacing(4) --spacing(6);
+  display: flex;
+  align-items: center;
+  flex-direction: col;
+  color: var(--color-white);
+  font-weight: var(--font-weight-medium);
+  gap: --spacing(3);
+  justify-content: space-between;
+  font-size: var(--text-lg);
+
+  @variant lg {
+    flex-direction: row;
+  }
+}
+
+.guide-cta a {
+  text-decoration: underline;
+  text-decoration-color: var(--color-brand-light);
+}
+
+/* Prose */
+
 .prose {
-  color: var(--color-text-main);
+  color: var(--color-prose-main);
   margin: 0 auto;
 }
 
@@ -264,7 +395,7 @@ body.dark {
 .prose h4,
 .prose h5 {
   font-weight: var(--font-weight-extrabold);
-  color: var(--color-text-strong);
+  color: var(--color-prose-strong);
   margin: 1.4rem 0 .4rem
 }
 
@@ -298,7 +429,7 @@ body.dark {
   border-radius: var(--radius-sm);
   margin-right: 2px;
   padding: 0 .4rem;
-  font-family: var(--font-dm-mono), Maple Mono, Jetbrains Mono, Roboto Mono, monospace;
+  font-family: var(--font-family-mono);
   font-size: .9rem;
   display: inline-block
 }
@@ -309,7 +440,7 @@ body.dark {
   white-space: pre-wrap;
   color: var(--color-gray-200);
   margin: 1.4rem 0;
-  font-family: var(--font-dm-mono), Maple Mono, Jetbrains Mono, Roboto Mono, monospace;
+  font-family: var(--font-family-mono);
   font-size: .9rem
 }
 
@@ -343,11 +474,11 @@ body.dark {
   text-transform: uppercase;
   font-size: var(--text-sm);
   margin-bottom: var(--spacing);
-  color: var(--color-text-subtle);
+  color: var(--color-prose-subtle);
 }
 
 .docs-header h1 {
-  color: var(--color-text-strong);
+  color: var(--color-prose-strong);
   font-weight: var(--font-weight-extrabold);
   font-size: var(--text-3xl);
 }
@@ -374,13 +505,13 @@ body.dark {
 }
 
 .docs-sidebar nav:not(:last-child) {
-  border-bottom: 1px solid --alpha(var(--color-text-subtle) / 40%);
+  border-bottom: 1px solid --alpha(var(--color-prose-subtle) / 40%);
 }
 
 .docs-sidebar h5 {
   font-weight: var(--font-weight-semibold);
   margin-bottom: --spacing(1);
-  color: var(--color-text-strong);
+  color: var(--color-prose-strong);
   /* Add 2 extra pixels to account for the border in the nav items */
   padding: 0 calc(--spacing(3) + 2px);
 }
@@ -391,7 +522,7 @@ body.dark {
 
 .docs-sidebar nav>ul>li a {
   padding: --spacing(2) --spacing(3);
-  color: var(--color-text-main);
+  color: var(--color-prose-main);
   font-weight: var(--font-weight-medium);
   display: block;
   border-left: 2px solid transparent;
@@ -427,13 +558,13 @@ body.dark {
 
 .docs-links li>a h3 {
   font-weight: var(--font-weight-bold);
-  color: var(--color-text-strong);
+  color: var(--color-prose-strong);
   font-size: var(--text-lg);
 }
 
 .docs-links li>a p {
   font-size: var(--text-sm);
-  color: var(--color-text-main);
+  color: var(--color-prose-main);
 }
 
 /* Table of contents */
@@ -452,7 +583,7 @@ body.dark {
   text-transform: uppercase;
   font-weight: var(--font-weight-bold);
   font-size: var(--text-sm);
-  color: var(--color-text-subtle);
+  color: var(--color-prose-subtle);
 }
 
 .table-of-contents li a {
@@ -479,7 +610,7 @@ body.dark {
 }
 
 .hl-variant {
-  color: #d38064;
+  color: #f9a878;
 }
 
 .hl-function {
@@ -487,7 +618,7 @@ body.dark {
 }
 
 .hl-operator {
-  color: #95e2fc;
+  color: #77d2ff;
 }
 
 .hl-comment {
