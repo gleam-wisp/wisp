@@ -1,4 +1,4 @@
-![Wisp Logo][./assets/logo.svg]
+![Wisp Logo](./assets/images/logo.svg)
 
 # Wisp Documentation Site
 
