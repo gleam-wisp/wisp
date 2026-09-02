@@ -187,6 +187,7 @@ body {
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
+  gap: --spacing(3);
 
   @variant md {
     justify-content: space-between;
@@ -198,6 +199,24 @@ body {
 
   @variant md {
     display: block;
+  }
+}
+
+.site-nav .sidebar-open-button {
+  gap: calc(var(--spacing) * 2);
+  color: var(--color-prose-main);
+  font-weight: var(--font-weight-medium);
+  padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 3);
+  margin-right: auto;
+  border: 1px solid var(--color-brand-quitelight);
+  border-radius: .6rem;
+  background: #fff;
+  font-size: .9rem;
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+
+  @variant lg {
+    display: none;
   }
 }
 

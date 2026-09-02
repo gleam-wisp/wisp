@@ -329,7 +329,18 @@ pub fn handle_request(req: Request, ctx: Context) -> Response {
 
   element.fragment([
     html.header([class("site-hero")], [
-      site_nav(False),
+      html.nav([class("site-nav")], [
+        html.div([class("container")], [
+          html.a([href("/"), class("site-logo")], [
+            html.img([
+              attr.src("/images/logo.svg"),
+              attr.alt("Wisp logo"),
+              class("h-12"),
+            ]),
+          ]),
+          nav_links(),
+        ]),
+      ]),
 
       html.section([class("text-center py-32")], [
         html.figure([class("mb-8 relative w-max mx-auto")], [
@@ -506,7 +517,19 @@ pub fn handle_request(req: Request, ctx: Context) -> Response {
 fn docs_index(sections: List(GuideSection)) {
   element.fragment([
     html.header([class("site-hero")], [
-      site_nav(is_content: False),
+      html.nav([class("site-nav")], [
+        html.div([class("container")], [
+          html.a([href("/"), class("site-logo")], [
+            html.img([
+              attr.src("/images/logo.svg"),
+              attr.alt("Wisp logo"),
+              class("h-12"),
+            ]),
+          ]),
+          nav_links(),
+        ]),
+      ]),
+
       html.div([class("container")], [
         html.header([class("docs-header")], [
           html.h1([], [text("Guides")]),
@@ -571,8 +594,10 @@ fn doc_page(
     // CSS only sidebar toggling for mobile
     html.input([
       class("sidebar-toggle-input"),
+      attr.autocomplete("off"),
       attr.type_("checkbox"),
       attr.id("sidebar-toggle"),
+      attr.checked(True),
     ]),
 
     html.aside([class("docs-sidebar")], [
@@ -611,9 +636,27 @@ fn doc_page(
       })
     ]),
 
-    html.main([class("container")], [
-      site_nav(is_content: True),
+    html.nav([class("site-nav")], [
+      html.div([class("container")], [
+        html.label(
+          [
+            attr.role("button"),
+            attr.class("sidebar-open-button"),
+            attr.for("sidebar-toggle"),
+            attr.aria_label("Open list of guides in sidebar"),
+          ],
+          [text("☰")],
+        ),
 
+        html.div([class("nav-search")], [
+          element.element("pagefind-modal-trigger", [], []),
+          element.element("pagefind-modal", [], []),
+        ]),
+        nav_links(),
+      ]),
+    ]),
+
+    html.main([class("container")], [
       html.header([class("docs-header")], [
         html.h4([], [text(section_name)]),
         html.h1([], [text(title)]),
@@ -653,7 +696,18 @@ fn doc_page(
 fn not_found() {
   element.fragment([
     html.header([class("site-hero")], [
-      site_nav(is_content: False),
+      html.nav([class("site-nav")], [
+        html.div([class("container")], [
+          html.a([href("/"), class("site-logo")], [
+            html.img([
+              attr.src("/images/logo.svg"),
+              attr.alt("Wisp logo"),
+              class("h-12"),
+            ]),
+          ]),
+          nav_links(),
+        ]),
+      ]),
 
       html.div([class("text-center py-32")], [
         html.figure([class("mb-8 relative w-max mx-auto")], [
@@ -779,66 +833,46 @@ pub type Guide {
   )
 }
 
-fn site_nav(is_content is_content: Bool) {
-  html.nav([class("site-nav")], [
-    html.div([class("container")], [
-      case is_content {
-        True ->
-          html.div([class("nav-search")], [
-            element.element("pagefind-modal-trigger", [], []),
-            element.element("pagefind-modal", [], []),
-          ])
-
-        False ->
-          html.a([href("/"), class("site-logo")], [
-            html.img([
-              attr.src("/images/logo.svg"),
-              attr.alt("Wisp logo"),
-              class("h-12"),
-            ]),
-          ])
-      },
-      html.ul([class("site-links")], [
-        html.li([], [
-          html.a([href("/docs")], [
-            html.img([
-              attr.src("/images/guides-icon.svg"),
-              attr.class("size-5"),
-              attr.alt("Guides Icon"),
-            ]),
-            text("Guides"),
-          ]),
+fn nav_links() {
+  html.ul([class("site-links")], [
+    html.li([], [
+      html.a([href("/docs")], [
+        html.img([
+          attr.src("/images/guides-icon.svg"),
+          attr.class("size-5"),
+          attr.alt("Guides Icon"),
         ]),
-        html.li([], [
-          html.a([href("https://github.com/gleam-wisp/wisp")], [
-            html.img([
-              attr.src("/images/source-icon.svg"),
-              attr.class("size-5"),
-              attr.alt("Source Icon"),
-            ]),
-            text("Source"),
-          ]),
+        text("Guides"),
+      ]),
+    ]),
+    html.li([], [
+      html.a([href("https://github.com/gleam-wisp/wisp")], [
+        html.img([
+          attr.src("/images/source-icon.svg"),
+          attr.class("size-5"),
+          attr.alt("Source Icon"),
         ]),
-        html.li([], [
-          html.a([href("https://wisp.hexdocs.pm/")], [
-            html.img([
-              attr.src("/images/hexdocs-icon.svg"),
-              attr.class("size-5"),
-              attr.alt("HexDocs (unofficial) Icon"),
-            ]),
-            text("HexDocs"),
-          ]),
+        text("Source"),
+      ]),
+    ]),
+    html.li([], [
+      html.a([href("https://wisp.hexdocs.pm/")], [
+        html.img([
+          attr.src("/images/hexdocs-icon.svg"),
+          attr.class("size-5"),
+          attr.alt("HexDocs (unofficial) Icon"),
         ]),
-        html.li([class("special-link")], [
-          html.a([href("https://github.com/lpil")], [
-            html.img([
-              attr.src("/images/heart-icon.svg"),
-              attr.class("size-5"),
-              attr.alt("Heart Icon"),
-            ]),
-            text("Sponsor"),
-          ]),
+        text("HexDocs"),
+      ]),
+    ]),
+    html.li([class("special-link")], [
+      html.a([href("https://github.com/lpil")], [
+        html.img([
+          attr.src("/images/heart-icon.svg"),
+          attr.class("size-5"),
+          attr.alt("Heart Icon"),
         ]),
+        text("Sponsor"),
       ]),
     ]),
   ])
