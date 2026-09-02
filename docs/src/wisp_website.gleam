@@ -4,7 +4,7 @@ import gleam/dict
 import gleam/int
 import gleam/io
 import gleam/list
-import gleam/option
+import gleam/option.{type Option, None, Some}
 import gleam/string
 import gleam/time/calendar
 import gleam/time/duration
@@ -18,7 +18,12 @@ import simplifile
 import tom
 
 type Meta(a) {
-  Meta(title: String, description: String, extra: List(element.Element(a)))
+  Meta(
+    title: String,
+    description: String,
+    cover: Option(String),
+    extra: List(element.Element(a)),
+  )
 }
 
 const version = "2.2.2"
@@ -68,7 +73,7 @@ pub fn main() {
         list.map(files, fn(file_name) {
           let assert Ok(content) =
             simplifile.read("./content/" <> category.slug <> "/" <> file_name)
-          let assert frontmatter.Extracted(option.Some(frontmatter), content) =
+          let assert frontmatter.Extracted(Some(frontmatter), content) =
             frontmatter.extract(content)
 
           let assert Ok(frontmatter) = tom.parse(frontmatter)
@@ -88,7 +93,7 @@ pub fn main() {
               ..document,
               content: list.map(document.content, fn(item) {
                 case item {
-                  jot.Codeblock(language: option.Some("gleam"), content:, ..) ->
+                  jot.Codeblock(language: Some("gleam"), content:, ..) ->
                     jot.RawBlock(
                       "<pre><code>"
                       <> contour.to_html(content)
@@ -122,8 +127,9 @@ pub fn main() {
             "docs/" <> section.slug <> "/" <> guide.slug <> ".html",
             doc_page(guides, section.title, guide.title, guide.content),
             Meta(
-              title: guide.title,
-              description: "Wisp: The go-to web server framework for Gleam, from beginners to scale.",
+              title: guide.title <> " - Wisp Guides",
+              description: guide.description,
+              cover: None,
               extra: [
                 html.link([
                   attr.href("/pagefind/pagefind-component-ui.css"),
@@ -152,8 +158,9 @@ pub fn main() {
         "index.html",
         home(),
         Meta(
-          title: "Wisp: Build practical, performant, intuitive web applications with Gleam",
+          title: "Wisp: Practical, performant, intuitive web applications with Gleam",
           description: "The go-to web server framework for Gleam, from beginners to scale.",
+          cover: None,
           extra: [],
         ),
       ),
@@ -161,8 +168,9 @@ pub fn main() {
         "404.html",
         not_found(),
         Meta(
-          title: "Page not found",
+          title: "Page Not Found - Wisp",
           description: "Wisp: The go-to web server framework for Gleam, from beginners to scale.",
+          cover: None,
           extra: [],
         ),
       ),
@@ -171,6 +179,7 @@ pub fn main() {
         docs_index(guides),
         Meta(
           title: "Wisp Guides and Documentation",
+          cover: None,
           description: "Wisp: The go-to web server framework for Gleam, from beginners to scale.",
           extra: [],
         ),
@@ -559,13 +568,31 @@ fn doc_page(
   content: jot.Document,
 ) {
   html.div([class("docs-layout")], [
+    // CSS only sidebar toggling for mobile
+    html.input([
+      class("sidebar-toggle-input"),
+      attr.type_("checkbox"),
+      attr.id("sidebar-toggle"),
+    ]),
+
     html.aside([class("docs-sidebar")], [
-      html.a([href("/"), class("sidebar-logo")], [
-        html.img([
-          attr.src("/images/logo.svg"),
-          attr.alt("Wisp"),
-          class("h-10"),
+      html.header([class("sidebar-header")], [
+        html.a([href("/"), class("sidebar-logo")], [
+          html.img([
+            attr.src("/images/logo.svg"),
+            attr.alt("Wisp"),
+            class("h-10"),
+          ]),
         ]),
+        html.label(
+          [
+            attr.role("button"),
+            attr.class("sidebar-close-button"),
+            attr.for("sidebar-toggle"),
+            attr.aria_label("Close sidebar"),
+          ],
+          [text("×")],
+        ),
       ]),
       ..list.map(guides, fn(section) {
         html.nav([], [
@@ -583,6 +610,7 @@ fn doc_page(
         ])
       })
     ]),
+
     html.main([class("container")], [
       site_nav(is_content: True),
 
@@ -680,18 +708,30 @@ fn layout(body: element.Element(a), meta: Meta(a)) -> element.Element(a) {
       ]),
       html.title([], meta.title),
       html.link([
-        attr.href("favicon.ico"),
+        attr.href("/images/icon.svg"),
         attr.rel("icon"),
         attr.type_("image/svg"),
       ]),
-      html.link([attr.href("icon.svg"), attr.rel("apple-touch-icon")]),
+      html.link([attr.href("/images/icon.svg"), attr.rel("apple-touch-icon")]),
+      html.meta([
+        attr("content", meta.title),
+        attr("property", "og:title"),
+      ]),
+      html.meta([
+        attr("content", meta.title),
+        attr("property", "twitter:title"),
+      ]),
       html.meta([
         attr("content", meta.description),
         attr.name("description"),
       ]),
       html.meta([
-        attr("content", "My Web Project"),
-        attr("property", "og:title"),
+        attr("content", meta.description),
+        attr.name("og:description"),
+      ]),
+      html.meta([
+        attr("content", meta.description),
+        attr.name("twitter:description"),
       ]),
       html.meta([
         attr("content", "website"),
@@ -702,14 +742,21 @@ fn layout(body: element.Element(a), meta: Meta(a)) -> element.Element(a) {
         attr("property", "og:url"),
       ]),
       html.meta([
-        attr("content", "icon.png"),
+        attr("content", option.unwrap(meta.cover, "/images/cover.png")),
         attr("property", "og:image"),
+      ]),
+      html.meta([
+        attr("content", option.unwrap(meta.cover, "/images/cover.png")),
+        attr("property", "twitter:image"),
+      ]),
+      html.meta([
+        attr("content", "summary_large_image"),
+        attr("property", "twitter:card"),
       ]),
       html.link([
         attr.rel("stylesheet"),
         attr.href("/styles.css"),
       ]),
-      html.script([attr.src("/script.mjs"), attr.type_("module")], ""),
       ..meta.extra
     ]),
     html.body([], [body]),

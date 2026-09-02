@@ -186,6 +186,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-wrap: wrap;
 
   @variant md {
     justify-content: space-between;
@@ -461,8 +462,12 @@ body {
   display: block;
 }
 
+/* Pad for the sidebar on desktop */
+
 .docs-layout {
-  padding-left: 300px;
+  @variant lg {
+    padding-left: 300px;
+  }
 }
 
 .docs-header {
@@ -485,17 +490,52 @@ body {
 
 .docs-sidebar {
   position: fixed;
-  width: 300px;
   top: 0;
   left: 0;
+  right: 0;
   bottom: 0;
-  background: conic-gradient(from 180deg at 50% 50%, --alpha(#90B357 / 20%) 0deg, --alpha(#B2CF70 / 20%) 135deg, --alpha(#57B399 / 20%) 237.12deg, --alpha(#90B357 / 20%) 360deg);
+  background: conic-gradient(from 180deg at 50% 50%, --alpha(#90B357 / 20%) 0deg, --alpha(#B2CF70 / 20%) 135deg, --alpha(#57B399 / 20%) 237.12deg, --alpha(#90B357 / 20%) 360deg), linear-gradient(0deg, var(--color-brand-extralight), var(--color-brand-extralight));
+  transition: 200ms cubic-bezier(0.19, 1, 0.22, 1) transform;
+  z-index: 100;
+
+  @variant lg {
+    width: 300px;
+    right: auto;
+    /* Override the mobile slide-away when on larger screens */
+    transform: translateX(0) !important;
+  }
 }
 
-.docs-sidebar .sidebar-logo {
-  padding: --spacing(4) --spacing(4) --spacing(2);
+.sidebar-toggle-input {
+  position: absolute;
+  visibility: hidden;
+}
+
+.sidebar-toggle-input:checked~.docs-sidebar {
+  transform: translateX(-100%);
+}
+
+.docs-sidebar .sidebar-header {
   border-bottom: --alpha(#90B356 / 10%) 1px solid;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.docs-sidebar .sidebar-header .sidebar-logo {
+  padding: --spacing(4) --spacing(4) --spacing(2);
+}
+
+.docs-sidebar .sidebar-header .sidebar-close-button {
+  padding: calc(var(--spacing) * 4);
+  font-size: 2rem;
+  line-height: 1.6rem;
+  cursor: pointer;
+  color: var(--color-prose-strong);
+
+  @variant lg {
+    display: none;
+  }
 }
 
 .docs-sidebar nav {
