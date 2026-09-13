@@ -587,8 +587,7 @@ fn buffered_read(
 /// Set the maximum permitted size of a request body of the request in bytes.
 ///
 /// If a body is larger than this size attempting to read the body will result
-/// in a response with status code 413: Content too large will be returned to the
-/// client.
+/// in a response with status code 413: Content too large.
 ///
 /// This limit only applies for headers and bodies that get read into memory.
 /// Part of a multipart body that contain files and so are streamed to disc
@@ -632,9 +631,9 @@ pub fn get_secret_key_base(request: Request) -> String {
 
 /// Set the maximum permitted size of all files uploaded by a request, in bytes.
 ///
-/// If a request contains fails which are larger in total than this size
+/// If a request contains files which are larger in total than this size
 /// then attempting to read the body will result in a response with status code
-/// 413: Content too large will be returned to the client.
+/// 413: Content too large.
 ///
 /// This limit only applies for files in a multipart body that get streamed to
 /// disc. For headers and other content that gets read into memory use the
