@@ -17,12 +17,15 @@ import gleeunit
 import helper
 import simplifile
 import wisp
-import wisp/internal
 import wisp/simulate
 
 pub fn main() {
   wisp.configure_logger()
   gleeunit.main()
+}
+
+fn generate_etag(file_size: Int, mtime_seconds: Int) -> String {
+  int.to_base16(file_size) <> "-" <> int.to_base16(mtime_seconds)
 }
 
 fn form_handler(
@@ -385,7 +388,7 @@ pub fn serve_static_test() {
     simulate.request(http.Get, "/stuff/test/fixture.txt")
     |> handler
   let assert Ok(file_info) = simplifile.file_info("test/fixture.txt")
-  let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
+  let etag = generate_etag(file_info.size, file_info.mtime_seconds)
 
   assert response.status == 200
   assert response.headers
@@ -401,7 +404,7 @@ pub fn serve_static_test() {
     simulate.request(http.Get, "/stuff/test/fixture.json")
     |> handler
   let assert Ok(file_info) = simplifile.file_info("test/fixture.json")
-  let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
+  let etag = generate_etag(file_info.size, file_info.mtime_seconds)
 
   assert response.status == 200
   assert response.headers
@@ -417,7 +420,7 @@ pub fn serve_static_test() {
     simulate.request(http.Get, "/stuff/test/fixture.dat")
     |> handler
   let assert Ok(file_info) = simplifile.file_info("test/fixture.dat")
-  let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
+  let etag = generate_etag(file_info.size, file_info.mtime_seconds)
 
   assert response.status == 200
   assert response.headers
@@ -464,7 +467,7 @@ pub fn serve_static_under_has_no_trailing_slash_test() {
     wisp.ok()
   }
   let assert Ok(file_info) = simplifile.file_info("test/fixture.txt")
-  let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
+  let etag = generate_etag(file_info.size, file_info.mtime_seconds)
 
   assert response.status == 200
   assert response.headers
@@ -485,7 +488,7 @@ pub fn serve_static_from_has_no_trailing_slash_test() {
     wisp.ok()
   }
   let assert Ok(file_info) = simplifile.file_info("test/fixture.txt")
-  let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
+  let etag = generate_etag(file_info.size, file_info.mtime_seconds)
 
   assert response.status == 200
   assert response.headers
@@ -543,7 +546,7 @@ pub fn serve_static_etags_returns_304_test() {
     simulate.request(http.Get, "/stuff/test/fixture.txt")
     |> handler
   let assert Ok(file_info) = simplifile.file_info("test/fixture.txt")
-  let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
+  let etag = generate_etag(file_info.size, file_info.mtime_seconds)
 
   assert response.status == 200
   assert response.headers
@@ -667,46 +670,6 @@ pub fn serve_static_with_uri_encoding_test() {
     |> static_file_handler
 
   assert response.status == 200
-}
-
-pub fn temporary_file_test() {
-  // Create tmp files for a first request
-  let request1 = simulate.request(http.Get, "/")
-  let assert Ok(request1_file1) = wisp.new_temporary_file(request1)
-  let assert Ok(request1_file2) = wisp.new_temporary_file(request1)
-
-  assert // The files exist
-    request1_file1 != request1_file2
-  let assert Ok(_) = simplifile.read(request1_file1)
-  let assert Ok(_) = simplifile.read(request1_file2)
-
-  // Create tmp files for a second request
-  let request2 = simulate.request(http.Get, "/")
-  let assert Ok(request2_file1) = wisp.new_temporary_file(request2)
-  let assert Ok(request2_file2) = wisp.new_temporary_file(request2)
-
-  assert // The files exist
-    request2_file1 != request1_file2
-  let assert Ok(_) = simplifile.read(request2_file1)
-  let assert Ok(_) = simplifile.read(request2_file2)
-
-  // Delete the files for the first request
-  let assert Ok(_) = wisp.delete_temporary_files(request1)
-
-  // They no longer exist
-  let assert Error(simplifile.Enoent) = simplifile.read(request1_file1)
-  let assert Error(simplifile.Enoent) = simplifile.read(request1_file2)
-
-  // The files for the second request still exist
-  let assert Ok(_) = simplifile.read(request2_file1)
-  let assert Ok(_) = simplifile.read(request2_file2)
-
-  // Delete the files for the first request
-  let assert Ok(_) = wisp.delete_temporary_files(request2)
-
-  // They no longer exist
-  let assert Error(simplifile.Enoent) = simplifile.read(request2_file1)
-  let assert Error(simplifile.Enoent) = simplifile.read(request2_file2)
 }
 
 pub fn require_content_type_test() {
