@@ -339,6 +339,10 @@ pub const default_secret_key_base: String = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ///
 pub const default_host: String = "wisp.example.com"
 
+/// The default user agent for browser requests.
+///
+pub const default_user_agent: String = "Mozilla/5.0 WispSimulate/1"
+
 /// The default headers for non-browser requests.
 ///
 pub const default_headers: List(#(String, String)) = [#("host", default_host)]
@@ -348,4 +352,5 @@ pub const default_headers: List(#(String, String)) = [#("host", default_host)]
 pub const default_browser_headers: List(#(String, String)) = [
   #("origin", "https://" <> default_host),
   #("host", default_host),
+  #("user-agent", default_user_agent),
 ]
