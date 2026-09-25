@@ -27,6 +27,7 @@ pub fn browser_request_test() {
     == [
       #("origin", "https://wisp.example.com"),
       #("host", "wisp.example.com"),
+      #("user-agent", "Mozilla/5.0 WispSimulate/1"),
     ]
   assert request.scheme == http.Https
   assert request.host == "wisp.example.com"
@@ -162,6 +163,7 @@ pub fn cookie_plain_text_test() {
       #("cookie", "abc=MTIzNA; def=NTY3OA"),
       #("origin", "https://wisp.example.com"),
       #("host", "wisp.example.com"),
+      #("user-agent", "Mozilla/5.0 WispSimulate/1"),
     ]
 }
 
@@ -178,6 +180,7 @@ pub fn cookie_signed_test() {
       ),
       #("origin", "https://wisp.example.com"),
       #("host", "wisp.example.com"),
+      #("user-agent", "Mozilla/5.0 WispSimulate/1"),
     ]
 }
 
