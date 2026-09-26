@@ -11,6 +11,7 @@
   request body streams.
 - Fixed a bug where Wisp would set content length header for range requests
   instead of letting the web server set it.
+- Added a default user-agent when simulating browser requests in tests.
 
 ## v2.2.1 - 2026-03-08
 
