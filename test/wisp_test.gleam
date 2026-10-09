@@ -387,6 +387,7 @@ pub fn serve_static_test() {
   let assert Ok(file_info) = simplifile.file_info("test/fixture.txt")
   let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
 
+  assert valid_etag(etag)
   assert response.status == 200
   assert response.headers
     == [
@@ -403,6 +404,7 @@ pub fn serve_static_test() {
   let assert Ok(file_info) = simplifile.file_info("test/fixture.json")
   let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
 
+  assert valid_etag(etag)
   assert response.status == 200
   assert response.headers
     == [
@@ -419,6 +421,7 @@ pub fn serve_static_test() {
   let assert Ok(file_info) = simplifile.file_info("test/fixture.dat")
   let etag = internal.generate_etag(file_info.size, file_info.mtime_seconds)
 
+  assert valid_etag(etag)
   assert response.status == 200
   assert response.headers
     == [
@@ -1444,4 +1447,11 @@ pub fn content_security_policy_protection_test() {
       <> nonce
       <> "' 'strict-dynamic'; object-src 'none'; base-uri 'none'",
     )
+}
+
+// A valid ETag should look like either `"wibble wobble"` or `W/"wobble
+// wibble"`
+fn valid_etag(etag: String) -> Bool {
+  { string.starts_with(etag, "\"") || string.starts_with(etag, "W/\"") }
+  && string.ends_with(etag, "\"")
 }

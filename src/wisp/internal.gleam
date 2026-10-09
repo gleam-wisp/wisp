@@ -82,9 +82,19 @@ pub fn random_slug() -> String {
   random_string(16)
 }
 
-/// Generates etag using file size + file mtime as seconds
+/// Generates etag using file size + file mtime as seconds (in base 16). As
+/// this is not determined by file contents, the generated etag is a
+/// weak-validator. See [the HTTP
+/// specification](https://httpwg.org/specs/rfc9110.html#weak.and.strong.validators)
+/// for more information.
 ///
-/// Exmaple etag value: `2C-67A4D2F1`
+/// Example etag value: `W/"2C-67A4D2F1"`
 pub fn generate_etag(file_size: Int, mtime_seconds: Int) -> String {
-  int.to_base16(file_size) <> "-" <> int.to_base16(mtime_seconds)
+  // Quotes are required per the spec:
+  // https://www.rfc-editor.org/rfc/rfc9110.html#section-8.8.3
+  "W/\""
+  <> int.to_base16(file_size)
+  <> "-"
+  <> int.to_base16(mtime_seconds)
+  <> "\""
 }
