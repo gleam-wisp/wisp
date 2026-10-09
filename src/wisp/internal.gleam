@@ -84,7 +84,13 @@ pub fn random_slug() -> String {
 
 /// Generates etag using file size + file mtime as seconds
 ///
-/// Exmaple etag value: `2C-67A4D2F1`
+/// Example etag value: `"2C-67A4D2F1"`
 pub fn generate_etag(file_size: Int, mtime_seconds: Int) -> String {
-  int.to_base16(file_size) <> "-" <> int.to_base16(mtime_seconds)
+  // Quotes are required per the spec:
+  // https://www.rfc-editor.org/rfc/rfc9110.html#section-8.8.3
+  "\""
+  <> int.to_base16(file_size)
+  <> "-"
+  <> int.to_base16(mtime_seconds)
+  <> "\""
 }
