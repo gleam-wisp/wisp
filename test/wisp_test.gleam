@@ -1147,6 +1147,59 @@ BB\r
     == wisp.ok()
 }
 
+pub fn multipart_form_fields_with_same_name_are_stable_test() {
+  let data =
+    "--theboundary\r
+Content-Disposition: form-data; name=\"wibble\"\r
+\r
+first\r
+--theboundary\r
+Content-Disposition: form-data; name=\"wibble\"\r
+\r
+second\r
+--theboundary\r
+Content-Disposition: form-data; name=\"wibble\"\r
+\r
+third\r
+--theboundary\r
+Content-Disposition: form-data; name=\"wobble\"; filename=\"file.txt\"\r
+\r
+first-file\r
+--theboundary\r
+Content-Disposition: form-data; name=\"wobble\"; filename=\"file.txt\"\r
+\r
+second-file\r
+--theboundary\r
+Content-Disposition: form-data; name=\"wobble\"; filename=\"file.txt\"\r
+\r
+third-file\r
+--theboundary--\r
+"
+  assert simulate.request(http.Post, "/")
+    |> simulate.string_body(data)
+    |> request.set_header(
+      "content-type",
+      "multipart/form-data; boundary=theboundary",
+    )
+    |> form_handler(fn(form) {
+      // Fields are sorted by name.
+      let assert [
+        #("wibble", "first"),
+        #("wibble", "second"),
+        #("wibble", "third"),
+      ] = form.values
+      let assert [
+        #("wobble", wisp.UploadedFile("file.txt", path_a)),
+        #("wobble", wisp.UploadedFile("file.txt", path_b)),
+        #("wobble", wisp.UploadedFile("file.txt", path_c)),
+      ] = form.files
+      let assert Ok("first-file") = simplifile.read(path_a)
+      let assert Ok("second-file") = simplifile.read(path_b)
+      let assert Ok("third-file") = simplifile.read(path_c)
+    })
+    == wisp.ok()
+}
+
 pub fn urlencoded_form_fields_are_sorted_test() {
   let data = "xx=XX&zz=ZZ&yy=YY&cc=CC&aa=AA&bb=BB"
   assert simulate.request(http.Post, "/")
