@@ -12,6 +12,8 @@
 - Fixed a bug where Wisp would set content length header for range requests
   instead of letting the web server set it.
 - Added a default user-agent when simulating browser requests in tests.
+- Fixed a bug where form fields with the same name would not appear in the same
+  order as in a submitted multipart form.
 
 ## v2.2.1 - 2026-03-08
 

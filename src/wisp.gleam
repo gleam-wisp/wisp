@@ -1115,7 +1115,11 @@ fn read_multipart(
     option.Some(reader) ->
       read_multipart(request, reader, boundary, quotas, data)
     // There are no more parts, we're done.
-    option.None -> Ok(FormData(sort_keys(data.values), sort_keys(data.files)))
+    option.None ->
+      Ok(FormData(
+        sort_keys(list.reverse(data.values)),
+        sort_keys(list.reverse(data.files)),
+      ))
   }
 }
 
@@ -2035,7 +2039,7 @@ fn canned_reader(data: BitArray) -> internal.Reader {
 ///   Request.
 ///
 /// This middleware implements the [OWASP Verifying Origin With Standard Headers][1]
-/// CSRF defense-in-depth technique. **Do not** allow `Get` or `Head` requests 
+/// CSRF defense-in-depth technique. **Do not** allow `Get` or `Head` requests
 /// to trigger side effects if relying only on this function and the SameSite
 /// cookies feature for CSRF protection.
 ///
