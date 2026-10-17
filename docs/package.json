@@ -1,0 +1,14 @@
+{
+  "name": "wisp-docs",
+  "version": "1.0.0",
+  "scripts": {
+	"build:style": "tailwindcss -i ./assets/styles.css -o ./dist/styles.css --minify",
+	"build:search": "pagefind --site dist",
+	"build": "pnpm run build:style && pnpm run build:search"
+  },
+  "dependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "pagefind": "^1.5.2",
+    "tailwindcss": "^4.3.3"
+  }
+}
