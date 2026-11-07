@@ -1,0 +1,29 @@
+name = "wisp_website"
+version = "1.0.0"
+target = "javascript"
+
+[dependencies]
+gleam_stdlib = ">= 0.44.0 and < 2.0.0"
+lustre = ">= 5.6.0 and < 6.0.0"
+modem = ">= 2.1.2 and < 3.0.0"
+argv = ">= 1.0.2 and < 2.0.0"
+hoist = ">= 1.0.0 and < 2.0.0"
+jot = ">= 12.1.0 and < 13.0.0"
+tom = ">= 2.1.0 and < 3.0.0"
+frontmatter = ">= 1.0.1 and < 2.0.0"
+simplifile = ">= 2.7.0 and < 3.0.0"
+gleam_community_ansi = ">= 1.4.4 and < 2.0.0"
+gleam_time = ">= 1.10.0 and < 2.0.0"
+shellout = ">= 1.8.0 and < 2.0.0"
+contour = ">= 1.2.1 and < 2.0.0"
+
+[dev-dependencies]
+gleeunit = ">= 1.0.0 and < 2.0.0"
+lustre_dev_tools = ">= 2.3.5 and < 3.0.0"
+
+[tools.lustre.html]
+title = "Wisp - a practical web framework for Gleam"
+meta = [
+  { name = "description", content = "A practical web framework for Gleam" },
+  { name = "og:description", content = "A practical web framework for Gleam" },
+]
